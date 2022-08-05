@@ -5,7 +5,7 @@ from speckle.converter.geometry._init_ import convertToSpeckle
 
 def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialReference, project: arcpy.mp.ArcGISProject, selectedLayer):
     print("___________Feature to Speckle____________")
-    b = Base()
+    b = Base(units = "m")
     data = arcpy.Describe(selectedLayer.dataSource)
     layer_sr = data.spatialReference # if sr.type == "Projected":
     geomType = data.shapeType #Polygon, Point, Polyline, Multipoint, MultiPatch

@@ -11,7 +11,7 @@ import math
 def polygonToSpeckle(geom, feature, layer):
     """Converts a QgsPolygon to Speckle"""
     #try: 
-    polygon = Base()
+    polygon = Base(units = "m")
     pointList = []
     for p in geom:
         for r in p: # <class 'arcpy.arcobjects.arcobjects.Point'>

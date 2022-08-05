@@ -14,7 +14,7 @@ def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
         specklePts.append(newPt)
 
     # TODO: Replace with `from_points` function when fix is pushed.
-    polyline = Polyline()
+    polyline = Polyline(units = "m")
     polyline.value = []
     polyline.closed = closed
     polyline.units = specklePts[0].units

@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<ArcGIS.Desktop xmlns="http://schemas.esri.com/DADF/Registry">
+  <QAT>esri_core_newProjectButton;esri_core_openProjectButton;esri_core_saveProjectButton;esri_core_undoSplitButton;esri_core_redoSplitButton;</QAT>
+  <QAT>esri_core_newProjectButton;esri_core_openProjectButton;esri_core_saveProjectButton;esri_core_undoSplitButton;esri_core_redoSplitButton;</QAT>
+  <modules>
+    <insertModule id="Custom">
+      <tabs>
+        <tab id="esriTab8b57edc2a9c81c3c" caption="Speckle" placeWith="esri_mapping_homeTab" insert="after">
+          <group refID="esriGroupdf926f3374d95768" />
+        </tab>
+      </tabs>
+      <groups>
+        <group id="esriGroupdf926f3374d95768" caption="">
+          <button refID="esri_geoprocessing_speckle_toolbox_SpeckleSender" size="large" />
+        </group>
+      </groups>
+      <controls>
+        <button id="esri_geoprocessing_speckle_toolbox_SpeckleSender" caption="Speckle" smallImage="C:\Users\Kateryna\Documents\00_Speckle\GitHub\speckle-arcgis\speckle\plugin_utils\speckle.png" largeImage="C:\Users\Kateryna\Documents\00_Speckle\GitHub\speckle-arcgis\speckle\plugin_utils\speckle.png" isCustomCommand="true" assembly="" className="esri_geoprocessing_module:Commands.ExecuteGPToolButton" extendedCaption="Speckle Toolbox">
+          <args>
+            <params toolPath="C:\Users\Kateryna\Documents\00_Speckle\GitHub\speckle-arcgis\Speckle.pyt\SpeckleSender" name="Speckle" xmlns="" />
+          </args>
+          <tooltip heading="Speckle">Allows you to send your layers to and receive from other software using Speckle server.</tooltip>
+        </button>
+      </controls>
+    </insertModule>
+    <updateModule refID="Custom">
+      <controls />
+    </updateModule>
+  </modules>
+</ArcGIS.Desktop>

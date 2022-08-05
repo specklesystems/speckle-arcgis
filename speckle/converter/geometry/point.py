@@ -10,7 +10,7 @@ def pointToSpeckle(pt, feature, layer):
     y = pt.Y
     if pt.Z: z = pt.Z 
     else: z = 0
-    specklePoint = Point()
+    specklePoint = Point(units = "m")
     specklePoint.x = x
     specklePoint.y = y
     specklePoint.z = z

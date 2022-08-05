@@ -2,36 +2,42 @@
 
 from typing import List
 import arcpy
-import specklepy
-from specklepy.transports.server import ServerTransport
-from specklepy.api.credentials import get_local_accounts
-from specklepy.api.client import SpeckleClient
-from specklepy.api import operations
-from specklepy.api.client import SpeckleException
-from specklepy.api.credentials import StreamWrapper
-from specklepy.objects import Base
-from specklepy.api.wrapper import StreamWrapper
 
 from speckle.converter.layers._init_ import convertSelectedLayers
 from arcgis.features import FeatureLayer
+import os.path
+
+import specklepy
+from specklepy.transports.server.server import ServerTransport
+from specklepy.api.credentials import get_local_accounts
+from specklepy.api.client import SpeckleClient
+from specklepy.api import operations
+from specklepy.logging.exceptions import (
+    SpeckleException,
+    SpeckleWarning,
+)
+from specklepy.api.credentials import StreamWrapper
+from specklepy.objects import Base
+from specklepy.api.wrapper import StreamWrapper
 
 class Toolbox(object):
     def __init__(self):
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
-        self.label = "Toolbox"
-        self.alias = "toolbox"
+        self.label = "Speckle Toolbox"
+        self.alias = "speckle_toolbox"  
         # List of tool classes associated with this toolbox
-        self.tools = [SpeckleSender]
+        self.tools = [SpeckleSender]     
     
 class SpeckleSender(object):
     def __init__(self):
-        print("resetting plugin")
+        print("resetting plugin")   
         self.label       = "Speckle Sender"
         self.description = "Allows you to send your layers " + \
                            "to other software using Speckle server." 
         #self.stylesheet 
-        #self.icon="resources:///ArcToolBox/Images/speckle-logo-close.png.png"
+        #self.attributes= os.path.dirname(__file__) + "/plugin_utils/speckle.png"
+        #print(self.attributes)
 
         accounts = get_local_accounts()
 
@@ -48,15 +54,20 @@ class SpeckleSender(object):
         self.all_layers = []
         self.selected_layers = []
         self.messageSpeckle = ""
+        self.project = aprx = None
+        self.action = 1 #send
+        try: 
+            # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm
+            aprx = arcpy.mp.ArcGISProject('current') 
+            active_map = aprx.activeMap
+            self.project = aprx
 
-        # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm
-        aprx = arcpy.mp.ArcGISProject('current') 
-        active_map = aprx.activeMap
-        self.project = aprx
+            if active_map is not None: # if project loaded
+                for layer in active_map.listLayers(): 
+                    if layer.isFeatureLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
+        except: pass
 
-        if active_map is not None: # if project loaded
-            for layer in active_map.listLayers(): 
-                if layer.isFeatureLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
+        
         # TODO react on project changes
 
     def getParameterInfo(self):
@@ -105,8 +116,8 @@ class SpeckleSender(object):
         selected_layers.filter.list = [str(i) + "-" + l.name for i,l in enumerate(self.all_layers)] #"Polyline"
 
         
-        # TODO: ACTION button
-        action = arcpy.Parameter(
+        '''
+        refresh = arcpy.Parameter(
             displayName="Refresh",
             name="refresh",
             datatype="GPBoolean",
@@ -114,8 +125,21 @@ class SpeckleSender(object):
             #category="Sending data",
             direction="Input"
             )
-        action.filter.type = "ValueList"   
-        action.value = False     
+        refresh.filter.type = "ValueList"   
+        refresh.value = False 
+        '''
+
+        action = arcpy.Parameter(
+            displayName="",
+            name="action",
+            datatype="GPString",
+            parameterType="Required",
+            #category="Sending data",
+            direction="Input"
+            )
+        action.value = "Send" 
+        action.filter.type = 'ValueList'
+        action.filter.list = ["Send", "Receive"]  
 
         parameters = [stream, branch, selected_layers, msg, action]
         return parameters
@@ -135,6 +159,9 @@ class SpeckleSender(object):
                     if st.name == selected_stream_name.split(" | ")[0]: 
                         self.active_stream = st
                         break
+
+                parameters[1].filter.list = [branch.name for branch in self.active_stream.branches.items]
+                
                 #if self.active_stream is None: 
                 #    print("Choose a valid stream")
                 #    arcpy.AddMessage("Choose a valid stream")
@@ -158,6 +185,7 @@ class SpeckleSender(object):
         if parameters[3].altered:
             self.messageSpeckle = parameters[3].valueAsText
 
+        '''
         if parameters[4].altered: # refresh btn
             print("Refresh")
             if parameters[4].value == True:
@@ -171,6 +199,11 @@ class SpeckleSender(object):
                 params_new[0].filter.list = [ (st.name + " | " + st.id) for st in self.streams ]
                 params_new[2].filter.list = [str(i) + "-" + l.name for i,l in enumerate(self.all_layers)]
                 self.updateParameters(params_new)
+        '''
+
+        if parameters[4].altered:
+            if parameters[4].valueAsText == "Send": self.action = 1
+            else: self.action = 0
                   
         return 
 
@@ -181,21 +214,31 @@ class SpeckleSender(object):
         # https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/what-is-arcpy-.htm
         #Warning if any of the fields is invalid/empty 
         print("_______________________Run__________________________")
+        if self.action == 1: self.onSend(parameters)
+        elif self.action == 0: self.onReceive(parameters)
+
+    def validateStreamBranch(self, parameters: List):
+        	
         self.updateParameters(parameters)
         if self.active_stream is None:
             arcpy.AddError("Choose a valid stream")
-            return
+            return False
         if self.active_branch is None: 
             arcpy.AddError("Choose a valid branch")
-            return
+            return False
+        return True 
+
+    def onSend(self, parameters: List):
+
+        if self.validateStreamBranch(parameters) == False: return
+
         if len(self.selected_layers) == 0: 
             arcpy.AddError("No layers selected")
             return
 
-        
         streamId = self.active_stream.id #stream_id
         client = self.speckle_client # ?
-
+        
         # Get the stream wrapper
         #streamWrapper = StreamWrapper(None)
         #client = streamWrapper.get_client()
@@ -218,7 +261,11 @@ class SpeckleSender(object):
             objId = operations.send(base=base_obj, transports=[transport])
         except SpeckleException as error:
             arcpy.AddError("Error sending data")
+            print("Error sending data")
             return
+        except SpeckleWarning as warning:
+            arcpy.AddMessage("SpeckleWarning: " + str(warning.args[0]))
+            
 
         message = self.messageSpeckle
         if message is None or ( isinstance(message, str) and len(message) == 0):  message = "Sent from ArcGIS"
@@ -236,3 +283,23 @@ class SpeckleSender(object):
             #parameters[2].value = ""
         except:
             arcpy.AddError("Error creating commit")
+
+    def onReceive(self, parameters: List): 
+        
+        if self.validateStreamBranch(parameters) == False: return
+
+        streamId = self.active_stream.id #stream_id
+        client = self.speckle_client # 
+
+        # get last commit 
+        try: 
+            commit = self.active_branch.commits.items[0]
+        except: 
+            arcpy.AddError("Failed to find a commit")
+            return
+
+        # next create a server transport - this is the vehicle through which you will send and receive
+        try: transport = ServerTransport(client=client, stream_id=streamId)
+        except: 
+            arcpy.AddError("Make sure your account has access to the chosen stream")
+            return
