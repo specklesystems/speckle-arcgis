@@ -3,6 +3,7 @@ import arcpy
 
 from specklepy.objects import Base
 from specklepy.objects.geometry import Point
+from speckle.converter.geometry.point import pointToCoord
 from speckle.converter.geometry.polyline import polylineFromVerticesToSpeckle
 
 import math
@@ -93,3 +94,15 @@ def polygonToSpeckle(geom, feature, layer):
     #except: 
     #    arcpy.AddWarning("Some polygons might be invalid")
     #    pass
+
+def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
+    """Converts a Speckle Polygon base object to QgsPolygon.
+    This object must have a 'boundary' and 'voids' properties.
+    Each being a Speckle Polyline and List of polylines respectively."""
+
+    pts = [pointToCoord(pt) for pt in poly["boundary"].as_points()]
+    array = arcpy.Array([arcpy.Point(*coords) for coords in pts])
+    array.append(array[0])
+    polygon = arcpy.Polygon(array, sr)
+
+    return polygon

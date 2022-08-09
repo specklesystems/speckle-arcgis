@@ -3,7 +3,7 @@
   <QAT>esri_core_newProjectButton;esri_core_openProjectButton;esri_core_saveProjectButton;esri_core_undoSplitButton;esri_core_redoSplitButton;</QAT>
   <QAT>esri_core_newProjectButton;esri_core_openProjectButton;esri_core_saveProjectButton;esri_core_undoSplitButton;esri_core_redoSplitButton;</QAT>
   <modules>
-    <insertModule id="Custom">
+    <insertModule id="Custom_speckle">
       <tabs>
         <tab id="esriTab8b57edc2a9c81c3c" caption="Speckle" placeWith="esri_mapping_homeTab" insert="after">
           <group refID="esriGroupdf926f3374d95768" />
@@ -23,7 +23,7 @@
         </button>
       </controls>
     </insertModule>
-    <updateModule refID="Custom">
+    <updateModule refID="Custom_speckle">
       <controls />
     </updateModule>
   </modules>

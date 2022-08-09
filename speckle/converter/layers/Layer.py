@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Optional
 from specklepy.objects.base import Base
+
+from speckle.converter.layers.CRS import CRS
 
 
 class Layer(Base, chunkable={"features": 100}):
@@ -7,8 +9,9 @@ class Layer(Base, chunkable={"features": 100}):
 
     def __init__(
         self,
-        name=None,
-        crs=None,
+        name: Optional[str] = None,
+        crs: Optional[CRS] = None,
+        datum: Optional[CRS] = None,
         features: List[Base] = [],
         layerType: str = "None",
         geomType: str = "None",
@@ -18,6 +21,7 @@ class Layer(Base, chunkable={"features": 100}):
         super().__init__(**kwargs)
         self.name = name
         self.crs = crs
+        self.datum = datum
         self.type = layerType
         self.features = features
         self.geomType = geomType

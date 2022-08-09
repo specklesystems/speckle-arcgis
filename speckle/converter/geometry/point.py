@@ -1,5 +1,9 @@
 import math
+from typing import List
 from specklepy.objects.geometry import Point
+import arcpy
+
+from speckle.converter.layers.utils import get_scale_factor
 
 def pointToSpeckle(pt, feature, layer):
   
@@ -20,3 +24,22 @@ def pointToSpeckle(pt, feature, layer):
     specklePoint['displayStyle']['color'] = col
     '''
     return specklePoint
+
+def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
+    """Converts a Speckle Point to QgsPoint"""
+    pt = scalePointToNative(pt, pt.units)
+    geom = arcpy.PointGeometry(arcpy.Point(pt.x, pt.y), sr)
+    return geom
+
+def pointToCoord(pt: Point) -> List[float]:
+    """Converts a Speckle Point to QgsPoint"""
+    pt = scalePointToNative(pt, pt.units)
+    return [pt.x, pt.y, pt.z]
+
+def scalePointToNative(pt: Point, units: str) -> Point:
+    """Scale point coordinates to meters"""
+    scaleFactor = get_scale_factor(units)
+    pt.x = pt.x * scaleFactor
+    pt.y = pt.y * scaleFactor
+    pt.z = 0 if math.isnan(pt.z) else pt.z * scaleFactor
+    return pt

@@ -28,6 +28,9 @@ def get_qgis_python_path():
     return pythonExec
 
 def clone_env(pythonExec: str): 
+    # EVERYTHING HERE: https://developers.arcgis.com/python/guide/understanding-conda/
+    #then https://support.esri.com/en/technical-article/000024206
+    
     # https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#cloning-an-environment
     arcpy.AddMessage("Clone env")
     print("Clone env")
