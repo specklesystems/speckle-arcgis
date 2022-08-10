@@ -16,15 +16,26 @@ def subprocess_call(*args, **kwargs):
         kwargs['startupinfo'] = startupinfo
         print("start")
     try: 
-        retcode = subprocess.run(*args, capture_output=True, text=True, timeout=1)
+        # if manually: cmd.exe -> conda activate [env folder] -> pip install specklepy 
+        retcode = subprocess.run(*args, capture_output=True, text=True, shell=True, timeout=1000)
+        #return retcode
+
+        #result = subprocess.Popen( arg, shell=True, stdout=subprocess.PIPE) #, stderr=subprocess.STDOUT)
+        #result = subprocess.run( *args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        
+        #retcode = subprocess.run(*args, capture_output=True, text=True, timeout=1)
         #retcode = subprocess.check_call(*args, **kwargs) # Creates infinite loop, known issue: https://github.com/python/cpython/issues/87512
     except CalledProcessError as e: 
         print("ERROR: " + e.output)
+        return False
     except subprocess.TimeoutExpired as e: 
-        print("Timeout Error: " + e.output) # e.g. Defaulting to user installation because normal site-packages is not writeable
+        print("Timeout Error: " + str(e.args[0])) # e.g. Defaulting to user installation because normal site-packages is not writeable
+        return False
     except Exception as e: 
         print(str(e))
+        return False
     except: print("unknown error") 
     print("end")
-    return
+    return True
+
     
