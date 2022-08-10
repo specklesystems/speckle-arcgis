@@ -257,26 +257,29 @@ class Speckle(object):
             else: self.toolboxInputs.action = 0
 
         if parameters[5].altered: # refresh btn
-            print("Refresh")
-            if parameters[5].value == True:
-                uiInputs()
-                self.__init__()
-                #self.streams = self.speckle_client.stream.search("")
-                params_new = []
-                for i,p in enumerate(parameters):
-                    params_new.append(p)
-                    if i==1: params_new[i].value = "main"
-                    elif i ==3: params_new[i].value = ""
-                    elif i ==4: params_new[i].value = "Send"
-                    elif i ==5: params_new[i].value = False
-                    else: params_new[i].value = None
-                
-                params_new[0].filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
-                params_new[2].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
-                
-                self.updateParameters(params_new)
-                  
+            self.refresh(parameters)
         return 
+
+    def refresh(self, parameters: List[Any]):
+        print("Refresh")
+        if parameters[5].value == True:
+            uiInputs()
+            self.__init__()
+            #self.streams = self.speckle_client.stream.search("")
+            params_new = []
+            for i,p in enumerate(parameters):
+                params_new.append(p)
+                if i==1: params_new[i].value = "main"
+                elif i ==3: params_new[i].value = ""
+                elif i ==4: params_new[i].value = "Send"
+                elif i ==5: params_new[i].value = False
+                else: params_new[i].value = None
+            
+            params_new[0].filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
+            params_new[2].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
+            
+            self.updateParameters(params_new)
+        return
 
     def updateMessages(self, parameters): #optional
         return
@@ -355,8 +358,10 @@ class Speckle(object):
             #parameters[2].value = ""
         except:
             arcpy.AddError("Error creating commit")
+            
+        self.refresh(parameters)
 
-    def onReceive(self, parameters: List): 
+    def onReceive(self, parameters: List[Any]): 
         
         if self.validateStreamBranch(parameters) == False: return
 
@@ -455,8 +460,11 @@ class Speckle(object):
                             break
                 '''
             traverseObject(commitObj, callback, check)
-                
+      
         except SpeckleException as e:
             print("Receive failed")
             return
+
+        self.refresh(parameters)
+    
     

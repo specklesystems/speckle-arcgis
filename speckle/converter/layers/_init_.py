@@ -111,6 +111,7 @@ def layerToNative(layer: Union[Layer, RasterLayer], streamBranch: str, project: 
 
 def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject):
     vl = None
+    layerName = layer.name.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
     sr = arcpy.SpatialReference(text=layer.crs.wkt) 
     active_map = project.activeMap
     path = "\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
@@ -125,7 +126,7 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
         if l.longName == newGroupName: layerGroup = l; break 
     print("__________________")
     #find ID of the layer with a matching name in the "latest" group 
-    newName = f'{streamBranch}__{layer.name}'
+    newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
     # particularly if the layer comes from ArcGIS
     geomType = layer.geomType # for ArcGIS: Polygon, Point, Polyline, Multipoint, MultiPatch
     print(geomType)
@@ -134,6 +135,7 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     if "polyline" in geomType.lower(): geomType = "Polyline"
     if "multipoint" in geomType.lower(): geomType = "Multipoint"
     
+    print(newName)
     #path = r"C:\Users\Kateryna\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
     #https://community.esri.com/t5/arcgis-pro-questions/is-it-possible-to-create-a-new-group-layer-with/td-p/1068607
     f_class = CreateFeatureclass(path, newName + "_class", geomType, spatial_reference = sr)
@@ -149,13 +151,16 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
             # https://support.esri.com/en/technical-article/000005588
             key = key.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
             if len(key)>10: key = key[:10]
+            print(all_keys)
             if key in all_keys:
                 for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
                     if len(key)<10 and (key+letter) not in all_keys: key+=letter; break 
                     if len(key) == 10 and (key[:9] + letter) not in all_keys: key=key[:9] + letter; break 
-            all_keys.append(key)
-            matrix.append([key, value, key, 255])
-            print(matrix)
+            if key not in all_keys: 
+                all_keys.append(key)
+                print(all_keys)
+                matrix.append([key, value, key, 255])
+                print(matrix)
     AddFields(str(f_class), matrix)
 
     # add Layer features 
@@ -168,17 +173,17 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     count = 0
     rowValues = []
     for feat in fets:
-        try: feat['Id'] 
-        except: feat.update({'Id': count})
-        try: feat['FID'] 
-        except: feat.update({'FID': count})
+      
+        try: feat['applicationId'] 
+        except: feat.update({'applicationId': count})
 
-        row = [feat['FID'], feat['arcGisGeomFromSpeckle'], feat['Id']]
-        heads = ['FID', 'Shape@', 'Id']
-        for key,value in feat.items(): 
-            if key != 'arcGisGeomFromSpeckle' and key != 'FID' and key!= 'Shape' and key!= 'Id' : row.append(value)
+        row = [feat['applicationId'], feat['arcGisGeomFromSpeckle']]
+        heads = ['FID', 'Shape@']
         for key in all_keys: 
-            if key != 'arcGisGeomFromSpeckle' and key != 'FID' and key!= 'Shape' and key!= 'Id' : heads.append(key)
+            if key != 'arcGisGeomFromSpeckle' and key != 'FID' and key!= 'Shape' and key!= 'Id' and key!= 'applicationId' : heads.append(key)
+        for key,value in feat.items(): 
+            print(key)
+            if key != 'arcGisGeomFromSpeckle' and key != 'FID' and key!= 'Shape' and key!= 'Id' and key!= 'applicationId': row.append(value)
         rowValues.append(row)
         count += 1
     

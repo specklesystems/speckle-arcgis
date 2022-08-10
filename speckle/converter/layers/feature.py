@@ -74,7 +74,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
              
         print(f_shape)
 
-    # Convert geometry
+    ######################################### Convert geometry
     try:
         geom = convertToSpeckle(f_shape, selectedLayer, geomType, featureType)
         if geom is not None:
@@ -86,9 +86,10 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     #print(fieldnames)
     for i, name in enumerate(fieldnames):
         corrected = name.replace("/", "_").replace(".", "-")
-        if corrected == "id": corrected = "applicationId"
-        f_val = attr_list[i] #str()
-        b[corrected] = f_val
+        if corrected != "Shape" and corrected != "Shape@": 
+            if corrected == "FID": 
+                b["applicationId"] = str(attr_list[i])
+            else: b[corrected] = attr_list[i]
     print("_____________________")
     return b
 
@@ -112,8 +113,8 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     
     #feat.setFields(fields)  
     for key, variant in fields.items():
-        if key == "id": feat.update({key: str(feature["applicationId"]) })
-        else: 
+        if key == "FID": feat.update({key: str(feature["applicationId"]) })
+        elif key != "Shape" and key != "Shape@" and key != "arcGisGeomFromSpeckle": 
             #print(feature[key])
             value = feature[key]
             if variant == "TEXT": value = str(feature[key]) 

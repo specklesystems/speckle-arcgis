@@ -18,12 +18,7 @@ def subprocess_call(*args, **kwargs):
     try: 
         # if manually: cmd.exe -> conda activate [env folder] -> pip install specklepy 
         retcode = subprocess.run(*args, capture_output=True, text=True, shell=True, timeout=1000)
-        #return retcode
-
         #result = subprocess.Popen( arg, shell=True, stdout=subprocess.PIPE) #, stderr=subprocess.STDOUT)
-        #result = subprocess.run( *args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        
-        #retcode = subprocess.run(*args, capture_output=True, text=True, timeout=1)
         #retcode = subprocess.check_call(*args, **kwargs) # Creates infinite loop, known issue: https://github.com/python/cpython/issues/87512
     except CalledProcessError as e: 
         print("ERROR: " + e.output)
