@@ -3,23 +3,59 @@ import arcpy
 
 from specklepy.objects import Base
 from specklepy.objects.geometry import Point
+from speckle.converter.geometry.mesh import rasterToMesh
 from speckle.converter.geometry.point import pointToCoord
 from speckle.converter.geometry.polyline import polylineFromVerticesToSpeckle
 
 import math
+from panda3d.core import Triangulator
 
 
-def polygonToSpeckle(geom, feature, layer):
-    """Converts a QgsPolygon to Speckle"""
+def polygonToSpeckle(geom, feature, layer, multiType: bool):
+    """Converts a Polygon to Speckle"""
     #try: 
+    print("___Polygon to Speckle____")
     polygon = Base(units = "m")
     pointList = []
-    for p in geom:
-        for r in p: # <class 'arcpy.arcobjects.arcobjects.Point'>
-            pointList.append(r)
-
-    boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
+    voidPointList = []
     voids = []
+    boundary = None
+    
+    #print(geom) # <geoprocessing describe geometry object object at 0x0000020F1D94AB10>
+    #print(multiType)
+
+    if multiType is False: 
+        for p in geom:
+            #print(p) # <geoprocessing array object object at 0x0000020F1D972C90>
+            for pt in p: 
+                #print(pt) # 284394.58100903 5710688.11602606 NaN NaN <class 'arcpy.arcobjects.arcobjects.Point'> 
+                #print(type(pt))
+                if pt != None: pointList.append(pt) 
+        boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
+    else: 
+        for i, p in enumerate(geom):
+            #print(i)
+            #print(p) # <geoprocessing array object object at 0x00000296FFF11CF0>
+            #print(type(p)) # <class 'arcpy.arcobjects.arcobjects.Array'>
+            for pt in p:  
+                #print(pt) # 284394.58100903 5710688.11602606 NaN NaN
+                if pt == None and boundary == None:  # first break 
+                    boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
+                    pointList = []
+                elif pt == None and boundary != None: # breaks btw voids
+                    void = polylineFromVerticesToSpeckle(pointList, True, feature, layer)
+                    voids.append(void)
+                    pointList = []
+                elif pt != None: # add points to whatever list (boundary or void) 
+                    pointList.append(pt)
+
+            if boundary != None and len(pointList)>0: # remaining polyline
+                void = polylineFromVerticesToSpeckle(pointList, True, feature, layer)
+                voids.append(void)
+
+        #print("boundary: ")
+        #print(boundary)
+    
     #try:
     #    for i in range(geom.numInteriorRings()):
     #        intRing = polylineFromVerticesToSpeckle(geom.interiorRing(i).vertices(), True, feature, layer)
@@ -30,16 +66,16 @@ def polygonToSpeckle(geom, feature, layer):
     polygon.voids = voids
     polygon.displayValue = [ boundary ] + voids
 
-    '''
+    ############# mesh 
     vertices = []
     total_vertices = 0
+    polyBorder = boundary.as_points()
+
     if len(voids) == 0: # if there is a mesh with no voids
-        for pt in pointList:
-            if isinstance(pt, QgsPointXY):
-                pt = QgsPoint(pt)
-            x = pt.x()
-            y = pt.y()
-            z = 0 if math.isnan(pt.z()) else pt.z()
+        for pt in polyBorder:
+            x = pt.x
+            y = pt.y
+            z = 0 if math.isnan(pt.z) else pt.z
             vertices.extend([x, y, z])
             total_vertices += 1
 
@@ -52,7 +88,7 @@ def polygonToSpeckle(geom, feature, layer):
         faces = []
 
         # add boundary points
-        polyBorder = boundary.as_points()
+        #polyBorder = boundary.as_points()
         pt_count = 0
         # add extra middle point for border
         for pt in polyBorder:
@@ -85,11 +121,11 @@ def polygonToSpeckle(geom, feature, layer):
           i+=1
         ran = range(0, total_vertices)
 
-    col = featureColorfromNativeRenderer(feature, layer)
+    col = (100<<16) + (100<<8) + 100 #featureColorfromNativeRenderer(feature, layer)
     colors = [col for i in ran] # apply same color for all vertices
     mesh = rasterToMesh(vertices, faces, colors)
     polygon.displayValue = mesh 
-    '''
+
     return polygon
     #except: 
     #    arcpy.AddWarning("Some polygons might be invalid")
@@ -108,7 +144,7 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
     try:
         for void in poly["voids"]: 
             print(void)
-            pts = [pointToCoord(pt) for pt in void["boundary"].as_points()]
+            pts = [pointToCoord(pt) for pt in void.as_points()]
             print(pts)
             inner_arr = [arcpy.Point(*coords) for coords in pts]
             inner_arr.append(inner_arr[0])

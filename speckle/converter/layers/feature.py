@@ -71,8 +71,6 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
             ptgeo1 = f_shape.projectAs(projectCRS)
             f_shape = ptgeo1
         
-             
-        #print(f_shape)
 
     ######################################### Convert geometry
     try:
@@ -80,6 +78,8 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
         if geom is not None:
             b["geometry"] = geom
     except Exception as error:
+        print("Error converting geometry: " + str(error))
+        print(selectedLayer)
         arcpy.AddError("Error converting geometry: " + str(error))
 
     #print(attr_list)
@@ -87,10 +87,10 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     for i, name in enumerate(fieldnames):
         corrected = name.replace("/", "_").replace(".", "-")
         if corrected != "Shape" and corrected != "Shape@": 
-            if corrected == "FID": 
+            if corrected == "FID" or corrected == "OBJECTID": 
                 b["applicationId"] = str(attr_list[i])
             else: b[corrected] = attr_list[i]
-    print("_____________________")
+    print("______end of __Feature to Speckle____________________")
     return b
 
 
@@ -114,7 +114,7 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     
     #feat.setFields(fields)  
     for key, variant in fields.items():
-        if key.lower() == "fid": feat.update({key: str(feature["applicationId"]) })
+        if key.lower() == "objectid": feat.update({key: str(feature["applicationId"]) })
         elif key.lower() != "shape" and key.lower() != "shape@" and key != "arcGisGeomFromSpeckle": 
             #print(feature[key])
             value = feature[key]

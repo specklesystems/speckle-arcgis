@@ -9,12 +9,39 @@ from speckle.converter.geometry.point import pointToCoord, pointToNative, pointT
 from speckle.converter.layers.utils import get_scale_factor
 
 
+def polylineToSpeckle(geom, feature, layer, multiType: bool):
+    #try: 
+    print("___Polyline to Speckle____")
+    polyline = None
+    pointList = []
+    
+    #print(geom) # <geoprocessing describe geometry object object at 0x0000020F1D94AB10>
+    #print(multiType)
+
+    if multiType is False: 
+        for p in geom: 
+            #print(p) # <geoprocessing array object object at 0x0000020F1D972C90>
+            for pt in p: 
+                #print(pt) # 284394.58100903 5710688.11602606 NaN NaN 
+                #print(type(pt)) #<class 'arcpy.arcobjects.arcobjects.Point'> 
+                if pt != None: pointList.append(pt) 
+        closed = False
+        if pointList[0] == pointList[len(pointList)-1]: 
+            closed = True
+            pointList = pointList[:-1]
+        polyline = polylineFromVerticesToSpeckle(pointList, closed, feature, layer) 
+
+    return polyline
+
 def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
-    """Returns a Speckle Polyline given a list of QgsPoint instances and a boolean indicating if it's closed or not."""
+    """Converts a Polyline to Speckle"""
+    
+    print("___PolyLINE to Speckle____")
     specklePts = []
     for pt in vertices:
         newPt = pointToSpeckle(pt, feature, layer) 
         specklePts.append(newPt)
+    #print(specklePts)
 
     # TODO: Replace with `from_points` function when fix is pushed.
     polyline = Polyline(units = "m")
@@ -25,6 +52,7 @@ def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
         if closed and i == len(specklePts) - 1:
             continue
         polyline.value.extend([point.x, point.y, point.z])
+    print(polyline)
     '''
     col = featureColorfromNativeRenderer(feature, layer)
     polyline['displayStyle'] = {}

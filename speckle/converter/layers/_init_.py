@@ -68,27 +68,28 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the i
 
     try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
         layerObjs = []
-        #data = arcpy.Describe(layer.dataSource)
-
         if data.datasetType == "FeatureClass": #FeatureClass, ?Table Properties, ?Datasets
-            
             # write feature attributes
             fieldnames = [field.name for field in data.fields]
+            print(layer.longName) # e.g. 17b0b76d13_custom_crs_04dcfaa936\04dcfaa936_Vector_lineGeom
+            print(fieldnames) # e.g. ['OBJECTID', 'Shape', 'Shape_Length', 'Speckle_ID', 'number', 'area']
             rows_shapes = arcpy.da.SearchCursor(layer.longName, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
-            #print(rows_shapes) # <da.SearchCursor object at 0x00000172565E6C10>
+            print(rows_shapes) # <da.SearchCursor object at 0x00000172565E6C10>
 
             # write feature attributes
             for i, features in enumerate(rows_shapes):
+                print("____Enumerate rows in geom")
                 rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
                 row_attr = []
                 for k, attrs in enumerate(rows_attributes):
                     if i == k: row_attr = attrs; break
 
-                #print(features) #(<Polygon object at 0x172592ae8c8[0x17258d2a600]>,)
-                #print(features[0]) # <geoprocessing describe geometry object object at 0x000001B3278E5AB0>
-                #print(row_attr) # 
-                b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
-                layerObjs.append(b)
+                print(features) #(<Polygon object at 0x172592ae8c8[0x17258d2a600]>,)
+                print(features[0]) # <geoprocessing describe geometry object object at 0x000001B3278E5AB0>
+                print(row_attr) # 
+                if features[0]:
+                    b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
+                    layerObjs.append(b)
                 
             speckleLayer.features=layerObjs
             speckleLayer.geomType = data.shapeType
@@ -152,7 +153,8 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     all_keys = []
     all_key_types = []
     for key, value in newFields.items(): 
-        if key!= "arcGisGeomFromSpeckle" and key.lower()!= "fid" and key.lower()!= "shape" and key.lower()!= "id": # exclude geometry and default existing fields
+        existingFields = [fl.name for fl in arcpy.ListFields("class_" + newName)]
+        if key not in existingFields and key!= "arcGisGeomFromSpeckle" and key.lower()!= "objectid" and key.lower()!= "shape" and key.lower()!= "id": # exclude geometry and default existing fields
             # https://support.esri.com/en/technical-article/000005588
             key = key.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_") 
             if key[0] in ['0','1','2','3','4','5','6','7','8','9']: key = "_"+key
@@ -204,10 +206,10 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
         row = [feat['arcGisGeomFromSpeckle'], feat['applicationId']]
         heads = [ 'Shape@', 'OBJECTID']
         for i, key in enumerate(all_keys): 
-            if key != 'arcGisGeomFromSpeckle' and key.lower() != 'fid' and key!= 'shape' and key.lower()!= 'id' and key!= 'applicationId' : heads.append(key)
+            if key != 'arcGisGeomFromSpeckle' and key!= 'objectid' and key!= 'shape' and key.lower()!= 'id' and key!= 'applicationId' : heads.append(key)
         for key,value in feat.items(): 
             #print(key)
-            if key != 'arcGisGeomFromSpeckle' and key.lower() != 'fid' and key!= 'shape' and key.lower()!= 'id' and key!= 'applicationId': row.append(value)
+            if key in all_keys: row.append(value)
         rowValues.append(row)
         count += 1
     #if geomType != "Multipoint":

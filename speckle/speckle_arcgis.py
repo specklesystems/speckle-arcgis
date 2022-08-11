@@ -283,9 +283,9 @@ class Speckle(object):
         #    parameters = newParams
             
             ##parameters = newParams
-        print("continue UPDATING PARAMETERS")
-        print(parameters[2].filter.list)
-        print(parameters[4].valueAsText)
+        #print("continue UPDATING PARAMETERS")
+        #print(parameters[2].filter.list)
+        #print(parameters[4].valueAsText)
         return 
 
     def refresh(self, parameters: List[Any]): 
@@ -307,8 +307,8 @@ class Speckle(object):
          
         parameters[0].filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
         parameters[2].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
-        print("___continue_refresh______")
-        print(parameters[2].filter.list)
+        #print("___continue_refresh______")
+        #print(parameters[2].filter.list)
         
         return parameters
 

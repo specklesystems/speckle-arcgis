@@ -6,37 +6,30 @@ from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, 
 import arcpy 
 from typing import Any, List, Union, Sequence
 from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle
-from speckle.converter.geometry.polyline import arcToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative
-from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle
+from speckle.converter.geometry.polyline import arcToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
+from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
 
 
 def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:
     """Converts the provided layer feature to Speckle objects"""
-    print("___convertToSpeckle___")
+    print("___convertToSpeckle____________")
     geom = feature
-    try: print(geom.isMultipart) 
-    except: pass
-    print(featureType)
-    geomSingleType = (featureType=="Simple") # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
+    print(geom.isMultipart) # e.g. False 
+    geomMultiType = geom.isMultipart
+    
+    print(featureType) 
+    print(geomType)
+    #geomSingleType = (featureType=="Simple") # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
 
     if geomType == "Point": #Polygon, Point, Polyline, Multipoint, MultiPatch
-        if geomSingleType:
-            for pt in geom:
-                return pointToSpeckle(pt, feature, layer)
+        for pt in geom:
+            return pointToSpeckle(pt, feature, layer)
     elif geomType == "Polyline":
-        if geomSingleType:
-            vertices = []
-            for p in geom:
-                for pt in p: # <class 'arcpy.arcobjects.arcobjects.Point'>
-                    #ptGeometry = arcpy.PointGeometry(point)
-                    vertices.append(pt)
-            return polylineFromVerticesToSpeckle(vertices, False, feature, layer)
+        return polylineToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Polygon":
-        if geomSingleType:
-            return polygonToSpeckle(geom, feature, layer)
+        return polygonToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Multipoint":
-        #print(feature)
-        arcpy.AddWarning("Unsupported or invalid geometry in layer " + layer.name)
+        return multiPointToSpeckle(geom, feature, layer, geomMultiType)
     else:
         arcpy.AddWarning("Unsupported or invalid geometry in layer " + layer.name)
     return None

@@ -19,6 +19,7 @@ def get_python_path():
     if pythonExec.endswith(r"\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python"): 
         print("default env - need to clone")
         pythonExec = clone_env(pythonExec)
+        return None 
 
     ## should be: %LOCALAPPDATA%\ESRI\conda\envs\arcgispro-py3-clone + python.exe, C:\Users\[UserName]\AppData\Local\ESRI\conda\envs\arcgispro-py3-clone
     # or default: %PROGRAMFILES%\ArcGIS\Pro\bin\Python\envs\arcgispro-py3  + python.exe,  C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3
@@ -34,7 +35,7 @@ def clone_env(pythonExec_old: str): #'%PROGRAMFILES%\ArcGIS\Pro\bin\Python\envs\
     arcpy.AddMessage("Clone env")
     print("Clone env")
     winExec = r"%SystemRoot%\System32\cmd.exe"
-    install_folder = "\""+ r"%LOCALAPPDATA%\ESRI\conda\envs" + "\""
+    install_folder = r"%LOCALAPPDATA%\ESRI\conda\envs"
     env_new_name = "arcgispro-py3-speckle-clone"
     #create specs file conda list --explicit > spec-file.txt
     #commands = f"conda list --explicit > {install_folder}\spec-file.txt" #cd {defaultEnvFolder}; 
@@ -43,7 +44,7 @@ def clone_env(pythonExec_old: str): #'%PROGRAMFILES%\ArcGIS\Pro\bin\Python\envs\
     pythonExec_old = "\""+ pythonExec_old + "\""
 
     if not os.path.exists(install_folder): os.makedirs(install_folder)
-    subprocess_call([f"{winExec} conda activate {pythonExec_old} ;", f"conda list --explicit > {install_folder}\spec-file.txt"]) 
+    subprocess_call([f"conda list --explicit > {install_folder}\spec-file.txt"]) 
     # "conda", "list", "--explicit", ">", f"{install_folder}\spec-file.txt"])
     print("subprocess returned")
     return pythonExec_old
@@ -82,6 +83,15 @@ def setup():
         arcpy.AddMessage("Specklepy not installed")
         print("Specklepy not installed")
         subprocess_call([ pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
+
+    
+    pkgVersion = "1.10.11" 
+    pkgName = "panda3d"
+    try:
+        import panda3d
+    except Exception as e:
+        print("panda3d not installed")
+        subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
 
     # Check if specklpy needs updating
     try:
