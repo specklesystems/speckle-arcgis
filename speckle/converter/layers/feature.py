@@ -24,21 +24,21 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
         
         tr0 = tr1 = tr2 = tr_custom = None
         transformations = arcpy.ListTransformations(layer_sr, projectCRS)
-        print(transformations)
+        #print(transformations)
         customTransformName = "layer_sr.name"+"_To_"+ projectCRS.name
         if len(transformations) == 0:
             midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
             try:
                 tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
                 tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
-                print(tr1)
-                print(tr2)
+                #print(tr1)
+                #print(tr2)
             except: 
                 #customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
                 #CreateCustomGeoTransformation(customTransformName, layer_sr, projectCRS)
                 tr_custom = customTransformName
         else: 
-            print("else")
+            #print("else")
             # choose equation based instead of file-based/grid-based method, 
             # to be consistent with QGIS: https://desktop.arcgis.com/en/arcmap/latest/map/projections/choosing-an-appropriate-transformation.htm
             selecterTr = {}
@@ -50,10 +50,10 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
                     selecterTr.update({tr: diff})
             selecterTr = dict(sorted(selecterTr.items(), key=lambda item: item[1]))
             tr0 = list(selecterTr.keys())[0]
-            print(tr0)
+            #print(tr0)
 
         if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint":
-            print(geomType)
+            #print(geomType)
             arcpy.AddWarning("Unsupported or invalid geometry in layer " + selectedLayer.name)
 
         # reproject geometry using chosen transformstion(s)
@@ -61,9 +61,9 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
             ptgeo1 = f_shape.projectAs(projectCRS, tr0)
             f_shape = ptgeo1
         elif tr1 is not None and tr2 is not None:
-            print("else")
-            print(tr1)
-            print(tr2)
+            #print("else")
+            #print(tr1)
+            #print(tr2)
             ptgeo1 = f_shape.projectAs(midSr, tr1)
             ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
             f_shape = ptgeo2
@@ -72,7 +72,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
             f_shape = ptgeo1
         
              
-        print(f_shape)
+        #print(f_shape)
 
     ######################################### Convert geometry
     try:
@@ -95,10 +95,11 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
 
 
 def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
+    print("Feature To Native____________")
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
     except:  speckle_geom = feature # for created in other software
-
+    print(speckle_geom)
     if isinstance(speckle_geom, list):
         arcGisGeom = convertToNativeMulti(speckle_geom, sr)
     else:
@@ -113,8 +114,8 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     
     #feat.setFields(fields)  
     for key, variant in fields.items():
-        if key == "FID": feat.update({key: str(feature["applicationId"]) })
-        elif key != "Shape" and key != "Shape@" and key != "arcGisGeomFromSpeckle": 
+        if key.lower() == "fid": feat.update({key: str(feature["applicationId"]) })
+        elif key.lower() != "shape" and key.lower() != "shape@" and key != "arcGisGeomFromSpeckle": 
             #print(feature[key])
             value = feature[key]
             if variant == "TEXT": value = str(feature[key]) 
@@ -129,9 +130,9 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
             if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
                 feat.update({key: value})
             else: 
-                if variant == "TEXT": feat.update({key: ""})
+                if variant == "TEXT": feat.update({key: None})
                 if variant == "FLOAT": feat.update({key: None})
                 if variant == "LONG": feat.update({key: None})
                 if variant == "SHORT": feat.update({key: None})
-    print(feat)
+    #print(feat)
     return feat

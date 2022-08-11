@@ -5,17 +5,20 @@ import arcpy
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
     # TODO add Base object
-    pairs = {
-        str: "TEXT", # 10
-        float: "FLOAT",
-        int: "LONG",
-        bool: "SHORT"
+    pairs = [
+        (str, "TEXT"), # 10
+        (float, "FLOAT"),
+        (int, "LONG"),
+        (bool, "SHORT")
         #date: "SHORT"
-    }
-    t = type(value)
+    ]
     res = None
-    try: res = pairs[t]
-    except: pass
+    for p in pairs:
+        if isinstance(value, p[0]): res = p[1]; break
+    #t = type(value)
+    
+    #try: res = pairs[t]
+    #except: pass
     #if isinstance(value, str) and "PyQt5.QtCore.QDate(" in value: res = QVariant.Date #14
     #elif isinstance(value, str) and "PyQt5.QtCore.QDateTime(" in value: res = QVariant.DateTime #16
 
@@ -41,6 +44,7 @@ def getLayerAttributes(features: List[Base]) -> dict:
 
             value = feature[name]
             variant = getVariantFromValue(value)
+            #print(variant)
             if not variant: variant = None #LongLong #4 
 
             # add a field if not existing yet AND if variant is known

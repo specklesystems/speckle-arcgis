@@ -14,6 +14,8 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
     """Converts the provided layer feature to Speckle objects"""
     print("___convertToSpeckle___")
     geom = feature
+    try: print(geom.isMultipart) 
+    except: pass
     print(featureType)
     geomSingleType = (featureType=="Simple") # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
 
@@ -64,15 +66,20 @@ def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
     return converted
 
 def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference):
+    print("Create MultiPoint")
     all_pts = []
     # example https://pro.arcgis.com/en/pro-app/2.8/arcpy/classes/multipoint.htm
     for item in items:
-        pt = pointToCoord(pt)
-        all_pts.append(arcpy.Point(pt[0], pt[1], pt[2]) )
-    multipt = arcpy.Multipoint(arcpy.Array(all_pts), sr)
-    return multipt
+        pt = pointToCoord(item) # [x, y, z]
+        all_pts.append( arcpy.Point(pt[0], pt[1], pt[2]) )
+    print(all_pts)
+    features = arcpy.Multipoint( arcpy.Array(all_pts) )
+    #if len(features)==0: features = None
+    return features
 
 def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
+    print("_______Drawing Multipolylines____")
+    print(items)
     all_pts = []
     # example https://community.esri.com/t5/python-questions/creating-a-multipolygon-polygon/td-p/392918
     for item in items:
@@ -85,6 +92,30 @@ def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
     return poly
 
 def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO fix multi features
+    
+    print("_______Drawing Multipolygons____")
+    print(items)
+    for item in items: # will be 1 item
+        print(item)
+        pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
+        outer_arr = [arcpy.Point(*coords) for coords in pts]
+        outer_arr.append(outer_arr[0])
+        list_of_arrs = []
+        try:
+            for void in item["voids"]: 
+                print(void)
+                pts = [pointToCoord(pt) for pt in void.as_points()]
+                print(pts)
+                inner_arr = [arcpy.Point(*coords) for coords in pts]
+                inner_arr.append(inner_arr[0])
+                list_of_arrs.append(arcpy.Array(inner_arr))
+        except:pass
+    
+    list_of_arrs.insert(0, arcpy.Array(outer_arr))
+    array = arcpy.Array(list_of_arrs)
+    polygon = arcpy.Polygon(array, sr)
+
+    r'''
     all_pts = []
     # example https://community.esri.com/t5/python-questions/creating-a-multipolygon-polygon/td-p/392918
     for item in items:
@@ -95,6 +126,7 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
         pts.append(pts[0])
         all_pts.append(arcpy.Array(pts))
     polygon = arcpy.Polygon(arcpy.Array(all_pts), sr)
+    '''
     return polygon
 
 def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference): 

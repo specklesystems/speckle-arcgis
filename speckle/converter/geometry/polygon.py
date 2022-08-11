@@ -100,9 +100,22 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
     This object must have a 'boundary' and 'voids' properties.
     Each being a Speckle Polyline and List of polylines respectively."""
 
+    print("_______Drawing polygons____")
     pts = [pointToCoord(pt) for pt in poly["boundary"].as_points()]
-    array = arcpy.Array([arcpy.Point(*coords) for coords in pts])
-    array.append(array[0])
+    outer_arr = [arcpy.Point(*coords) for coords in pts]
+    outer_arr.append(outer_arr[0])
+    list_of_arrs = []
+    try:
+        for void in poly["voids"]: 
+            print(void)
+            pts = [pointToCoord(pt) for pt in void["boundary"].as_points()]
+            print(pts)
+            inner_arr = [arcpy.Point(*coords) for coords in pts]
+            inner_arr.append(inner_arr[0])
+            list_of_arrs.append(arcpy.Array(inner_arr))
+    except:pass
+    list_of_arrs.insert(0, outer_arr)
+    array = arcpy.Array(list_of_arrs)
     polygon = arcpy.Polygon(array, sr)
 
     return polygon

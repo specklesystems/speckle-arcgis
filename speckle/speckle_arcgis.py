@@ -66,10 +66,10 @@ class Toolbox(object):
         self.alias = "speckle_toolbox"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]    
-        self.toolboxInputs = uiInputs() # initialize once together with a toolbox
+        #self.toolboxInputs = uiInputs() # initialize once together with a toolbox
 
         
-        print(self.toolboxInputs.selected_layers)
+        #print(self.toolboxInputs.selected_layers)
         #try: 
         # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm#except: print("something happened")
 
@@ -94,9 +94,11 @@ class uiInputs(object):
             if acc.isDefault: account = acc; break
         #account.userInfo.name, account.serverInfo.url
         self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
-        self.speckle_client.authenticate(token=account.token)
-
+        self.speckle_client.authenticate_with_token(token=account.token)
+        print("ping")
+        print(self.speckle_client)
         self.streams = self.speckle_client.stream.search("")
+        print("ping")
         self.active_stream = None
         self.active_branch = None
         self.all_layers = []
@@ -104,7 +106,7 @@ class uiInputs(object):
         self.messageSpeckle = ""
         self.project = aprx = None
         self.action = 1 #send
-
+        #print(self.streams)
         try: aprx = ArcGISProject('CURRENT') 
         except: 
             print(arcpy.env.workspace) # None
@@ -118,22 +120,33 @@ class uiInputs(object):
 
         if active_map is not None and isinstance(active_map, Map): # if project loaded
             for layer in active_map.listLayers(): 
-                print(layer)
+                #print(layer)
                 if layer.isFeatureLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
         
 
 class Speckle(object):
     def __init__(self):
-        print("resetting script tool_____")   
+        print("________________reset_______________")   
         self.label       = "Speckle"
         self.description = "Allows you to send and receive your layers " + \
                            "to/from other software using Speckle server." 
         self.toolboxInputs = None
+        self.toRefresh = False
 
         for instance in uiInputs.instances:
-            if instance is not None: self.toolboxInputs = instance
-        if self.toolboxInputs is None: self.toolboxInputs = uiInputs() #in case Toolbox class was not initialized 
+            #print(instance)
+            if instance is not None: 
+                try: 
+                    x = instance.streams # in case not initialized properly 
+                    self.toolboxInputs = instance # take latest 
+                except: pass
+        if self.toolboxInputs is None: 
+            print("Instance is None")
+            self.toolboxInputs = uiInputs() #in case Toolbox class was not initialized 
         # TODO react on project changes
+        
+        #print("______continue reset_______")
+        #print(self.toolboxInputs.all_layers)
 
     def getParameterInfo(self):
         #data types: https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/defining-parameter-data-types-in-a-python-toolbox.htm
@@ -180,8 +193,6 @@ class Speckle(object):
             )
         selected_layers.filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)] #"Polyline"
 
-        
-        
         refresh = arcpy.Parameter(
             displayName="Refresh",
             name="refresh",
@@ -193,7 +204,6 @@ class Speckle(object):
         #refresh.filter.type = "ValueList"   
         refresh.value = False 
         
-
         action = arcpy.Parameter(
             displayName="",
             name="action",
@@ -213,17 +223,23 @@ class Speckle(object):
     def isLicensed(self): #optional
         return True
 
-    def updateParameters(self, parameters: List): #optional
+    def updateParameters(self, parameters: List, toRefresh = False): #optional
+        print("UPDATING PARAMETERS")
+        
         if parameters[0].altered:
-            parameters[1].value = "main"
 
             # Search for the stream by name
             if parameters[0].valueAsText is not None:
                 selected_stream_name = parameters[0].valueAsText[:]
                 self.toolboxInputs.active_stream = None
+                #print(self.toolboxInputs.active_stream)
+                #print(self.toolboxInputs.streams)
                 for st in self.toolboxInputs.streams:
                     if st.name == selected_stream_name.split(" | ")[0]: 
                         self.toolboxInputs.active_stream = st
+                        branch_list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
+                        if parameters[1].valueAsText not in branch_list:
+                            parameters[1].value = "main"
                         break
 
                 parameters[1].filter.list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
@@ -257,29 +273,44 @@ class Speckle(object):
             else: self.toolboxInputs.action = 0
 
         if parameters[5].altered: # refresh btn
-            self.refresh(parameters)
+            if parameters[5].value == True: 
+                self.refresh(parameters) 
+        if self.toRefresh == True:
+            self.refresh(parameters) 
+            self.toRefresh = False
+        #if newParams: # apply fresh values 
+        #    print(newParams[2].filter.list)
+        #    parameters = newParams
+            
+            ##parameters = newParams
+        print("continue UPDATING PARAMETERS")
+        print(parameters[2].filter.list)
+        print(parameters[4].valueAsText)
         return 
 
-    def refresh(self, parameters: List[Any]):
-        print("Refresh")
-        if parameters[5].value == True:
-            uiInputs()
-            self.__init__()
-            #self.streams = self.speckle_client.stream.search("")
-            params_new = []
-            for i,p in enumerate(parameters):
-                params_new.append(p)
-                if i==1: params_new[i].value = "main"
-                elif i ==3: params_new[i].value = ""
-                elif i ==4: params_new[i].value = "Send"
-                elif i ==5: params_new[i].value = False
-                else: params_new[i].value = None
-            
-            params_new[0].filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
-            params_new[2].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
-            
-            self.updateParameters(params_new)
-        return
+    def refresh(self, parameters: List[Any]): 
+        print("Refresh______")
+        uiInputs()
+        for instance in uiInputs.instances:
+            if instance is not None: self.toolboxInputs = instance # take latest 
+        #self.__init__()
+        #self.streams = self.speckle_client.stream.search("")
+        #params_new = []
+        #for i,p in enumerate(parameters):
+         #   params_new.append(p)
+        parameters[0].value = None
+        parameters[1].value = "main"
+        parameters[2].value = None
+        parameters[3].value = ""
+        parameters[4].value = "Send"
+        parameters[5].value = False
+         
+        parameters[0].filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
+        parameters[2].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
+        print("___continue_refresh______")
+        print(parameters[2].filter.list)
+        
+        return parameters
 
     def updateMessages(self, parameters): #optional
         return
@@ -358,8 +389,10 @@ class Speckle(object):
             #parameters[2].value = ""
         except:
             arcpy.AddError("Error creating commit")
-            
-        self.refresh(parameters)
+
+        print("sent")
+        #self.updateParameters(parameters, True)
+        #self.refresh(parameters)
 
     def onReceive(self, parameters: List[Any]): 
         
@@ -410,9 +443,9 @@ class Speckle(object):
                     groupExists+=1
             if groupExists == 0:
                 # create empty group layer file 
-                path = "\\".join(self.toolboxInputs.project.filePath.split("\\")[:-1]) + "\\speckle_layers\\"
+                path = self.toolboxInputs.project.filePath.replace("aprx","gdb") #"\\".join(self.toolboxInputs.project.filePath.split("\\")[:-1]) + "\\speckle_layers\\"
                 #path = "\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
-                if not os.path.exists(path): os.makedirs(path)
+                #if not os.path.exists(path): os.makedirs(path)
                 f = open(path + newGroupName + ".lyrx", "w")
                 content = createGroupLayer().replace("TestGroupLayer", newGroupName)
                 f.write(content)
@@ -464,7 +497,8 @@ class Speckle(object):
         except SpeckleException as e:
             print("Receive failed")
             return
-
-        self.refresh(parameters)
+        print("received")
+        #self.updateParameters(parameters, True)
+        #self.refresh(parameters)
     
     
