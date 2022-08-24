@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<metadata xml:lang="en"><Esri><CreaDate>20220718</CreaDate><CreaTime>13513700</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><ModDate>20220725</ModDate><ModTime>20392900</ModTime><scaleRange><minScale>150000000</minScale><maxScale>5000</maxScale></scaleRange><ArcGISProfile>ItemDescription</ArcGISProfile></Esri><tool name="SpeckleSender" displayname="Speckle Sender" toolboxalias="speckle_toolbox" xmlns=""><arcToolboxHelpPath>c:\program files\arcgis\pro\Resources\Help\gp</arcToolboxHelpPath><parameters><param name="stream" displayname="Stream" type="Required" direction="Input" datatype="String" expression="elevation | 35cc66339a | ArcGIS testing | 088420bfdf | contours | c61ca4a73c | Pokemon Go ( London Edition) | 1c17f17bec | TestQGIStoGH | f7291f7474 | QGIS Open Day | dc8b33da01 | Testing QGIS | 841611bfc8 | London game | 341e319e5e | QGIS examples | 4a8fd0c6b6 | Hackathon | e36c4553b1 | QGIS New UI tests | 5854d4fb2f | QGIS tutorial | 1b8f482fa2 | Simulation_example | 51c63b9684"/><param name="branch" displayname="Branch" type="Required" direction="Input" datatype="String" expression="branch"/><param name="selected_layers" displayname="Selected Layers" type="Optional" direction="Input" datatype="Multiple Value" expression="{0-boundary | 1-Boundary_test | 2-boundary | 3-another boundary | 4-Arc | 5-Point}"/><param name="message" displayname="Message" type="Optional" direction="Input" datatype="String" expression="{message}"/><param name="refresh" displayname="Refresh" type="Optional" direction="Input" datatype="Boolean" expression="{refresh}"/></parameters></tool><dataIdInfo><idCitation><resTitle>Speckle Sender</resTitle></idCitation><searchKeys><keyword>speckle3d</keyword></searchKeys></dataIdInfo><distInfo><distributor><distorFormat><formatName>ArcToolbox Tool</formatName></distorFormat></distributor></distInfo><mdHrLv><ScopeCd value="005"/></mdHrLv><mdDateSt Sync="TRUE">20220725</mdDateSt><Binary><Thumbnail><Data EsriPropertyType="PictureX">/9j/4AAQSkZJRgABAQEAkACQAAD/4gxYSUNDX1BST0ZJTEUAAQEAAAxITGlubwIQAABtbnRyUkdC
+<metadata xml:lang="en"><Esri><CreaDate>20220718</CreaDate><CreaTime>13500100</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><ModDate>20220824</ModDate><ModTime>182507</ModTime><scaleRange><minScale>150000000</minScale><maxScale>5000</maxScale></scaleRange><ArcGISProfile>ItemDescription</ArcGISProfile></Esri><toolbox name="Speckle" alias="speckle_toolbox_"><arcToolboxHelpPath>c:\program files\arcgis\pro\Resources\Help\gp</arcToolboxHelpPath><toolsets/></toolbox><dataIdInfo><idCitation><resTitle>Speckle</resTitle></idCitation><idPurp>Speckle connector for ArcGIS</idPurp><searchKeys><keyword>speckle3d</keyword></searchKeys></dataIdInfo><distInfo><distributor><distorFormat><formatName>ArcToolbox Toolbox</formatName></distorFormat></distributor></distInfo><mdHrLv><ScopeCd value="005"></ScopeCd></mdHrLv><Binary><Thumbnail><Data EsriPropertyType="PictureX">/9j/4AAQSkZJRgABAQEAYABgAAD/4gxYSUNDX1BST0ZJTEUAAQEAAAxITGlubwIQAABtbnRyUkdC
 IFhZWiAHzgACAAkABgAxAABhY3NwTVNGVAAAAABJRUMgc1JHQgAAAAAAAAAAAAAAAAAA9tYAAQAA
 AADTLUhQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABFj
 cHJ0AAABUAAAADNkZXNjAAABhAAAAGx3dHB0AAAB8AAAABRia3B0AAACBAAAABRyWFlaAAACGAAA
@@ -65,12 +65,13 @@ dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ
 tREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYk
 NOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaH
 iImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq
-8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD69+P37SVx8L/jHpng/wDtH+yIL7SIr2K6kjjaIytNOhRi
-ykrkRrg5x9O/Ny/tP30Jw/jSwB9ltz/JK8R/4KQf8nFeF/8AsAWv/pXdV4kepr+g8h4ZwGOy2hXq
-QV3HXRP80fknE+b4nLMUo0ZO0vNn2hL+1lPD18Z2zf7lrG38o66r4P8A7SEnjz4laPoB8Rf2gLvz
-v3C2aoG2Qu/3hGMY2569q+BK9m/Y8/5OM8I/9vf/AKRzV35rwrluGy7EVoQ96MJNaR3UW10PnMt4
-lx+Ix1ClKWkpxT1ls2l3LH/BR/8A5OK8L/8AYAtf/Su6rxJvvGvrf9tj9nH4ifFz4z6DrvhPw9/a
-2lWuj29rNcfbbaHbItxO7LtkkVjhXU5Axz9a8tP7Hvxdyf8Aikf/ACpWf/x6t+Gc3y7D5TQp1sTC
-MktU5xTXybPX4yy/GYrFQlQoymrPaLf5I8Zr2b9jz/k4zwj/ANvf/pHNR/wx58Xv+hR/8qVn/wDH
-q9M/Zt/Zt+I3gH41eHde17w79g0m0+0+dcfbraTbutpUX5UkLHLMo4HevQznOcsq5ZiadPE03J05
-pJTi224uySufJ5TlOYU8ww854eaSnFtuMrJcy1eh/9k=</Data></Thumbnail></Binary></metadata>
+8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9Kfif8SNJ+EngjUPFeui4OlWLwrObWMPIolmSINtJGQDI
+Ccc4BwCcA8rbftG+F7y3iuLe31CeCVBJHLGkTK6kZDAiTBBHeuZ/bq/5NW8b/wDbj/6XW9fmzpP/
+ACC7P/rin/oIr9T4V4XwueYKVetJqSk18rRfl3Z8NxLnlfJfZypK/MfpTq37XHhmxvpbeFLVhGdj
+C71KKGRWHDKUG7GD716V8OfihoHxP0l7vRr+2uZ4Nq3drDOsj27HOA209Dg4bvg9CCB+S1fZf/BO
+v/moH/cP/wDbmvX4j4OwOV5XUxlBvmhy/O8ktfvvofO5DxVjMxzKGFrJcs7/ACsm/wBD1H9ur/k1
+bxv/ANuP/pdb1+bOk/8AILs/+uKf+giv2Y1DT7XVrC5sb62hvLK5iaGe2uIxJHLGwIZGU8MpBIIP
+BBrw/Rf2JPhRpLXQk0e81GGWTdDDdahMFtU7RxmNlJUDAy5ZuOWNeTwlxVg8jwlShioybcuZctne
+6Stq1ta+/wDwfoOKMjxOcqlHDNK173dvyTPzhr7L/wCCdf8AzUD/ALh//tzXsv8Awx58If8AoUf/
+ACpXn/x6uz+HXwd8IfCf+0P+EV0j+yv7Q8v7T/pM03mbN2z/AFjtjG9umOtepxDxpl+bZZVwVCE1
+KXLa6jbSSfST7djwMi4Sx2WZjSxdacHGN72bvrFrrFd+5//Z</Data></Thumbnail></Binary><mdDateSt Sync="TRUE">20220725</mdDateSt></metadata>

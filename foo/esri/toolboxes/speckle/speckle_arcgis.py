@@ -63,7 +63,7 @@ class Toolbox(object):
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
         self.label = "Speckle Toolbox"
-        self.alias = "speckle_toolbox"  
+        self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]    
         #self.toolboxInputs = uiInputs() # initialize once together with a toolbox
@@ -446,11 +446,12 @@ class Speckle(object):
                 path = self.toolboxInputs.project.filePath.replace("aprx","gdb") #"\\".join(self.toolboxInputs.project.filePath.split("\\")[:-1]) + "\\speckle_layers\\"
                 #path = "\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
                 #if not os.path.exists(path): os.makedirs(path)
-                f = open(path + newGroupName + ".lyrx", "w")
+                print(path)
+                f = open(path + "\\" + newGroupName + ".lyrx", "w")
                 content = createGroupLayer().replace("TestGroupLayer", newGroupName)
                 f.write(content)
                 f.close()
-                smth = arcpy.mp.LayerFile(path + newGroupName + ".lyrx")
+                smth = arcpy.mp.LayerFile(path + "\\" + newGroupName + ".lyrx")
                 print(smth)
                 layerGroup = self.toolboxInputs.project.activeMap.addLayer(smth)[0]
                 layerGroup.name = newGroupName

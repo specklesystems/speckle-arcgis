@@ -61,9 +61,6 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
             ptgeo1 = f_shape.projectAs(projectCRS, tr0)
             f_shape = ptgeo1
         elif tr1 is not None and tr2 is not None:
-            #print("else")
-            #print(tr1)
-            #print(tr2)
             ptgeo1 = f_shape.projectAs(midSr, tr1)
             ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
             f_shape = ptgeo2
@@ -72,7 +69,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
             f_shape = ptgeo1
         
 
-    ######################################### Convert geometry
+    ######################################### Convert geometry ##########################################
     try:
         geom = convertToSpeckle(f_shape, selectedLayer, geomType, featureType)
         if geom is not None:
@@ -82,13 +79,10 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
         print(selectedLayer)
         arcpy.AddError("Error converting geometry: " + str(error))
 
-    #print(attr_list)
-    #print(fieldnames)
     for i, name in enumerate(fieldnames):
         corrected = name.replace("/", "_").replace(".", "-")
         if corrected != "Shape" and corrected != "Shape@": 
-            if corrected == "FID" or corrected == "OBJECTID": 
-                b["applicationId"] = str(attr_list[i])
+            if corrected == "FID" or corrected == "OBJECTID": b["applicationId"] = str(attr_list[i])
             else: b[corrected] = attr_list[i]
     print("______end of __Feature to Speckle____________________")
     return b
@@ -113,26 +107,26 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     #except: pass
     
     #feat.setFields(fields)  
-    for key, variant in fields.items():
-        if key.lower() == "objectid": feat.update({key: str(feature["applicationId"]) })
-        elif key.lower() != "shape" and key.lower() != "shape@" and key != "arcGisGeomFromSpeckle": 
-            #print(feature[key])
-            value = feature[key]
-            if variant == "TEXT": value = str(feature[key]) 
-            r'''
-            if isinstance(value, str) and variant == QVariant.Date:  # 14
-                y,m,d = value.split("(")[1].split(")")[0].split(",")[:3]
-                value = QDate(int(y), int(m), int(d) ) 
-            elif isinstance(value, str) and variant == QVariant.DateTime: 
-                y,m,d,t1,t2 = value.split("(")[1].split(")")[0].split(",")[:5]
-                value = QDateTime(int(y), int(m), int(d), int(t1), int(t2) )
-            '''
-            if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
-                feat.update({key: value})
-            else: 
-                if variant == "TEXT": feat.update({key: None})
-                if variant == "FLOAT": feat.update({key: None})
-                if variant == "LONG": feat.update({key: None})
-                if variant == "SHORT": feat.update({key: None})
+    for key, variant in fields.items(): 
+        #if key.lower() == "objectid" or key.lower() == "fid": feat.update({key: str(feature["applicationId"]) })
+        #if key.lower() != "shape" and key.lower() != "shape@" and key != "arcGisGeomFromSpeckle": 
+        #print(feature[key])
+        value = feature[key]
+        if variant == "TEXT": value = str(feature[key]) 
+        r'''
+        if isinstance(value, str) and variant == QVariant.Date:  # 14
+            y,m,d = value.split("(")[1].split(")")[0].split(",")[:3]
+            value = QDate(int(y), int(m), int(d) ) 
+        elif isinstance(value, str) and variant == QVariant.DateTime: 
+            y,m,d,t1,t2 = value.split("(")[1].split(")")[0].split(",")[:5]
+            value = QDateTime(int(y), int(m), int(d), int(t1), int(t2) )
+        '''
+        if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
+            feat.update({key: value})
+        else: 
+            if variant == "TEXT": feat.update({key: None})
+            if variant == "FLOAT": feat.update({key: None})
+            if variant == "LONG": feat.update({key: None})
+            if variant == "SHORT": feat.update({key: None})
     #print(feat)
     return feat
