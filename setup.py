@@ -23,13 +23,9 @@ setup(name='foo',
       )
 
 # to build an installer: run cmd from this folder:
-# "%PROGRAMFILES%\\ArcGIS\\Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe" setup.py sdist bdist_wheel 
+# "%PROGRAMFILES%\\ArcGIS\\Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe"  C:\\Users\\Kateryna\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\setup.py sdist bdist_wheel 
 
 # then to install in ArcGIS:
 # import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, '-m','pip', 'install', 'C:\\Users\\Kateryna\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\dist\\foo-0.1-py3-none-any.whl'), capture_output=True, text=True, shell=True, timeout=1000 )
-#trying from a separate folder: C:\Users\Kateryna\Downloads: import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, '-m','pip', 'install', 'C:\\Users\\Kateryna\\Downloads\\foo-0.1-py3-none-any.whl'), capture_output=True, text=True, shell=True, timeout=1000 )
 # to uninstall: 
-# "C:\\Users\\Kateryna\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-py3-speckle\\python.exe" -m pip uninstall foo-0.1-py3-none-any.whl 
-
-# to import in ArGIS Pro Python console:
-# arcpy.ImportToolbox(r"C:\Users\Kateryna\Documents\00_Speckle\GitHub\speckle-arcgis\speckle_arcgis\Speckle.pyt")
+# "C:\\Users\\Kateryna\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-py3-speckle\\python.exe" -m pip uninstall C:\\Users\\Kateryna\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\dist\\foo-0.1-py3-none-any.whl
