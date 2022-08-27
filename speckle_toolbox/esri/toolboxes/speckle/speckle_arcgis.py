@@ -101,6 +101,7 @@ class uiInputs(object):
         print("ping")
         self.active_stream = None
         self.active_branch = None
+        self.active_commit = None
         self.all_layers = []
         self.selected_layers = []
         self.messageSpeckle = ""
@@ -173,6 +174,16 @@ class Speckle(object):
         branch.value = "main"
         branch.filter.type = 'ValueList'
 
+        commit = arcpy.Parameter(
+            displayName="Commit",
+            name="commit",
+            datatype="GPString",
+            parameterType="Optional",
+            #category="Sending data",
+            direction="Input")
+        commit.value = ""
+        commit.filter.type = 'ValueList'
+
         ################################################################
         msg = arcpy.Parameter(
             displayName="Message",
@@ -217,7 +228,7 @@ class Speckle(object):
         #action.filter.type = 'ValueList'
         action.filter.list = ["Send", "Receive"]  
 
-        parameters = [stream, branch, selected_layers, msg, action, refresh]
+        parameters = [stream, branch, commit, selected_layers, msg, action, refresh]
         return parameters
 
     def isLicensed(self): #optional
@@ -237,20 +248,36 @@ class Speckle(object):
                 for st in self.toolboxInputs.streams:
                     if st.name == selected_stream_name.split(" | ")[0]: 
                         self.toolboxInputs.active_stream = st
-                        branch_list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
-                        if parameters[1].valueAsText not in branch_list:
-                            parameters[1].value = "main"
                         break
 
-                parameters[1].filter.list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
-                
-                #if self.active_stream is None: 
-                #    print("Choose a valid stream")
-                #    arcpy.AddMessage("Choose a valid stream")
-                #    return
+                # edit branches: globals and UI 
+                branch_list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
+                parameters[1].filter.list = branch_list
+                print(parameters[1].filter.list)
 
-        if parameters[1].altered:
-            # Search for the stream by name
+                if parameters[1].valueAsText not in branch_list: 
+                    parameters[1].value = "main"
+                for b in self.toolboxInputs.active_stream.branches.items:
+                    if b.name == parameters[1].value: 
+                        self.toolboxInputs.active_branch = b
+                        break 
+                
+                # setting commit value and list 
+                try: 
+                    print("___editing the stream input")
+                    print(self.toolboxInputs.active_branch.commits.items)
+                    parameters[2].filter.list = [f"{commit.id}"+ " | " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
+                    print(parameters[2].filter.list)
+                    print(parameters[2].valueAsText)
+                    if parameters[2].valueAsText not in parameters[2].filter.list:
+                        parameters[2].value = self.toolboxInputs.active_branch.commits.items[0].id + " | " + self.toolboxInputs.active_branch.commits.items[0].message 
+                        self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0] 
+                except: 
+                    parameters[2].filter.list = []
+                    parameters[2].value = None
+                    self.toolboxInputs.active_commit = None 
+
+        if parameters[1].altered: # branches
             if parameters[1].valueAsText is not None:
                 selected_branch_name = parameters[1].valueAsText[:]
                 self.toolboxInputs.active_branch = None
@@ -259,21 +286,45 @@ class Speckle(object):
                         if br.name == selected_branch_name: #.split(" | ")[0]: 
                             self.toolboxInputs.active_branch = br
                             break
-        
-        if parameters[2].altered: # selected layers
+            # edit commit values 
+            if self.toolboxInputs.active_branch is not None: 
+                try: 
+                    print("___editing the branch input")
+                    print(self.toolboxInputs.active_branch)
+                    parameters[2].filter.list = [f"{commit.id}"+ " | " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
+                    print(parameters[2].filter.list)
+                    print(parameters[2].valueAsText)
+                    if parameters[2].valueAsText not in parameters[2].filter.list:
+                        parameters[2].value = self.toolboxInputs.active_branch.commits.items[0].id + " | " + self.toolboxInputs.active_branch.commits.items[0].message 
+                        self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0]
+                except: 
+                    parameters[2].filter.list = []
+                    parameters[2].value = None
+                    self.toolboxInputs.active_commit = None 
+
+        if parameters[2].altered: # commits
             if parameters[2].valueAsText is not None:
-                self.toolboxInputs.selected_layers = parameters[2].values
-
-        if parameters[3].altered:
-            self.toolboxInputs.messageSpeckle = parameters[3].valueAsText
-
+                selected_commit_id = parameters[2].valueAsText[:].split(" | ")[0]
+                self.toolboxInputs.active_commit = None
+                if self.toolboxInputs.active_branch is not None:
+                    for c in self.toolboxInputs.active_branch.commits.items:
+                        if c.id == selected_commit_id: 
+                            self.toolboxInputs.active_commit = c 
+                            break
+        
+        if parameters[3].altered: # selected layers
+            if parameters[3].valueAsText is not None:
+                self.toolboxInputs.selected_layers = parameters[3].values
 
         if parameters[4].altered:
-            if parameters[4].valueAsText == "Send": self.toolboxInputs.action = 1
+            self.toolboxInputs.messageSpeckle = parameters[4].valueAsText
+
+        if parameters[5].altered:
+            if parameters[5].valueAsText == "Send": self.toolboxInputs.action = 1
             else: self.toolboxInputs.action = 0
 
-        if parameters[5].altered: # refresh btn
-            if parameters[5].value == True: 
+        if parameters[6].altered: # refresh btn
+            if parameters[6].value == True: 
                 self.refresh(parameters) 
         if self.toRefresh == True:
             self.refresh(parameters) 
@@ -301,12 +352,13 @@ class Speckle(object):
         parameters[0].value = None
         parameters[1].value = "main"
         parameters[2].value = None
-        parameters[3].value = ""
-        parameters[4].value = "Send"
-        parameters[5].value = False
+        parameters[3].value = None
+        parameters[4].value = ""
+        parameters[5].value = "Send"
+        parameters[6].value = False
          
         parameters[0].filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
-        parameters[2].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
+        parameters[3].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
         #print("___continue_refresh______")
         #print(parameters[2].filter.list)
         
@@ -404,12 +456,20 @@ class Speckle(object):
         except SpeckleWarning as warning: 
             arcpy.AddWarning(str(warning.args[0]))
 
-        # get last commit 
+        # get commit 
+        commit = None 
         try: 
-            commit = self.toolboxInputs.active_branch.commits.items[0]
+            #commit = self.toolboxInputs.active_branch.commits.items[0]
+            commit = self.toolboxInputs.active_commit
+            commitId = commit.id # text to make sure commit exists 
         except: 
-            arcpy.AddError("Failed to find a commit")
-            return
+            try: 
+                commit = self.toolboxInputs.active_branch.commits.items[0]
+                commitId = commit.id 
+                arcpy.AddWarning("Failed to find a commit. Getting the last commit of the branch")
+            except:
+                arcpy.AddError("Failed to find a commit")
+                return
 
         # next create a server transport - this is the vehicle through which you will send and receive
         try: transport = ServerTransport(client=client, stream_id=streamId)
@@ -418,6 +478,7 @@ class Speckle(object):
             return
 
         try:
+            print(commit)
             objId = commit.referencedObject
             commitDetailed = client.commit.get(streamId, commit.id)
             app = commitDetailed.sourceApplication
