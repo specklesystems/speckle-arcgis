@@ -112,8 +112,11 @@ def layerToNative(layer: Union[Layer, RasterLayer], streamBranch: str, project: 
     return None
 
 def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject):
+    print("_________Vector Layer to Native_________")
     vl = None
     layerName = layer.name.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+    
+    print(layerName)
     sr = arcpy.SpatialReference(text=layer.crs.wkt) 
     active_map = project.activeMap
     path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
@@ -126,9 +129,24 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     print(newGroupName)
     for l in active_map.listLayers():
         if l.longName == newGroupName: layerGroup = l; break 
-    print("__________________")
+    
     #find ID of the layer with a matching name in the "latest" group 
     newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
+
+    all_layer_names = []
+    layerExists = 0
+    for l in project.activeMap.listLayers(): 
+        if l.longName.startswith(newGroupName + "\\"):
+            all_layer_names.append(l.longName)
+    print(all_layer_names)
+
+    longName = streamBranch + "\\" + newName 
+    if longName in all_layer_names: 
+        for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
+            print("trying options: ")
+            print((longName + "_" +  letter))
+            if (longName + "_" + letter) not in all_layer_names: print("selected!"); newName += "_"+letter; layerExists +=1; break 
+
     # particularly if the layer comes from ArcGIS
     geomType = layer.geomType # for ArcGIS: Polygon, Point, Polyline, Multipoint, MultiPatch
     print(geomType)
@@ -144,26 +162,30 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     print(project.filePath.replace("aprx","gdb"))
     print("_________create feature class___________________________________")
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
-    f_class = CreateFeatureclass(path, "class_" + newName, geomType, spatial_reference = sr)
+    class_name = "feature_class_" + newName
+    print(class_name)
+    f_class = CreateFeatureclass(path, class_name, geomType, spatial_reference = sr)
 
     # get and set Layer attribute fields
     # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
     newFields = getLayerAttributes(layer.features)
+    fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid"]
     matrix = []
     all_keys = []
     all_key_types = []
+    max_len = 52
     for key, value in newFields.items(): 
-        existingFields = [fl.name for fl in arcpy.ListFields("class_" + newName)]
-        if key not in existingFields and key!= "arcGisGeomFromSpeckle" and key.lower()!= "objectid" and key.lower()!= "shape" and key.lower()!= "id": # exclude geometry and default existing fields
-            # https://support.esri.com/en/technical-article/000005588
+        existingFields = [fl.name for fl in arcpy.ListFields(class_name)]
+        if key not in existingFields  and key.lower() not in fields_to_ignore: # exclude geometry and default existing fields
+            # signs that should not be used as field names and table names: https://support.esri.com/en/technical-article/000005588
             key = key.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_") 
             if key[0] in ['0','1','2','3','4','5','6','7','8','9']: key = "_"+key
-            if len(key)>10: key = key[:10]
+            if len(key)>max_len: key = key[:max_len]
             #print(all_keys)
             if key in all_keys:
                 for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
-                    if len(key)<10 and (key+letter) not in all_keys: key+=letter; break 
-                    if len(key) == 10 and (key[:9] + letter) not in all_keys: key=key[:9] + letter; break 
+                    if len(key)<max_len and (key+letter) not in all_keys: key+=letter; break 
+                    if len(key) == max_len and (key[:9] + letter) not in all_keys: key=key[:9] + letter; break 
             if key not in all_keys: 
                 all_keys.append(key)
                 all_key_types.append(value)
@@ -172,6 +194,7 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
                 #print(matrix)
     if len(matrix)>0: AddFields(str(f_class), matrix)
 
+    '''
     # set the fields as nullable 
     for i, key in enumerate(all_keys): 
         #print(f_class)
@@ -187,6 +210,7 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
                         #fl.isNullable = True
                         AlterField(f_class, key, key, key, all_key_types[i], "255", "NULLABLE", "FALSE")
                 break
+    '''
 
     # add Layer features 
     #print(newFields)
@@ -205,12 +229,20 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
 
         row = [feat['arcGisGeomFromSpeckle'], feat['applicationId']]
         heads = [ 'Shape@', 'OBJECTID']
-        for i, key in enumerate(all_keys): 
-            if key != 'arcGisGeomFromSpeckle' and key!= 'objectid' and key!= 'shape' and key.lower()!= 'id' and key!= 'applicationId' : heads.append(key)
+        #for i, key in enumerate(all_keys): 
+        #    if key != 'arcGisGeomFromSpeckle' and key!= 'objectid' and key!= 'shape': 
+        #        heads.append(key)
+        #        #print(key)
         for key,value in feat.items(): 
-            #print(key)
-            if key in all_keys: row.append(value)
+            if key in all_keys and key.lower() not in fields_to_ignore: 
+                heads.append(key)
+                row.append(value)
+                #print(key)
+                #print(value)
         rowValues.append(row)
+        #print(all_keys)
+        #print(heads)
+        #print(rowValues)
         count += 1
     #if geomType != "Multipoint":
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
@@ -225,12 +257,23 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     #    arcpy.AddWarning(f"Layer {layer.name} was not received")
     #    return None
     
-
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+    #if layerExists: vl.name = newName[:len(newName)-1]
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
     #active_map.addLayer(new_layer)
     active_map.addLayerToGroup(layerGroup, vl)
+    r'''
+    # rename back the layer if was renamed due to existing duplicate
+    if layerExists:  
+        vl.name = newName[:len(newName)-2]
+        for lyr in project.activeMap.listLayers():
+            print(lyr.longName)
+            if (streamBranch + "\\" + newName) == lyr.longName: 
+                lyr.name = lyr.name.replace( lyr.name, lyr.name[:len(lyr.name)-2] )
+                lyr.longName = lyr.longName.replace( lyr.longName, lyr.longName[:len(newName)-2] )
+                break
+    '''
 
     r'''
     pr.addFeatures(fets)

@@ -28,7 +28,7 @@ def get_python_path(): # create a full copy of default env
     pythonExec = os.environ["ProgramFiles"] + r'\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe' #(r"%PROGRAMFILES%\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe") #os.path.dirname(sys.executable) + "\\python.exe" # default python.exe
     print(pythonExec)
     if sys.platform == "win32":
-        env_new_name = "arcgispro-py3-speckle10"
+        env_new_name = "arcgispro-py3-speckle"
         clone_env(pythonExec, env_new_name) # only if doesn't exist yet 
         activate_env(env_new_name)
         return pythonExec

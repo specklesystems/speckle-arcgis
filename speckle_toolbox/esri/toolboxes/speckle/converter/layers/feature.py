@@ -82,8 +82,10 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     for i, name in enumerate(fieldnames):
         corrected = name.replace("/", "_").replace(".", "-")
         if corrected != "Shape" and corrected != "Shape@": 
-            if corrected == "FID" or corrected == "OBJECTID": b["applicationId"] = str(attr_list[i])
-            else: b[corrected] = attr_list[i]
+            # different ID behaviors: https://support.esri.com/en/technical-article/000010834 
+            # save all attribute, duplicate one into applicationId 
+            b[corrected] = attr_list[i]
+            if corrected == "FID" or corrected == "OID" or corrected == "OBJECTID": b["applicationId"] = str(attr_list[i])
     print("______end of __Feature to Speckle____________________")
     return b
 

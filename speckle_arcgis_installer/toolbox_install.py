@@ -2,9 +2,11 @@
 from subprocess_call import subprocess_call
 import os 
 
+pythonPath = os.getenv('APPDATA').replace("\\Roaming","") + r"\Local\ESRI\conda\envs\arcgispro-py3-speckle\python.exe"
+
 def installToolbox(newExec: str):
     print("Installing Speckle Toolbox")
-    whl_file = os.path.join(os.path.dirname(__file__), "foo-0.1-py3-none-any.whl" ) 
+    whl_file = os.path.join(os.path.dirname(__file__), "speckle_toolbox-0.1-py3-none-any.whl" ) 
     subprocess_call([newExec, '-m','pip','install','--upgrade', '--force-reinstall', whl_file])
     # to uninstall: cmd.exe "C:\\Users\\username\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-py3-speckle\\python.exe" -m pip uninstall C:\\Users\\username\\Downloads\\speckle-arcgis\\foo-0.1-py3-none-any.whl
     return
@@ -62,7 +64,6 @@ def installDependencies(pythonExec: str):
         print(e.with_traceback)
     return True
 
-pythonPath = os.getenv('APPDATA').replace("\\Roaming","") + r"\Local\ESRI\conda\envs\arcgispro-py3-speckle10\python.exe"
 installToolbox(pythonPath)
 installDependencies(pythonPath)
 

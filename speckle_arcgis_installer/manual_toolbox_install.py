@@ -1,7 +1,7 @@
 # MANUAL INSTALLATION: 
 #   1. enter correct path to your new environemnt in line 10 
-#   2. run this command in ArcGIS Python console (View -> Python Window)
-#   import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, 'C:\\...\\speckle-arcgis\\manual_toolbox_install.py'), capture_output=True, text=True, shell=True, timeout=1000 )
+#   2. enter the location of 'manual_toolbox_install.py' and run this command in ArcGIS Python console (View -> Python Window)
+#   import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, 'C:\\...\\manual_toolbox_install.py'), capture_output=True, text=True, shell=True, timeout=1000 )
 # then restart
 
 from subprocess_call import subprocess_call
@@ -21,7 +21,7 @@ def installDependencies(pythonExec: str):
     try:
         import pip
     except:
-        getPipFilePath = os.path.join(os.path.dirname(__file__), "get_pip.py") #TODO: give actual folder path 
+        getPipFilePath = os.path.join(os.path.dirname(__file__), "get_pip.py") 
         exec(open(getPipFilePath).read())
 
         # just in case the included version is old

@@ -30,7 +30,8 @@ def getLayerAttributes(features: List[Base]) -> dict:
     for feature in features: 
         #get object properties to add as attributes
         dynamicProps = feature.get_dynamic_member_names()
-        attrsToRemove = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'userDictionary', 'userStrings','geometry']
+        attrsToRemove = ['geometry','applicationId','bbox','displayStyle', 'id', 
+                        'renderMaterial', 'userDictionary', 'userStrings','geometry']
         for att in attrsToRemove:
             try: dynamicProps.remove(att)
             except: pass
