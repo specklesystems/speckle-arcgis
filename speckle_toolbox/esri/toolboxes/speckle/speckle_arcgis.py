@@ -9,7 +9,7 @@ from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from specklepy.api.models import Branch, Stream, Streams
 from speckle.converter.layers.Layer import Layer, RasterLayer
 
-from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative
+from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative
 from arcgis.features import FeatureLayer
 import os.path
 
@@ -253,7 +253,7 @@ class Speckle(object):
                 # edit branches: globals and UI 
                 branch_list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
                 parameters[1].filter.list = branch_list
-                print(parameters[1].filter.list)
+                #print(parameters[1].filter.list)
 
                 if parameters[1].valueAsText not in branch_list: 
                     parameters[1].value = "main"
@@ -264,11 +264,11 @@ class Speckle(object):
                 
                 # setting commit value and list 
                 try: 
-                    print("___editing the stream input")
-                    print(self.toolboxInputs.active_branch.commits.items)
+                    #print("___editing the stream input")
+                    #print(self.toolboxInputs.active_branch.commits.items)
                     parameters[2].filter.list = [f"{commit.id}"+ " | " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
-                    print(parameters[2].filter.list)
-                    print(parameters[2].valueAsText)
+                    #print(parameters[2].filter.list)
+                    #print(parameters[2].valueAsText)
                     if parameters[2].valueAsText not in parameters[2].filter.list:
                         parameters[2].value = self.toolboxInputs.active_branch.commits.items[0].id + " | " + self.toolboxInputs.active_branch.commits.items[0].message 
                         self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0] 
@@ -289,11 +289,11 @@ class Speckle(object):
             # edit commit values 
             if self.toolboxInputs.active_branch is not None: 
                 try: 
-                    print("___editing the branch input")
-                    print(self.toolboxInputs.active_branch)
+                    #print("___editing the branch input")
+                    #print(self.toolboxInputs.active_branch)
                     parameters[2].filter.list = [f"{commit.id}"+ " | " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
-                    print(parameters[2].filter.list)
-                    print(parameters[2].valueAsText)
+                    #print(parameters[2].filter.list)
+                    #print(parameters[2].valueAsText)
                     if parameters[2].valueAsText not in parameters[2].filter.list:
                         parameters[2].value = self.toolboxInputs.active_branch.commits.items[0].id + " | " + self.toolboxInputs.active_branch.commits.items[0].message 
                         self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0]
@@ -527,15 +527,15 @@ class Speckle(object):
                     layer = layerToNative(base, streamBranch, self.toolboxInputs.project)
                     if layer is not None:
                         print("Layer created: " + layer.name)
-                #else:
-                #    loopObj(base, "")
+                else:
+                    loopObj(base, "")
                 return True
-            '''
+            
             def loopObj(base: Base, baseName: str):
                 memberNames = base.get_member_names()
                 for name in memberNames:
                     if name in ["id", "applicationId", "units", "speckle_type"]: continue
-                    try: loopVal(base[name], baseName + "/" + name)
+                    try: loopVal(base[name], baseName + "/" + name) # loop properties not included above
                     except: pass
 
             def loopVal(value: Any, name: str): # "name" is the parent object/property/layer name
@@ -549,11 +549,11 @@ class Speckle(object):
                     for item in value:
                         loopVal(item, name)
                         if item.speckle_type and item.speckle_type.startswith("Objects.Geometry."): 
-                            pt, pl = cadLayerToNative(value, name, streamBranch)
+                            pt, pl = cadLayerToNative(value, name, streamBranch, self.toolboxInputs.project)
                             if pt is not None: print("Layer group created: " + pt.name())
                             if pl is not None: print("Layer group created: " + pl.name())
                             break
-                '''
+                
             traverseObject(commitObj, callback, check)
       
         except SpeckleException as e:

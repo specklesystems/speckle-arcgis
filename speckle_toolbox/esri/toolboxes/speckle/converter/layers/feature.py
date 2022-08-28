@@ -89,7 +89,6 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     print("______end of __Feature to Speckle____________________")
     return b
 
-
 def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     print("Feature To Native____________")
     feat = {}
@@ -103,7 +102,9 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
 
     if arcGisGeom is not None:
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
-
+    else:
+        return None
+    print(feat)
     #try: 
     #    if "id" not in fields.keys() and feature["applicationId"]: fields.update(QgsField("id", QVariant.String))
     #except: pass
@@ -115,14 +116,6 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
         #print(feature[key])
         value = feature[key]
         if variant == "TEXT": value = str(feature[key]) 
-        r'''
-        if isinstance(value, str) and variant == QVariant.Date:  # 14
-            y,m,d = value.split("(")[1].split(")")[0].split(",")[:3]
-            value = QDate(int(y), int(m), int(d) ) 
-        elif isinstance(value, str) and variant == QVariant.DateTime: 
-            y,m,d,t1,t2 = value.split("(")[1].split(")")[0].split(",")[:5]
-            value = QDateTime(int(y), int(m), int(d), int(t1), int(t2) )
-        '''
         if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
             feat.update({key: value})
         else: 
@@ -132,3 +125,57 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
             if variant == "SHORT": feat.update({key: None})
     #print(feat)
     return feat
+
+def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
+    print("_________CAD Feature To Native____________")
+    feat = {}
+    try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
+    except:  speckle_geom = feature # for created in other software
+    print(feature)
+    print(speckle_geom)
+    if isinstance(speckle_geom, list):
+        arcGisGeom = convertToNativeMulti(speckle_geom, sr)
+    else:
+        arcGisGeom = convertToNative(speckle_geom, sr)
+
+    if arcGisGeom is not None:
+        feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
+    else: return None
+    print(feat) 
+    #try: 
+    #    if "Speckle_ID" not in fields.names() and feature["id"]: fields.append(QgsField("Speckle_ID", QVariant.String))
+    #except: pass
+
+    #feat.setFields(fields)  
+    for key, variant in fields.items(): 
+        value = feature[key]
+        if variant == "TEXT": value = str(feature[key]) 
+        if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
+            feat.update({key: value})
+        else: 
+            if variant == "TEXT": feat.update({key: None})
+            if variant == "FLOAT": feat.update({key: None})
+            if variant == "LONG": feat.update({key: None})
+            if variant == "SHORT": feat.update({key: None})
+    print(feat) 
+    return feat
+    
+    for field in fields:
+        name = field.name()
+        variant = field.type()
+        if name == "Speckle_ID": feat[name] = str(feature["id"])
+        else: 
+            value = feature[name]
+            if variant == QVariant.String: value = str(feature[name]) 
+            
+            if isinstance(value, str) and variant == QVariant.Date:  # 14
+                y,m,d = value.split("(")[1].split(")")[0].split(",")[:3]
+                value = QDate(int(y), int(m), int(d) ) 
+            elif isinstance(value, str) and variant == QVariant.DateTime: 
+                y,m,d,t1,t2 = value.split("(")[1].split(")")[0].split(",")[:5]
+                value = QDateTime(int(y), int(m), int(d), int(t1), int(t2) )
+            
+            if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
+                feat[name] = value
+      
+    

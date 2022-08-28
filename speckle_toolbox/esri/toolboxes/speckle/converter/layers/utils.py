@@ -25,6 +25,7 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
     return res
 
 def getLayerAttributes(features: List[Base]) -> dict:
+    print("________ get layer attributes___")
     fields = {}
     all_props = []
     for feature in features: 
@@ -37,6 +38,7 @@ def getLayerAttributes(features: List[Base]) -> dict:
             except: pass
 
         dynamicProps.sort()
+        print(dynamicProps)
 
         # add field names and variands 
         #variants = [] 
@@ -59,12 +61,13 @@ def getLayerAttributes(features: List[Base]) -> dict:
                 # replace if new one is NOT LongLong or IS String
                 if oldVariant != "TEXT" and variant == "TEXT": 
                     fields.update({name: variant}) 
+    print(all_props)
 
     # replace all empty ones wit String
     for name in all_props:
         if name not in fields.keys(): 
             fields.update({name: "TEXT"}) 
-    #print(fields)
+    print(fields)
     return fields
 
 def get_scale_factor(units: str) -> float:

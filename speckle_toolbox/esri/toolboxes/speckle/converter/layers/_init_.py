@@ -7,7 +7,7 @@ from typing import Any, List, Union
 from regex import D
 from speckle.converter.layers.CRS import CRS
 from speckle.converter.layers.Layer import Layer, RasterLayer
-from speckle.converter.layers.feature import featureToNative, featureToSpeckle
+from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative
 from specklepy.objects import Base
 
 import pandas as pd
@@ -111,6 +111,154 @@ def layerToNative(layer: Union[Layer, RasterLayer], streamBranch: str, project: 
         return rasterLayerToNative(layer, streamBranch, project)
     return None
 
+def cadLayerToNative(layerContentList:Base, layerName: str, streamBranch: str, project: ArcGISProject) :
+
+    geom_points = []
+    geom_polylines = []
+    geom_polygones = []
+    geom_meshes = []
+    #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
+    for geom in layerContentList:
+        #print(geom)
+        if geom.speckle_type == "Objects.Geometry.Point": 
+            geom_points.append(geom)
+        if geom.speckle_type == "Objects.Geometry.Line" or geom.speckle_type == "Objects.Geometry.Polyline" or geom.speckle_type == "Objects.Geometry.Curve" or geom.speckle_type == "Objects.Geometry.Arc" or geom.speckle_type == "Objects.Geometry.Circle" or geom.speckle_type == "Objects.Geometry.Polycurve":
+            geom_polylines.append(geom)
+    
+    if len(geom_points)>0: layer_points = cadVectorLayerToNative(geom_points, layerName, "Points", streamBranch, project)
+    if len(geom_polylines)>0: layer_polylines = cadVectorLayerToNative(geom_polylines, layerName, "Polylines", streamBranch, project)
+
+    return [layer_points, layer_polylines]
+
+def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
+    print("_________CAD vector layer to native_____")
+    #get Project CRS, use it by default for the new received layer
+    vl = None
+    layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+    layerName = layerName + "_" + geomType
+    
+    sr = arcpy.SpatialReference(project.activeMap.spatialReference.name)
+    active_map = project.activeMap
+    path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
+    
+    if sr.type == "Geographic": 
+        arcpy.AddMessage(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly")
+
+    #CREATE A GROUP "received blabla" with sublayers
+    layerGroup = None
+    newGroupName = f'{streamBranch}'
+    print(newGroupName)
+    for l in active_map.listLayers():
+        if l.longName == newGroupName: layerGroup = l; break 
+    
+    #find ID of the layer with a matching name in the "latest" group 
+    newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
+
+    all_layer_names = []
+    layerExists = 0
+    for l in project.activeMap.listLayers(): 
+        if l.longName.startswith(newGroupName + "\\"):
+            all_layer_names.append(l.longName)
+    print(all_layer_names)
+
+    longName = streamBranch + "\\" + newName 
+    if longName in all_layer_names: 
+        for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
+            print("trying options: ")
+            print((longName + "_" +  letter))
+            if (longName + "_" + letter) not in all_layer_names: print("selected!"); newName += "_"+letter; layerExists +=1; break 
+
+    # particularly if the layer comes from ArcGIS
+    #geomType = layer.geomType # for ArcGIS: Polygon, Point, Polyline, Multipoint, MultiPatch
+    print(geomType)
+    if "polygon" in geomType.lower(): geomType = "Polygon"
+    if "line" in geomType.lower(): geomType = "Polyline"
+    if "multipoint" in geomType.lower(): geomType = "Multipoint"
+    elif "point" in geomType.lower(): geomType = "Point"
+    print(geomType)
+    
+    print(newName)
+    #path = r"C:\Users\Kateryna\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
+    #https://community.esri.com/t5/arcgis-pro-questions/is-it-possible-to-create-a-new-group-layer-with/td-p/1068607
+
+    print("_________create feature class (cad)___________________________________")
+    # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
+    class_name = ("f_class_" + newName)
+    #print(path)
+    #print(class_name)
+    #print(sr)
+    f_class = CreateFeatureclass(path, class_name, geomType, spatial_reference = sr)
+    #print(f_class)
+    #print(geomList)
+
+    # get and set Layer attribute fields
+    # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
+    newFields = getLayerAttributes(geomList)
+    
+    fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid"]
+    matrix = []
+    all_keys = []
+    all_key_types = []
+    max_len = 52
+    for key, value in newFields.items(): 
+        existingFields = [fl.name for fl in arcpy.ListFields(class_name)]
+        if key not in existingFields  and key.lower() not in fields_to_ignore: # exclude geometry and default existing fields
+            # signs that should not be used as field names and table names: https://support.esri.com/en/technical-article/000005588
+            key = key.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_") 
+            if key[0] in ['0','1','2','3','4','5','6','7','8','9']: key = "_"+key
+            if len(key)>max_len: key = key[:max_len]
+            #print(all_keys)
+            if key in all_keys:
+                for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
+                    if len(key)<max_len and (key+letter) not in all_keys: key+=letter; break 
+                    if len(key) == max_len and (key[:9] + letter) not in all_keys: key=key[:9] + letter; break 
+            if key not in all_keys: 
+                all_keys.append(key)
+                all_key_types.append(value)
+                #print(all_keys)
+                matrix.append([key, value, key, 255])
+                #print(matrix)
+    if len(matrix)>0: AddFields(str(f_class), matrix)
+
+    fets = []
+    for f in geomList[:]: 
+        new_feat = cadFeatureToNative(f, newFields, sr)
+        if new_feat != "" and new_feat != None: 
+            fets.append(new_feat)
+    print("features created")
+    print(fets)
+
+    count = 0
+    rowValues = []
+    for feat in fets:
+        try: feat['applicationId'] 
+        except: feat.update({'applicationId': count})
+
+        row = [feat['arcGisGeomFromSpeckle'], feat['applicationId']]
+        heads = [ 'Shape@', 'OBJECTID']
+
+        for key,value in feat.items(): 
+            if key in all_keys and key.lower() not in fields_to_ignore: 
+                heads.append(key)
+                row.append(value)
+        rowValues.append(row)
+        count += 1
+    print(heads)
+    cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
+    for row in rowValues: 
+        #print(tuple(heads))
+        #print(tuple(row))
+        cur.insertRow(tuple(row))
+    del cur 
+    print(f_class)
+    vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+
+    #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
+    #active_map.addLayer(new_layer)
+    active_map.addLayerToGroup(layerGroup, vl)
+
+    return vl
+
 def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject):
     print("_________Vector Layer to Native_________")
     vl = None
@@ -162,7 +310,7 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     print(project.filePath.replace("aprx","gdb"))
     print("_________create feature class___________________________________")
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
-    class_name = "feature_class_" + newName
+    class_name = "f_class_" + newName
     print(class_name)
     f_class = CreateFeatureclass(path, class_name, geomType, spatial_reference = sr)
 
@@ -212,53 +360,35 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
                 break
     '''
 
-    # add Layer features 
-    #print(newFields)
     fets = []
     for f in layer.features: 
         new_feat = featureToNative(f, newFields, sr)
-        if new_feat != "": fets.append(new_feat)
+        if new_feat != "" and new_feat!= None: fets.append(new_feat)
 
     count = 0
     rowValues = []
     for feat in fets:
-      
+        print(feat)
         try: feat['applicationId'] 
         except: feat.update({'applicationId': count})
-        #print(feat)
 
         row = [feat['arcGisGeomFromSpeckle'], feat['applicationId']]
         heads = [ 'Shape@', 'OBJECTID']
-        #for i, key in enumerate(all_keys): 
-        #    if key != 'arcGisGeomFromSpeckle' and key!= 'objectid' and key!= 'shape': 
-        #        heads.append(key)
-        #        #print(key)
+
         for key,value in feat.items(): 
             if key in all_keys and key.lower() not in fields_to_ignore: 
                 heads.append(key)
                 row.append(value)
-                #print(key)
-                #print(value)
         rowValues.append(row)
-        #print(all_keys)
-        #print(heads)
-        #print(rowValues)
         count += 1
-    #if geomType != "Multipoint":
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     for row in rowValues: 
         #print(tuple(heads))
-        #print(len(heads))
         #print(tuple(row))
-        #print(len(row))
         cur.insertRow(tuple(row))
     del cur 
-    #except: 
-    #    arcpy.AddWarning(f"Layer {layer.name} was not received")
-    #    return None
-    
+
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
-    #if layerExists: vl.name = newName[:len(newName)-1]
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
     #active_map.addLayer(new_layer)

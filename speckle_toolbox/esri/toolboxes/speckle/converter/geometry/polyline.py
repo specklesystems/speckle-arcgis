@@ -63,11 +63,14 @@ def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
 
 def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Polyline to QgsLineString"""
+    print("__ convert poly to native __")
+    print(poly)
     pts = [pointToCoord(pt) for pt in poly.as_points()]
     if poly.closed is True: 
         pts.append( pointToCoord(poly.as_points()[0]) )
-
+    print(pts)
     polyline = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in pts]), sr )
+    print(polyline)
     return polyline
 
 
@@ -120,12 +123,17 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
                 return curve
     except: curve = None
     '''
-    curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr )
+    #curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr )
     return curve
 
 def arcToNativePoints(poly: Arc, sr: arcpy.SpatialReference):
     points = []
-    angle1 = atan( abs ((poly.startPoint.y - poly.plane.origin.y) / (poly.startPoint.x - poly.plane.origin.x) )) # between 0 and pi/2
+    print(poly)
+    print(poly.startPoint)
+    print(poly.plane.origin)
+    if poly.startPoint.x == poly.plane.origin.x: angle1 = math.pi/2
+    else: angle1 = atan( abs ((poly.startPoint.y - poly.plane.origin.y) / (poly.startPoint.x - poly.plane.origin.x) )) # between 0 and pi/2
+    
     if poly.plane.origin.x < poly.startPoint.x and poly.plane.origin.y > poly.startPoint.y: angle1 = 2*math.pi - angle1
     if poly.plane.origin.x > poly.startPoint.x and poly.plane.origin.y > poly.startPoint.y: angle1 = math.pi + angle1
     if poly.plane.origin.x > poly.startPoint.x and poly.plane.origin.y < poly.startPoint.y: angle1 = math.pi - angle1
