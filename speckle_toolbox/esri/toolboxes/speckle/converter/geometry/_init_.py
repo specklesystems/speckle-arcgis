@@ -14,11 +14,12 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
     """Converts the provided layer feature to Speckle objects"""
     print("___convertToSpeckle____________")
     geom = feature
-    print(geom.isMultipart) # e.g. False 
+    #print(geom.isMultipart) # e.g. False 
     geomMultiType = geom.isMultipart
+    hasCurves = feature.hasCurves 
     
-    print(featureType) 
-    print(geomType)
+    print(featureType) # e.g. Simple 
+    print(geomType) # e.g. Polygon 
     #geomSingleType = (featureType=="Simple") # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
 
     if geomType == "Point": #Polygon, Point, Polyline, Multipoint, MultiPatch

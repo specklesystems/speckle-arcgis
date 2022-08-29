@@ -47,14 +47,19 @@ def pointToSpeckle(pt, feature, layer):
 
 def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
     """Converts a Speckle Point to QgsPoint"""
+    #print("___pointToNative__")
+    #print(pt)
     pt = scalePointToNative(pt, pt.units)
     geom = arcpy.PointGeometry(arcpy.Point(pt.x, pt.y), sr)
+    #print(geom)
     return geom
 
 def pointToCoord(pt: Point) -> List[float]:
     """Converts a Speckle Point to QgsPoint"""
     pt = scalePointToNative(pt, pt.units)
-    return [pt.x, pt.y, pt.z]
+    coords = [pt.x, pt.y, pt.z]
+    #print(coords)
+    return coords
 
 def scalePointToNative(pt: Point, units: str) -> Point:
     """Scale point coordinates to meters"""

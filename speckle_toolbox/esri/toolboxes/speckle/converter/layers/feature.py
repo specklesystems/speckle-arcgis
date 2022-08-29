@@ -18,21 +18,14 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
 
     #apply transformation if needed
     if layer_sr.name != projectCRS.name:
-
-        #ptgeo1 = f_shape.projectAs(projectCRS)
-        #f_shape = ptgeo1
-        
         tr0 = tr1 = tr2 = tr_custom = None
         transformations = arcpy.ListTransformations(layer_sr, projectCRS)
-        #print(transformations)
         customTransformName = "layer_sr.name"+"_To_"+ projectCRS.name
         if len(transformations) == 0:
             midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
             try:
                 tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
                 tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
-                #print(tr1)
-                #print(tr2)
             except: 
                 #customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
                 #CreateCustomGeoTransformation(customTransformName, layer_sr, projectCRS)
@@ -71,14 +64,14 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
 
     ######################################### Convert geometry ##########################################
     try:
-        geom = convertToSpeckle(f_shape, selectedLayer, geomType, featureType)
-        if geom is not None:
-            b["geometry"] = geom
+        geom = convertToSpeckle(f_shape, selectedLayer, geomType, featureType) 
+        if geom is not None: print(geom); b["geometry"] = geom 
     except Exception as error:
         print("Error converting geometry: " + str(error))
         print(selectedLayer)
         arcpy.AddError("Error converting geometry: " + str(error))
-
+    print(geomType) 
+    print(featureType) 
     for i, name in enumerate(fieldnames):
         corrected = name.replace("/", "_").replace(".", "-")
         if corrected != "Shape" and corrected != "Shape@": 
@@ -86,6 +79,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
             # save all attribute, duplicate one into applicationId 
             b[corrected] = attr_list[i]
             if corrected == "FID" or corrected == "OID" or corrected == "OBJECTID": b["applicationId"] = str(attr_list[i])
+    print(b)
     print("______end of __Feature to Speckle____________________")
     return b
 
@@ -141,7 +135,7 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     if arcGisGeom is not None:
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
     else: return None
-    print(feat) 
+    #print(feat) 
     #try: 
     #    if "Speckle_ID" not in fields.names() and feature["id"]: fields.append(QgsField("Speckle_ID", QVariant.String))
     #except: pass

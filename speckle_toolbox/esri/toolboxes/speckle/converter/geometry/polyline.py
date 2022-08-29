@@ -2,19 +2,37 @@
 from math import atan, cos, sin
 import math
 from typing import List, Union
-from specklepy.objects.geometry import Point, Line, Polyline, Curve, Arc, Circle, Polycurve
+from specklepy.objects.geometry import Point, Line, Polyline, Curve, Arc, Circle, Polycurve, Plane, Interval  
 import arcpy 
 
 from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle
 from speckle.converter.layers.utils import get_scale_factor
 
+def circleToSpeckle(center, point, layer):
+    print("___Circle to Speckle____")
+    rad = math.sqrt(math.pow((center[0] - point[0]),2) + math.pow((center[1] - point[1]),2) )
+    print(rad)
+    if len(center)>2: center_z = center[2]
+    else: center_z = 0
+    length = rad*2*math.pi
+    domain = [0, length] 
+    plane = [center[0], center[1], center_z, 0,0,1, 1,0,0, 0,1,0] 
+    units = 3 #"m" 
+
+    args = [0] + [rad] + domain + plane + [units] 
+    print(args) 
+    c = Circle().from_list(args)
+    #c.length = length
+    #c.domain = Interval.from_list([0, 1])
+    print(c)
+    return c 
 
 def polylineToSpeckle(geom, feature, layer, multiType: bool):
     #try: 
     print("___Polyline to Speckle____")
     polyline = None
     pointList = []
-    
+    print(geom.hasCurves) 
     #print(geom) # <geoprocessing describe geometry object object at 0x0000020F1D94AB10>
     #print(multiType)
 
@@ -41,7 +59,8 @@ def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
     for pt in vertices:
         newPt = pointToSpeckle(pt, feature, layer) 
         specklePts.append(newPt)
-    #print(specklePts)
+    print(len(specklePts))
+    print(specklePts)
 
     # TODO: Replace with `from_points` function when fix is pushed.
     polyline = Polyline(units = "m")
@@ -68,9 +87,9 @@ def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyli
     pts = [pointToCoord(pt) for pt in poly.as_points()]
     if poly.closed is True: 
         pts.append( pointToCoord(poly.as_points()[0]) )
-    print(pts)
+    #print(pts)
     polyline = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in pts]), sr )
-    print(polyline)
+    #print(polyline)
     return polyline
 
 
@@ -128,12 +147,9 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
 
 def arcToNativePoints(poly: Arc, sr: arcpy.SpatialReference):
     points = []
-    print(poly)
-    print(poly.startPoint)
-    print(poly.plane.origin)
     if poly.startPoint.x == poly.plane.origin.x: angle1 = math.pi/2
     else: angle1 = atan( abs ((poly.startPoint.y - poly.plane.origin.y) / (poly.startPoint.x - poly.plane.origin.x) )) # between 0 and pi/2
-    
+
     if poly.plane.origin.x < poly.startPoint.x and poly.plane.origin.y > poly.startPoint.y: angle1 = 2*math.pi - angle1
     if poly.plane.origin.x > poly.startPoint.x and poly.plane.origin.y > poly.startPoint.y: angle1 = math.pi + angle1
     if poly.plane.origin.x > poly.startPoint.x and poly.plane.origin.y < poly.startPoint.y: angle1 = math.pi - angle1
@@ -141,7 +157,7 @@ def arcToNativePoints(poly: Arc, sr: arcpy.SpatialReference):
     try: 
         pointsNum = math.floor( abs(poly.endAngle - poly.startAngle)) * 12
         if pointsNum <4: pointsNum = 4
-        points.append(pointToNative(poly.startPoint))
+        points.append(pointToCoord(poly.startPoint))
 
         for i in range(1, pointsNum + 1): 
             k = i/pointsNum # to reset values from 1/10 to 1
@@ -150,7 +166,6 @@ def arcToNativePoints(poly: Arc, sr: arcpy.SpatialReference):
             pt.units = poly.startPoint.units 
             points.append(pointToCoord(pt))
         points.append(pointToCoord(poly.endPoint))
-
         curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr )
         return curve
     except: return None
