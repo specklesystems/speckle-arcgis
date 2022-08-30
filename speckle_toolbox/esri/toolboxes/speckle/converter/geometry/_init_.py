@@ -38,8 +38,8 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
 
 def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
     """Converts any given base object to QgsGeometry."""
-    print("___Convert to Native___")
-    print(base)
+    #print("___Convert to Native___")
+    #print(base)
     converted = None
     conversions = [
         (Point, pointToNative),
@@ -58,7 +58,7 @@ def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
             #print(conversion[0])
             converted = conversion[1](base, sr)
             break
-    print(converted)
+    #print(converted)
     return converted
 
 def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference):

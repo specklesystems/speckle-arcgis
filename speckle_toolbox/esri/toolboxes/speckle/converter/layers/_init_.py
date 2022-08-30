@@ -80,6 +80,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the i
             # write feature attributes
             for i, features in enumerate(rows_shapes):
                 print("____Feature # " + str(i+1))
+                if features[0] == None: continue 
                 print(features[0].hasCurves)
                 if features[0].hasCurves: continue 
                 rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)

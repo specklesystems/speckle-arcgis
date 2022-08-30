@@ -42,7 +42,7 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
             for pt in p: 
                 #print(pt) # 284394.58100903 5710688.11602606 NaN NaN 
                 #print(type(pt)) #<class 'arcpy.arcobjects.arcobjects.Point'> 
-                if pt != None: pointList.append(pt) 
+                if pt != None: pointList.append(pt); print(pt.Z)
         closed = False
         if pointList[0] == pointList[len(pointList)-1]: 
             closed = True
@@ -59,8 +59,8 @@ def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
     for pt in vertices:
         newPt = pointToSpeckle(pt, feature, layer) 
         specklePts.append(newPt)
-    print(len(specklePts))
-    print(specklePts)
+    #print(len(specklePts))
+    #print(specklePts)
 
     # TODO: Replace with `from_points` function when fix is pushed.
     polyline = Polyline(units = "m")
@@ -71,7 +71,7 @@ def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
         if closed and i == len(specklePts) - 1:
             continue
         polyline.value.extend([point.x, point.y, point.z])
-    print(polyline)
+    #print(polyline)
     '''
     col = featureColorfromNativeRenderer(feature, layer)
     polyline['displayStyle'] = {}
@@ -83,7 +83,7 @@ def polylineFromVerticesToSpeckle(vertices, closed, feature, layer):
 def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Polyline to QgsLineString"""
     print("__ convert poly to native __")
-    print(poly)
+    #print(poly)
     pts = [pointToCoord(pt) for pt in poly.as_points()]
     if poly.closed is True: 
         pts.append( pointToCoord(poly.as_points()[0]) )
@@ -95,7 +95,9 @@ def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyli
 
 def lineToNative(line: Line, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Line to QgsLineString"""
+    print("___Line to Native___")
     pts = [pointToCoord(pt) for pt in [line.start, line.end]]
+    print(pts)
     line = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in pts]), sr )
     return line
 
@@ -112,6 +114,37 @@ def arcToNative(poly: Arc, sr: arcpy.SpatialReference) -> arcpy.Polyline:
 
 def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Circle to QgsLineString"""
+    print("___Convert Circle from Native___")
+    points = []
+    angle1 = math.pi/2
+    
+    #try: 
+    pointsNum = math.floor(math.pi*2) * 12 
+    if pointsNum <4: pointsNum = 4
+    points.append(pointToCoord(poly.plane.origin))
+    #print(points)
+    #print(poly.units)
+    radScaled = poly.radius * get_scale_factor(poly.units)
+    points[0][1] += radScaled
+    #print(points)
+    #print(pointsNum)
+    for i in range(1, pointsNum + 1): 
+        #print(pointsNum)
+        #print(i)
+        k = i/pointsNum # to reset values from 1/10 to 1
+        #print(k)
+        #print(poly.plane.normal.z)
+        angle = angle1 + k * math.pi*2 * poly.plane.normal.z
+        pt = Point( x = poly.plane.origin.x + radScaled * cos(angle), y = poly.plane.origin.y + radScaled * sin(angle), z = 0) 
+        pt.units = "m"
+        #print(pt)
+        points.append(pointToCoord(pt))
+    points.append(points[0])
+    #print(points)
+    curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr )
+    return curve
+    #except: return None
+
     scaleFactor = get_scale_factor(poly.units)
     circ = None #QgsCircle(pointToNative(poly.plane.origin), poly.radius * scaleFactor)
     #circ = circ.toLineString() # QgsCircle is not supported to be added as a feature 
@@ -120,29 +153,41 @@ def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
 def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     points = []
     curve = None
-    r'''
+    print("___Polycurve to native___")
+    
     try:
         for segm in poly.segments: # Line, Polyline, Curve, Arc, Circle
-            if isinstance(segm,Line):  converted = lineToNative(segm) # QgsLineString
-            elif isinstance(segm,Polyline):  converted = polylineToNative(segm) # QgsLineString
-            elif isinstance(segm,Curve):  converted = curveToNative(segm) # QgsLineString
-            elif isinstance(segm,Circle):  converted = circleToNative(segm) # QgsLineString
-            elif isinstance(segm,Arc):  converted = arcToQgisPoints(segm) # QgsLineString
+            print(segm)
+            if isinstance(segm,Line):  converted = lineToNative(segm, sr) # QgsLineString
+            elif isinstance(segm,Polyline):  converted = polylineToNative(segm, sr) # QgsLineString
+            elif isinstance(segm,Curve):  converted = curveToNative(segm, sr) # QgsLineString
+            elif isinstance(segm,Circle):  converted = circleToNative(segm, sr) # QgsLineString
+            elif isinstance(segm,Arc):  converted = arcToNativePoints(segm, sr) # QgsLineString
             else: # either return a part of the curve, of skip this segment and try next
                 arcpy.AddWarning(f"Part of the polycurve cannot be converted")
                 curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]) )
                 return curve
             if converted is not None: 
-                for pt in converted.getPart({0}):
-                    if len(points)>0 and pt.X == points[len(points)-1].X and pt.Y== points[len(points)-1].Y and pt.Z== points[len(points)-1].Z: pass
-                    else: points.append([pt.X, pt.Y, pt.Z])
+                print(converted) # <geoprocessing describe geometry object object at 0x000002B2D3E338D0>
+                for part in converted:
+                    print(part) # <geoprocessing array object object at 0x000002B2D2E09530>
+                    for pt in part: 
+                        print(pt) # 64.4584221540162 5.5 NaN NaN
+                        if pt.Z != None: pt_z = pt.Z
+                        else: pt_z = 0
+                        print(pt_z)
+                        print(len(points)) 
+                        if len(points)>0 and pt.X == points[len(points)-1][0] and pt.Y == points[len(points)-1][1] and pt_z == points[len(points)-1][2]: pass
+                        else: points.append(pointToCoord(Point(x=pt.X, y = pt.Y, z = pt_z)))
+                        print(points)
             else:
                 arcpy.AddWarning(f"Part of the polycurve cannot be converted")
                 curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]) )
                 return curve
     except: curve = None
-    '''
-    #curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr )
+    print(curve)
+    
+    curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr )
     return curve
 
 def arcToNativePoints(poly: Arc, sr: arcpy.SpatialReference):

@@ -9,7 +9,7 @@ from speckle.converter.layers.utils import get_scale_factor
 def multiPointToSpeckle(geom, feature, layer, multiType: bool):
     """Converts a Point to Speckle"""
     #try: 
-    print("___Point to Speckle____")
+    #print("___Point to Speckle____")
     #point = Point(units = "m")
     pointList = []
     #print(geom) # <geoprocessing describe geometry object object at 0x0000020F1D94AB10>
@@ -25,7 +25,7 @@ def multiPointToSpeckle(geom, feature, layer, multiType: bool):
 def pointToSpeckle(pt, feature, layer):
   
     """Converts a Point to Speckle"""
-    print("___Point to Speckle____")
+    #print("___Point to Speckle____")
     # when unset, z() returns "nan"
     #print(pt) # 4.9046319 52.3592043 NaN NaN
     #print("____Point to Speckle___")
@@ -42,7 +42,7 @@ def pointToSpeckle(pt, feature, layer):
     specklePoint['displayStyle'] = {}
     specklePoint['displayStyle']['color'] = col
     '''
-    print(specklePoint)
+    #print(specklePoint)
     return specklePoint
 
 def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
@@ -50,7 +50,7 @@ def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
     #print("___pointToNative__")
     #print(pt)
     pt = scalePointToNative(pt, pt.units)
-    geom = arcpy.PointGeometry(arcpy.Point(pt.x, pt.y), sr)
+    geom = arcpy.PointGeometry(arcpy.Point(pt.x, pt.y, pt.z), sr)
     #print(geom)
     return geom
 
