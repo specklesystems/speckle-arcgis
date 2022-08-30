@@ -26,6 +26,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+speckle-sharp-ci-tools/
 MANIFEST
 
 # PyInstaller
@@ -111,6 +112,7 @@ venv.bak/
 
 # other
 __pycache__/
+typings/
 *.pyc
 scratch.py
 settings.json
