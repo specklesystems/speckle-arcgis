@@ -7,7 +7,7 @@
 from subprocess_call import subprocess_call
 import os 
 
-pythonPath = 'C:\\ ...\\custom_environment_name\\python.exe"
+pythonPath = "C:\\ ...\\custom_environment_name\\python.exe"
 
 def installToolbox(newExec: str):
     print("Installing Speckle Toolbox")

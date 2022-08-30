@@ -18,8 +18,8 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
     geomMultiType = geom.isMultipart
     hasCurves = feature.hasCurves 
     
-    print(featureType) # e.g. Simple 
-    print(geomType) # e.g. Polygon 
+    #print(featureType) # e.g. Simple 
+    #print(geomType) # e.g. Polygon 
     #geomSingleType = (featureType=="Simple") # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
 
     if geomType == "Point": #Polygon, Point, Polyline, Multipoint, MultiPatch
@@ -38,7 +38,7 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
 
 def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
     """Converts any given base object to QgsGeometry."""
-    #print("___Convert to Native___")
+    print("___Convert to Native SingleType___")
     #print(base)
     converted = None
     conversions = [
@@ -62,46 +62,39 @@ def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
     return converted
 
 def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference):
-    print("Create MultiPoint")
+    print("___Create MultiPoint")
     all_pts = []
     # example https://pro.arcgis.com/en/pro-app/2.8/arcpy/classes/multipoint.htm
     for item in items:
         pt = pointToCoord(item) # [x, y, z]
         all_pts.append( arcpy.Point(pt[0], pt[1], pt[2]) )
-    print(all_pts)
+    #print(all_pts)
     features = arcpy.Multipoint( arcpy.Array(all_pts) )
     #if len(features)==0: features = None
     return features
 
 def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
     print("_______Drawing Multipolylines____")
-    print(items)
-    all_pts = []
-    # example https://community.esri.com/t5/python-questions/creating-a-multipolygon-polygon/td-p/392918
-    for item in items:
-        pts = [] 
-        for pt in item.as_points(): #[[x,y,z],[x,y,z],..]
-            pt = pointToCoord(pt)
-            pts.append(arcpy.Point(pt[0], pt[1], pt[2]) )
-        all_pts.append(arcpy.Array(pts))
-    poly = arcpy.Polygon(arcpy.Array(all_pts), sr)
+    #print(items)
+    poly = None
+
     return poly
 
 def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO fix multi features
     
     print("_______Drawing Multipolygons____")
-    print(items)
+    #print(items)
     for item in items: # will be 1 item
-        print(item)
+        #print(item)
         pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
         outer_arr = [arcpy.Point(*coords) for coords in pts]
         outer_arr.append(outer_arr[0])
         list_of_arrs = []
         try:
             for void in item["voids"]: 
-                print(void)
+                #print(void)
                 pts = [pointToCoord(pt) for pt in void.as_points()]
-                print(pts)
+                #print(pts)
                 inner_arr = [arcpy.Point(*coords) for coords in pts]
                 inner_arr.append(inner_arr[0])
                 list_of_arrs.append(arcpy.Array(inner_arr))
@@ -109,23 +102,12 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
     
     list_of_arrs.insert(0, arcpy.Array(outer_arr))
     array = arcpy.Array(list_of_arrs)
-    polygon = arcpy.Polygon(array, sr)
+    polygon = arcpy.Polygon(array, sr, has_z=True)
 
-    r'''
-    all_pts = []
-    # example https://community.esri.com/t5/python-questions/creating-a-multipolygon-polygon/td-p/392918
-    for item in items:
-        pts = [] 
-        for pt in item["boundary"].as_points(): #[[x,y,z],[x,y,z],..]
-            pt = pointToCoord(pt)
-            pts.append(arcpy.Point(pt[0], pt[1], pt[2]) )
-        pts.append(pts[0])
-        all_pts.append(arcpy.Array(pts))
-    polygon = arcpy.Polygon(arcpy.Array(all_pts), sr)
-    '''
     return polygon
 
 def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference): 
+    print("___Convert to Native MultiType___")
     first = items[0]
     if isinstance(first, Point):
         return multiPointToNative(items, sr)

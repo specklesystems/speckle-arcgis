@@ -86,7 +86,7 @@ class uiInputs(object):
     instances = []
 
     def __init__(self):
-        print("start UI inputs________")
+        #print("start UI inputs________")
         self.instances.append(self)
         accounts = get_local_accounts()
         account = None
@@ -95,10 +95,10 @@ class uiInputs(object):
         #account.userInfo.name, account.serverInfo.url
         self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
         self.speckle_client.authenticate_with_token(token=account.token)
-        print("ping")
-        print(self.speckle_client)
+        #print("ping")
+        #print(self.speckle_client)
         self.streams = self.speckle_client.stream.search("")
-        print("ping")
+        #print("ping")
         self.active_stream = None
         self.active_branch = None
         self.active_commit = None
@@ -110,7 +110,7 @@ class uiInputs(object):
         #print(self.streams)
         try: aprx = ArcGISProject('CURRENT') 
         except: 
-            print(arcpy.env.workspace) # None
+            #print(arcpy.env.workspace) # None
             #arcpy.env.workspace = ""
             #proj_path = "\\".join(arcpy.env.workspace.split("\\")[:-1]) + "\\"
             #aprx = ArcGISProject(proj_path)
@@ -127,7 +127,7 @@ class uiInputs(object):
 
 class Speckle(object):
     def __init__(self):
-        print("________________reset_______________")   
+        #print("________________reset_______________")   
         self.label       = "Speckle"
         self.description = "Allows you to send and receive your layers " + \
                            "to/from other software using Speckle server." 
@@ -142,7 +142,7 @@ class Speckle(object):
                     self.toolboxInputs = instance # take latest 
                 except: pass
         if self.toolboxInputs is None: 
-            print("Instance is None")
+            #print("Instance is None")
             self.toolboxInputs = uiInputs() #in case Toolbox class was not initialized 
         # TODO react on project changes
         
@@ -371,7 +371,7 @@ class Speckle(object):
         # https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/what-is-arcpy-.htm
         #Warning if any of the fields is invalid/empty 
         print("_______________________Run__________________________")
-        print(self.toolboxInputs.action)
+        #print(self.toolboxInputs.action)
         if self.toolboxInputs.action == 1: self.onSend(parameters)
         elif self.toolboxInputs.action == 0: self.onReceive(parameters)
 
@@ -419,7 +419,7 @@ class Speckle(object):
             objId = operations.send(base=base_obj, transports=[transport])
         except SpeckleException as error:
             arcpy.AddError("Error sending data")
-            print("Error sending data")
+            #print("Error sending data")
             return
         except SpeckleWarning as warning:
             arcpy.AddMessage("SpeckleWarning: " + str(warning.args[0]))
@@ -437,12 +437,12 @@ class Speckle(object):
                 source_application="ArcGIS",
             )
             arcpy.AddMessage("Successfully sent data to stream: " + streamId)
-            print("Successfully sent data to stream: " + streamId)
+            #print("Successfully sent data to stream: " + streamId)
             #parameters[2].value = ""
         except:
             arcpy.AddError("Error creating commit")
 
-        print("sent")
+        #print("sent")
         #self.updateParameters(parameters, True)
         #self.refresh(parameters)
 
@@ -478,7 +478,7 @@ class Speckle(object):
             return
 
         try:
-            print(commit)
+            #print(commit)
             objId = commit.referencedObject
             commitDetailed = client.commit.get(streamId, commit.id)
             app = commitDetailed.sourceApplication
@@ -497,23 +497,25 @@ class Speckle(object):
             newGroupName = f'{streamBranch}'
             
             groupExists = 0
+            #print(newGroupName)
             for l in self.toolboxInputs.project.activeMap.listLayers(): 
+                #print(l.longName)
                 if l.longName.startswith(newGroupName + "\\"):
-                    print(l.longName)
+                    #print(l.longName)
                     self.toolboxInputs.project.activeMap.removeLayer(l)
+                    groupExists+=1
+                elif l.longName == newGroupName: 
                     groupExists+=1
             if groupExists == 0:
                 # create empty group layer file 
                 path = self.toolboxInputs.project.filePath.replace("aprx","gdb") #"\\".join(self.toolboxInputs.project.filePath.split("\\")[:-1]) + "\\speckle_layers\\"
-                #path = "\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
-                #if not os.path.exists(path): os.makedirs(path)
-                print(path)
+                #print(path)
                 f = open(path + "\\" + newGroupName + ".lyrx", "w")
                 content = createGroupLayer().replace("TestGroupLayer", newGroupName)
                 f.write(content)
                 f.close()
                 smth = arcpy.mp.LayerFile(path + "\\" + newGroupName + ".lyrx")
-                print(smth)
+                #print(smth)
                 layerGroup = self.toolboxInputs.project.activeMap.addLayer(smth)[0]
                 layerGroup.name = newGroupName
 
@@ -522,7 +524,7 @@ class Speckle(object):
 
             def callback(base: Base) -> bool:
                 print("callback")
-                print(base)
+                #print(base)
                 if isinstance(base, Layer) or isinstance(base, RasterLayer):
                     layer = layerToNative(base, streamBranch, self.toolboxInputs.project)
                     if layer is not None:

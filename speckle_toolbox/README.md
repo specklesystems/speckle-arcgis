@@ -25,7 +25,7 @@ What is Speckle? Check our ![YouTube Video Views](https://img.shields.io/youtube
 - **GraphQL API:** get what you need anywhere you want it
 - **Webhooks:** the base for a automation and next-gen pipelines
 - **Built for developers:** we are building Speckle with developers in mind and got tools for every stack
-- **Built for the AEC industry:** Speckle connectors are plugins for the most common software used in the industry such as Revit, Rhino, Grasshopper, AutoCAD, Civil 3D, Excel, Unreal Engine, Unity, QGIS (you are here), Blender and more!
+- **Built for the AEC industry:** Speckle connectors are plugins for the most common software used in the industry such as Revit, Rhino, Grasshopper, AutoCAD, Civil 3D, Excel, Unreal Engine, Unity, QGIS, ArcGIS (you are here), Blender and more!
 
 ### Try Speckle now!
 
@@ -44,7 +44,7 @@ Give Speckle a try in no time by:
 
 ## Repo Structure
 
-This repo contains the QGIS plugin for Speckle 2.0. It is written in `python` and uses our fantastic [Python SDK](https://github.com/specklesystems/speckle-py). The [Speckle Server](https://github.com/specklesystems/Server) is providing all the web-facing functionality and can be found [here](https://github.com/specklesystems/Server).
+This repo contains the ArcGIS plugin for Speckle 2.0. It is written in `python` and uses our fantastic [Python SDK](https://github.com/specklesystems/speckle-py). The [Speckle Server](https://github.com/specklesystems/Server) is providing all the web-facing functionality and can be found [here](https://github.com/specklesystems/Server).
 
 > **Try it out!!**
 > Although we're still in early development stages, we encourage you to try out the latest stable release.
@@ -52,7 +52,7 @@ This repo contains the QGIS plugin for Speckle 2.0. It is written in `python` an
 >
 > **What can it do?**
 >
-> Currently, the plugin allows to send data from a single layer to a Speckle server using one of the accounts configured on your computer. It will extract all the features of that layer along side their properties and, when possible, geometry too.
+> Currently, the plugin allows to receive the data from Speckle and send data from a AcrGIS Pro layers to a Speckle server using one of the accounts configured on your computer. It will extract all the features of that layer along side their properties. 
 > The following geometry types are supported for now:
 >
 > - Point

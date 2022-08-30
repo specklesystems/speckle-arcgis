@@ -68,18 +68,12 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
     if multiType is False: 
         print("single type")
         for p in geom:
-            #print(p) # <geoprocessing array object object at 0x0000020F1D972C90>
             for pt in p: 
-                #print(pt) # 284394.58100903 5710688.11602606 NaN NaN <class 'arcpy.arcobjects.arcobjects.Point'> 
-                #print(type(pt))
                 if pt != None: pointList.append(pt) 
         boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
     else: 
         print("multi type")
         for i, p in enumerate(geom):
-            #print(i)
-            #print(p) # <geoprocessing array object object at 0x00000296FFF11CF0>
-            #print(type(p)) # <class 'arcpy.arcobjects.arcobjects.Array'>
             for pt in p:  
                 #print(pt) # 284394.58100903 5710688.11602606 NaN NaN
                 if pt == None and boundary == None:  # first break 
@@ -96,15 +90,6 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
                 void = polylineFromVerticesToSpeckle(pointList, True, feature, layer)
                 voids.append(void)
 
-        #print("boundary: ")
-        #print(boundary)
-    
-    #try:
-    #    for i in range(geom.numInteriorRings()):
-    #        intRing = polylineFromVerticesToSpeckle(geom.interiorRing(i).vertices(), True, feature, layer)
-    #        voids.append(intRing)
-    #except:
-    #    pass
     polygon.boundary = boundary
     polygon.voids = voids
     polygon.displayValue = [ boundary ] + voids
@@ -114,7 +99,7 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
     total_vertices = 0
     polyBorder = boundary.as_points()
 
-    print(polyBorder)
+    #print(polyBorder)
 
     if len(polyBorder)>2:
         print("make meshes from polygons")
@@ -125,11 +110,11 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
                 z = 0 if math.isnan(pt.z) else pt.z
                 vertices.extend([x, y, z])
                 total_vertices += 1
-            print(vertices)
+            #print(vertices)
             ran = range(0, total_vertices)
             faces = [total_vertices]
             faces.extend([i for i in ran])
-            print(faces)
+            #print(faces)
             # else: https://docs.panda3d.org/1.10/python/reference/panda3d.core.Triangulator
         else:
             trianglator = Triangulator()
@@ -162,24 +147,20 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
 
             trianglator.triangulate()
             i = 0
-            #print(trianglator.getNumTriangles())
             while i < trianglator.getNumTriangles():
               tr = [trianglator.getTriangleV0(i),trianglator.getTriangleV1(i),trianglator.getTriangleV2(i)]
               faces.extend([3, tr[0], tr[1], tr[2]])
               i+=1
             ran = range(0, total_vertices)
         
-        print(polygon)
+        #print(polygon)
         col = (100<<16) + (100<<8) + 100 #featureColorfromNativeRenderer(feature, layer)
         colors = [col for i in ran] # apply same color for all vertices
         mesh = rasterToMesh(vertices, faces, colors)
         polygon.displayValue = mesh 
-    print("print resulted polygon")
-    print(polygon)
+    #print("print resulted polygon")
+    #print(polygon)
     return polygon
-    #except: 
-    #    arcpy.AddWarning("Some polygons might be invalid")
-    #    pass
 
 def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
     """Converts a Speckle Polygon base object to QgsPolygon.
@@ -193,15 +174,15 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
     list_of_arrs = []
     try:
         for void in poly["voids"]: 
-            print(void)
+            #print(void)
             pts = [pointToCoord(pt) for pt in void.as_points()]
-            print(pts)
+            #print(pts)
             inner_arr = [arcpy.Point(*coords) for coords in pts]
             inner_arr.append(inner_arr[0])
             list_of_arrs.append(arcpy.Array(inner_arr))
     except:pass
     list_of_arrs.insert(0, outer_arr)
     array = arcpy.Array(list_of_arrs)
-    polygon = arcpy.Polygon(array, sr)
+    polygon = arcpy.Polygon(array, sr, has_z=True)
 
     return polygon

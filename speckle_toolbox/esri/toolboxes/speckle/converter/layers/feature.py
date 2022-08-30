@@ -13,8 +13,8 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     geomType = data.shapeType #Polygon, Point, Polyline, Multipoint, MultiPatch
     featureType = data.featureType # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
 
-    print(layer_sr.name)
-    print(projectCRS.name)
+    #print(layer_sr.name)
+    #print(projectCRS.name)
 
     #apply transformation if needed
     if layer_sr.name != projectCRS.name:
@@ -70,8 +70,8 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
         print("Error converting geometry: " + str(error))
         print(selectedLayer)
         arcpy.AddError("Error converting geometry: " + str(error))
-    print(geomType) 
-    print(featureType) 
+    #print(geomType) 
+    #print(featureType) 
     for i, name in enumerate(fieldnames):
         corrected = name.replace("/", "_").replace(".", "-")
         if corrected != "Shape" and corrected != "Shape@": 
@@ -79,18 +79,19 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
             # save all attribute, duplicate one into applicationId 
             b[corrected] = attr_list[i]
             if corrected == "FID" or corrected == "OID" or corrected == "OBJECTID": b["applicationId"] = str(attr_list[i])
-    print(b)
+    #print(b)
     print("______end of __Feature to Speckle____________________")
     return b
 
-def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
-    print("Feature To Native____________")
+def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.SpatialReference):
+    print("Feature To Native____________") 
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
     except:  speckle_geom = feature # for created in other software
     print(speckle_geom)
     if isinstance(speckle_geom, list):
-        arcGisGeom = convertToNativeMulti(speckle_geom, sr)
+        if len(speckle_geom)>1 or geomType == "Multipoint": arcGisGeom = convertToNativeMulti(speckle_geom, sr)
+        else: arcGisGeom = convertToNative(speckle_geom[0], sr)
     else:
         arcGisGeom = convertToNative(speckle_geom, sr)
 
@@ -99,15 +100,8 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     else:
         return None
     print(feat)
-    #try: 
-    #    if "id" not in fields.keys() and feature["applicationId"]: fields.update(QgsField("id", QVariant.String))
-    #except: pass
-    
-    #feat.setFields(fields)  
     for key, variant in fields.items(): 
-        #if key.lower() == "objectid" or key.lower() == "fid": feat.update({key: str(feature["applicationId"]) })
-        #if key.lower() != "shape" and key.lower() != "shape@" and key != "arcGisGeomFromSpeckle": 
-        #print(feature[key])
+
         value = feature[key]
         if variant == "TEXT": value = str(feature[key]) 
         if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
@@ -117,7 +111,6 @@ def featureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
             if variant == "FLOAT": feat.update({key: None})
             if variant == "LONG": feat.update({key: None})
             if variant == "SHORT": feat.update({key: None})
-    #print(feat)
     return feat
 
 def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
@@ -125,22 +118,17 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
     except:  speckle_geom = feature # for created in other software
-    print(feature)
-    print(speckle_geom)
+    #print(feature)
+    #print(speckle_geom)
     if isinstance(speckle_geom, list):
-        arcGisGeom = convertToNativeMulti(speckle_geom, sr)
+        if len(speckle_geom)>1: arcGisGeom = convertToNativeMulti(speckle_geom, sr)
+        else: arcGisGeom = convertToNative(speckle_geom[0], sr) 
     else:
         arcGisGeom = convertToNative(speckle_geom, sr)
 
     if arcGisGeom is not None:
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
     else: return None
-    #print(feat) 
-    #try: 
-    #    if "Speckle_ID" not in fields.names() and feature["id"]: fields.append(QgsField("Speckle_ID", QVariant.String))
-    #except: pass
-
-    #feat.setFields(fields)  
     for key, variant in fields.items(): 
         value = feature[key]
         if variant == "TEXT": value = str(feature[key]) 
@@ -151,25 +139,6 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
             if variant == "FLOAT": feat.update({key: None})
             if variant == "LONG": feat.update({key: None})
             if variant == "SHORT": feat.update({key: None})
-    print(feat) 
+    #print(feat) 
     return feat
-    
-    for field in fields:
-        name = field.name()
-        variant = field.type()
-        if name == "Speckle_ID": feat[name] = str(feature["id"])
-        else: 
-            value = feature[name]
-            if variant == QVariant.String: value = str(feature[name]) 
-            
-            if isinstance(value, str) and variant == QVariant.Date:  # 14
-                y,m,d = value.split("(")[1].split(")")[0].split(",")[:3]
-                value = QDate(int(y), int(m), int(d) ) 
-            elif isinstance(value, str) and variant == QVariant.DateTime: 
-                y,m,d,t1,t2 = value.split("(")[1].split(")")[0].split(",")[:5]
-                value = QDateTime(int(y), int(m), int(d), int(t1), int(t2) )
-            
-            if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
-                feat[name] = value
-      
     
