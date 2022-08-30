@@ -123,6 +123,7 @@ workflows: #happens with every PR to main
           extension: exe
           requires:
             - get-ci-tools
+            - build-connector-win
           filters:
             tags:
               only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
