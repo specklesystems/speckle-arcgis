@@ -38,7 +38,7 @@ def getLayerAttributes(features: List[Base]) -> dict:
             except: pass
 
         dynamicProps.sort()
-        print(dynamicProps)
+        #print(dynamicProps)
 
         # add field names and variands 
         #variants = [] 

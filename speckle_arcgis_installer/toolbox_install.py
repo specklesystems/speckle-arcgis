@@ -12,7 +12,7 @@ def installToolbox(newExec: str):
     return
 
 def installDependencies(pythonExec: str):
-    print("Installing dependencies")
+    #print("Installing dependencies")
     print(pythonExec)
     try:
         import pip
@@ -26,7 +26,7 @@ def installDependencies(pythonExec: str):
     pkgVersion = "2.7.4" 
     pkgName = "specklepy"
     try:
-        import specklepy # C:\Users\Kateryna\AppData\Roaming\Python\Python37\site-packages\specklepy\__init__.py 
+        import specklepy # C:\Users\username\AppData\Roaming\Python\Python37\site-packages\specklepy\__init__.py 
     except Exception as e:
         subprocess_call([ pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
 

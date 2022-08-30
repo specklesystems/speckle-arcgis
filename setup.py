@@ -1,5 +1,5 @@
 # to build an installer: run cmd from this folder:
-# "%PROGRAMFILES%\\ArcGIS\\Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe"  C:\\Users\\Kateryna\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\setup.py sdist bdist_wheel 
+# "%PROGRAMFILES%\\ArcGIS\\Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe"  C:\\Users\\username\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\setup.py sdist bdist_wheel 
 
 import os 
 from setuptools import setup 
@@ -13,7 +13,7 @@ setup(name='speckle_toolbox',
       version='0.1',
       author='SpeckleSystems',
       description=("Example for extending geoprocessing through Python modules"),
-      long_description=read('Readme.txt'),
+      long_description=read('Readme.md'),
       python_requires='~=3.3',
       packages=['speckle_toolbox'], 
       package_data={'speckle_toolbox':['esri/toolboxes/*',  
@@ -26,6 +26,6 @@ setup(name='speckle_toolbox',
       )
 
 # then to install in ArcGIS:
-# import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, '-m','pip', 'install', 'C:\\Users\\Kateryna\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\dist\\foo-0.1-py3-none-any.whl'), capture_output=True, text=True, shell=True, timeout=1000 )
+# import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, '-m','pip', 'install', 'C:\\Users\\username\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\dist\\foo-0.1-py3-none-any.whl'), capture_output=True, text=True, shell=True, timeout=1000 )
 # to uninstall: 
-# "C:\\Users\\Kateryna\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-py3-speckle\\python.exe" -m pip uninstall C:\\Users\\Kateryna\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\dist\\foo-0.1-py3-none-any.whl
+# "C:\\Users\\username\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-py3-speckle\\python.exe" -m pip uninstall C:\\Users\\username\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\dist\\foo-0.1-py3-none-any.whl

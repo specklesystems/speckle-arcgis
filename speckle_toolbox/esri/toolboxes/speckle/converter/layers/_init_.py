@@ -51,8 +51,8 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the i
     projectCRS = project.activeMap.spatialReference
     try: data = arcpy.Describe(layer.dataSource)
     except OSError as e: arcpy.AddWarning(str(e.args[0])); return
-    print(projectCRS)
-    print(projectCRS.name)
+    #print(projectCRS)
+    #print(projectCRS.name)
     crs = CRS(name = projectCRS.name, wkt = projectCRS.exportToString(), units = "m")
     
     layer_geo_crs = None
@@ -69,11 +69,12 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the i
     
     try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
         layerObjs = []
+        print(data.datasetType)
         if data.datasetType == "FeatureClass": #FeatureClass, ?Table Properties, ?Datasets
             # write feature attributes
             fieldnames = [field.name for field in data.fields]
-            print(layer.longName) # e.g. 17b0b76d13_custom_crs_04dcfaa936\04dcfaa936_Vector_lineGeom
-            print(fieldnames) # e.g. ['OBJECTID', 'Shape', 'Shape_Length', 'Speckle_ID', 'number', 'area']
+            #print(layer.longName) # e.g. 17b0b76d13_custom_crs_04dcfaa936\04dcfaa936_Vector_lineGeom
+            #print(fieldnames) # e.g. ['OBJECTID', 'Shape', 'Shape_Length', 'Speckle_ID', 'number', 'area']
             rows_shapes = arcpy.da.SearchCursor(layer.longName, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
             #print(rows_shapes) # <da.SearchCursor object at 0x00000172565E6C10>
             print("__ start iterating features")
@@ -81,20 +82,20 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the i
             for i, features in enumerate(rows_shapes):
                 print("____Feature # " + str(i+1))
                 if features[0] == None: continue 
-                print(features[0].hasCurves)
+                #print(features[0].hasCurves)
                 if features[0].hasCurves: continue 
                 rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
                 row_attr = []
                 for k, attrs in enumerate(rows_attributes):
                     if i == k: row_attr = attrs; break
 
-                print(features) #(<Polygon object at 0x172592ae8c8[0x17258d2a600]>,)
-                print(features[0].pointCount)
-                print(features[0].partCount)
+                #print(features) #(<Polygon object at 0x172592ae8c8[0x17258d2a600]>,)
+                #print(features[0].pointCount)
+                #print(features[0].partCount)
                 if features[0]:
                     b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
                     layerObjs.append(b)
-                    print(layerObjs)
+                    #print(layerObjs)
                 
             print("__ finish iterating features")
             speckleLayer.features=layerObjs
@@ -153,7 +154,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     #CREATE A GROUP "received blabla" with sublayers
     layerGroup = None
     newGroupName = f'{streamBranch}'
-    print(newGroupName)
+    #print(newGroupName)
     for l in active_map.listLayers():
         if l.longName == newGroupName: layerGroup = l; break 
     
@@ -165,35 +166,28 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     for l in project.activeMap.listLayers(): 
         if l.longName.startswith(newGroupName + "\\"):
             all_layer_names.append(l.longName)
-    print(all_layer_names)
+    #print(all_layer_names)
 
     longName = streamBranch + "\\" + newName 
     if longName in all_layer_names: 
         for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
-            print("trying options: ")
-            print((longName + "_" +  letter))
-            if (longName + "_" + letter) not in all_layer_names: print("selected!"); newName += "_"+letter; layerExists +=1; break 
+            if (longName + "_" + letter) not in all_layer_names: newName += "_"+letter; layerExists +=1; break 
 
     # particularly if the layer comes from ArcGIS
-    #geomType = layer.geomType # for ArcGIS: Polygon, Point, Polyline, Multipoint, MultiPatch
-    print(geomType)
     if "polygon" in geomType.lower(): geomType = "Polygon"
     if "line" in geomType.lower(): geomType = "Polyline"
     if "multipoint" in geomType.lower(): geomType = "Multipoint"
     elif "point" in geomType.lower(): geomType = "Point"
-    print(geomType)
+    #print(geomType)
     
-    print(newName)
-    #path = r"C:\Users\Kateryna\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
+    #print(newName)
+    #path = r"C:\Users\username\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
     #https://community.esri.com/t5/arcgis-pro-questions/is-it-possible-to-create-a-new-group-layer-with/td-p/1068607
 
     print("_________create feature class (cad)___________________________________")
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
     class_name = ("f_class_" + newName)
-    #print(path)
-    #print(class_name)
-    #print(sr)
-    f_class = CreateFeatureclass(path, class_name, geomType, spatial_reference = sr)
+    f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
     #print(f_class)
     #print(geomList)
 
@@ -231,8 +225,8 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         new_feat = cadFeatureToNative(f, newFields, sr)
         if new_feat != "" and new_feat != None: 
             fets.append(new_feat)
-    print("features created")
-    print(fets)
+    #print("features created")
+    #print(fets)
 
     count = 0
     rowValues = []
@@ -249,14 +243,14 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 row.append(value)
         rowValues.append(row)
         count += 1
-    print(heads)
+    #print(heads)
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     for row in rowValues: 
         #print(tuple(heads))
         #print(tuple(row))
         cur.insertRow(tuple(row))
     del cur 
-    print(f_class)
+    #print(f_class)
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
@@ -280,7 +274,7 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     #CREATE A GROUP "received blabla" with sublayers
     layerGroup = None
     newGroupName = f'{streamBranch}'
-    print(newGroupName)
+    #print(newGroupName)
     for l in active_map.listLayers():
         if l.longName == newGroupName: layerGroup = l; break 
     
@@ -292,14 +286,12 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     for l in project.activeMap.listLayers(): 
         if l.longName.startswith(newGroupName + "\\"):
             all_layer_names.append(l.longName)
-    print(all_layer_names)
+    #print(all_layer_names)
 
     longName = streamBranch + "\\" + newName 
     if longName in all_layer_names: 
         for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
-            print("trying options: ")
-            print((longName + "_" +  letter))
-            if (longName + "_" + letter) not in all_layer_names: print("selected!"); newName += "_"+letter; layerExists +=1; break 
+            if (longName + "_" + letter) not in all_layer_names: newName += "_"+letter; layerExists +=1; break 
 
     # particularly if the layer comes from ArcGIS
     geomType = layer.geomType # for ArcGIS: Polygon, Point, Polyline, Multipoint, MultiPatch
@@ -308,18 +300,18 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     if "line" in geomType.lower(): geomType = "Polyline"
     if "multipoint" in geomType.lower(): geomType = "Multipoint"
     elif "point" in geomType.lower(): geomType = "Point"
-    print(geomType)
+    #print(geomType)
     
-    print(newName)
-    #path = r"C:\Users\Kateryna\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
+    #print(newName)
+    #path = r"C:\Users\username\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
     #https://community.esri.com/t5/arcgis-pro-questions/is-it-possible-to-create-a-new-group-layer-with/td-p/1068607
-    print(project.filePath.replace("aprx","gdb"))
-    print("_________create feature class___________________________________")
+    #print(project.filePath.replace("aprx","gdb"))
+    #print("_________create feature class___________________________________")
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
     class_name = "f_class_" + newName
-    print(class_name)
-    try: f_class = CreateFeatureclass(path, class_name, geomType, spatial_reference = sr)
-    except arcgisscripting.ExecuteError: class_name+="_"; f_class = CreateFeatureclass(path, class_name, geomType, spatial_reference = sr)
+    #print(class_name)
+    try: f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
+    except arcgisscripting.ExecuteError: class_name+="_"; f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
 
     # get and set Layer attribute fields
     # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
@@ -349,33 +341,16 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
                 #print(matrix)
     if len(matrix)>0: AddFields(str(f_class), matrix)
 
-    '''
-    # set the fields as nullable 
-    for i, key in enumerate(all_keys): 
-        #print(f_class)
-        for fc in arcpy.ListFeatureClasses(): 
-            #print(fc)
-            if fc == "class_" + newName:
-                for fl in arcpy.ListFields(fc):
-                    # https://pro.arcgis.com/en/pro-app/2.8/tool-reference/data-management/alter-field-properties.htm
-                    if fl.name == key:
-                        #print("ADJUST FIELD:_________")
-                        #print(fl.name)
-                        #print(all_key_types[i]) 
-                        #fl.isNullable = True
-                        AlterField(f_class, key, key, key, all_key_types[i], "255", "NULLABLE", "FALSE")
-                break
-    '''
-
     fets = []
     for f in layer.features: 
-        new_feat = featureToNative(f, newFields, sr)
+        new_feat = featureToNative(f, newFields, geomType, sr)
         if new_feat != "" and new_feat!= None: fets.append(new_feat)
-
+    
+    print(fets)
     count = 0
     rowValues = []
     for feat in fets:
-        print(feat)
+        #print(feat)
         try: feat['applicationId'] 
         except: feat.update({'applicationId': count})
 
@@ -390,8 +365,8 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
         count += 1
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     for row in rowValues: 
-        #print(tuple(heads))
-        #print(tuple(row))
+        print(tuple(heads))
+        print(tuple(row))
         cur.insertRow(tuple(row))
     del cur 
 
