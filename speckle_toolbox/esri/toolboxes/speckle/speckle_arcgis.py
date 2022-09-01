@@ -25,7 +25,9 @@ from specklepy.logging.exceptions import (
 from specklepy.api.credentials import StreamWrapper
 from specklepy.objects import Base
 from specklepy.api.wrapper import StreamWrapper
-
+from specklepy.logging import metrics
+    
+    
 from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
 
 def traverseObject(
@@ -65,7 +67,8 @@ class Toolbox(object):
         self.label = "Speckle Tools"
         self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
-        self.tools = [Speckle]    
+        self.tools = [Speckle]  
+        metrics.set_host_app("ArcGIS")  
         #self.toolboxInputs = uiInputs() # initialize once together with a toolbox
 
         
