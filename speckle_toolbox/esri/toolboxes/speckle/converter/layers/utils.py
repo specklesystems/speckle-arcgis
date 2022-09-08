@@ -24,44 +24,51 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
 
     return res
 
-def getLayerAttributes(features: List[Base]) -> dict:
-    print("________ get layer attributes___")
+def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry'] ) -> dict:
+    print("03________ get layer attributes")
     fields = {}
     all_props = []
     for feature in features: 
         #get object properties to add as attributes
         dynamicProps = feature.get_dynamic_member_names()
-        attrsToRemove = ['geometry','applicationId','bbox','displayStyle', 'id', 
-                        'renderMaterial', 'userDictionary', 'userStrings','geometry']
+        #attrsToRemove = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry']
         for att in attrsToRemove:
             try: dynamicProps.remove(att)
             except: pass
 
         dynamicProps.sort()
-        #print(dynamicProps)
+        print(dynamicProps)
 
         # add field names and variands 
-        #variants = [] 
         for name in dynamicProps:
             if name not in all_props: all_props.append(name)
 
             value = feature[name]
             variant = getVariantFromValue(value)
-            #print(variant)
             if not variant: variant = None #LongLong #4 
 
+            # go thought the dictionary object
+            print("go thought the dictionary object")
+            if value and isinstance(value, list) and isinstance(value[0], dict) :
+                all_props.remove(name) # remove generic dict name
+                newF, newVals = traverseDict( {}, {}, name, value[0])
+                #print(newF)
+                #print(newF.items())
+                for i, (k,v) in enumerate(newF.items()):
+                    fields.update({k: v}) 
+                    if k not in all_props: all_props.append(k)
+                #print(fields)
+            
             # add a field if not existing yet AND if variant is known
-            if variant and (name not in fields.keys()): 
+            elif variant and (name not in fields.keys()): 
                 fields.update({name: variant})
             
             elif name in fields.keys(): #check if the field was empty previously: 
-                #nameIndex = fields.indexFromName(name)
                 oldVariant = fields[name]
-                #print(oldVariant)
                 # replace if new one is NOT LongLong or IS String
                 if oldVariant != "TEXT" and variant == "TEXT": 
                     fields.update({name: variant}) 
-    print(all_props)
+        #print(all_props)
 
     # replace all empty ones wit String
     for name in all_props:
@@ -69,6 +76,22 @@ def getLayerAttributes(features: List[Base]) -> dict:
             fields.update({name: "TEXT"}) 
     print(fields)
     return fields
+
+def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
+    #print("Traverse Dict")
+    if isinstance(val, dict):
+        for i, (k,v) in enumerate(val.items()):
+            traverseDict( newF, newVals, nam+"_"+k, v)
+    else: 
+        var = getVariantFromValue(val)
+        if not var: var = None #LongLong #4 
+        else: 
+            newF.update({nam: var})
+            newVals.update({nam: val})  
+    #print(newF)
+    #print(newVals)
+    #print("traverse end")
+    return newF, newVals
 
 def get_scale_factor(units: str) -> float:
     unit_scale = {

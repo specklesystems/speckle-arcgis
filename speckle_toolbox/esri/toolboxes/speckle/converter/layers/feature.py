@@ -1,11 +1,13 @@
 from specklepy.objects import Base
 import arcpy 
 from arcpy.management import CreateCustomGeoTransformation
+from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
 from speckle.converter.geometry._init_ import convertToSpeckle, convertToNative, convertToNativeMulti
 from speckle.converter.layers.utils import getVariantFromValue
+from speckle.converter.layers.utils import traverseDict
 
-def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialReference, project: arcpy.mp.ArcGISProject, selectedLayer):
+def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialReference, project: ArcGISProject, selectedLayer: arcLayer):
     print("___________Feature to Speckle____________")
     b = Base(units = "m")
     data = arcpy.Describe(selectedLayer.dataSource)
@@ -84,7 +86,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     return b
 
 def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.SpatialReference):
-    print("Feature To Native____________") 
+    print("04_____Feature To Native____________") 
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
     except:  speckle_geom = feature # for created in other software
@@ -99,7 +101,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
     else:
         return None
-    print(feat)
+
     for key, variant in fields.items(): 
 
         value = feature[key]
@@ -114,31 +116,50 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
     return feat
 
 def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
-    print("_________CAD Feature To Native____________")
+    print("04_________CAD Feature To Native____________")
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
     except:  speckle_geom = feature # for created in other software
-    #print(feature)
-    #print(speckle_geom)
+
     if isinstance(speckle_geom, list):
         if len(speckle_geom)>1: arcGisGeom = convertToNativeMulti(speckle_geom, sr)
         else: arcGisGeom = convertToNative(speckle_geom[0], sr) 
     else:
         arcGisGeom = convertToNative(speckle_geom, sr)
-
+    print(feat)
     if arcGisGeom is not None:
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
     else: return None
+    print(feat)
+    try: 
+        if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
+    except: pass
+    print(feat)
+    #### setting attributes to feature
     for key, variant in fields.items(): 
-        value = feature[key]
-        if variant == "TEXT": value = str(feature[key]) 
+        #value = feature[key]
+        #print()
+        if key == "Speckle_ID": 
+            value = str(feature["id"])
+            feat[key] = value 
+        else:
+            try: value = feature[key]
+            except:
+                rootName = key.split("_")[0]
+                newF, newVals = traverseDict({}, {}, rootName, feature[rootName][0])
+                for i, (k,v) in enumerate(newVals.items()):
+                    if k == key: value = v; break
+        # for all values: 
+        if variant == "TEXT": value = str(value) 
+
         if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
-            feat.update({key: value})
+            feat.update({key: value})   
         else: 
             if variant == "TEXT": feat.update({key: None})
             if variant == "FLOAT": feat.update({key: None})
             if variant == "LONG": feat.update({key: None})
             if variant == "SHORT": feat.update({key: None})
-    #print(feat) 
+            
+    print(feat) 
     return feat
     

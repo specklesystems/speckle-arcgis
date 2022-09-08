@@ -6,7 +6,7 @@ from typing import Any, List, Union
 
 from regex import D
 from speckle.converter.layers.CRS import CRS
-from speckle.converter.layers.Layer import Layer, RasterLayer
+from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
 from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative
 from specklepy.objects import Base
 
@@ -20,7 +20,7 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 from speckle.converter.layers.utils import getLayerAttributes
 
 
-def convertSelectedLayers(all_layers: List[arcpy._mp.Layer], selected_layers: List[str], project: arcpy.mp.ArcGISProject) -> List[Layer]:
+def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
     """Converts the current selected layers to Speckle"""
     print("________Convert Layers_________")
     result = []
@@ -44,7 +44,7 @@ def convertSelectedLayers(all_layers: List[arcpy._mp.Layer], selected_layers: Li
     #print(result)
     return result
 
-def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
+def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer, RasterLayer]: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
     """Converts a given QGIS Layer to Speckle"""
     print("________Convert Feature Layer_________")
 
@@ -61,7 +61,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the i
     #    #layer_geo_crs =  
     #    datum = CRS(name = layer_geo_crs.name, wkt = layer_geo_crs.exportToString(), units = "m")
     
-    speckleLayer = Layer()
+    speckleLayer = VectorLayer(units = "m")
     speckleLayer.type="VectorLayer"
     speckleLayer.name = layer.name
     speckleLayer.crs = crs
@@ -107,7 +107,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the i
 
     return speckleLayer
 
-def layerToNative(layer: Union[Layer, RasterLayer], streamBranch: str, project: ArcGISProject):
+def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: str, project: ArcGISProject):
 
     if layer.type is None:
         # Handle this case
@@ -119,7 +119,8 @@ def layerToNative(layer: Union[Layer, RasterLayer], streamBranch: str, project: 
     return None
 
 def cadLayerToNative(layerContentList:Base, layerName: str, streamBranch: str, project: ArcGISProject) :
-
+    print("01______Cad vector layer to native")
+    print(layerName)
     geom_points = []
     geom_polylines = []
     geom_polygones = []
@@ -138,7 +139,7 @@ def cadLayerToNative(layerContentList:Base, layerName: str, streamBranch: str, p
     return [layer_points, layer_polylines]
 
 def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
-    print("_________CAD vector layer to native_____")
+    print("02_________CAD vector layer to native_____")
     #get Project CRS, use it by default for the new received layer
     vl = None
     layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
@@ -184,7 +185,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     #path = r"C:\Users\username\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
     #https://community.esri.com/t5/arcgis-pro-questions/is-it-possible-to-create-a-new-group-layer-with/td-p/1068607
 
-    print("_________create feature class (cad)___________________________________")
+    #print("Create feature class (cad): ")
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
     class_name = ("f_class_" + newName)
     f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
@@ -259,7 +260,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
 
     return vl
 
-def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject):
+def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, project: ArcGISProject):
     print("_________Vector Layer to Native_________")
     vl = None
     layerName = layer.name.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")

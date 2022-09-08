@@ -29,6 +29,7 @@ from specklepy.logging import metrics
     
     
 from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+from speckle.converter.layers.Layer import VectorLayer
 
 def traverseObject(
         base: Base,
@@ -414,7 +415,7 @@ class Speckle(object):
         transport = ServerTransport(client=client, stream_id=streamId)
 
         ##################################### conversions ################################################
-        base_obj = Base()
+        base_obj = Base(units = "m")
         base_obj.layers = convertSelectedLayers(self.toolboxInputs.all_layers, self.toolboxInputs.selected_layers, self.toolboxInputs.project)
         
         try:
@@ -522,13 +523,13 @@ class Speckle(object):
                 layerGroup = self.toolboxInputs.project.activeMap.addLayer(smth)[0]
                 layerGroup.name = newGroupName
 
-            if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, Layer) or isinstance(base, RasterLayer)
+            if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, Layer) or isinstance(base, VectorLayer) or isinstance(base, RasterLayer)
             else: check: Callable[[Base], bool] = lambda base: isinstance(base, Base)
 
             def callback(base: Base) -> bool:
                 print("callback")
                 #print(base)
-                if isinstance(base, Layer) or isinstance(base, RasterLayer):
+                if isinstance(base, Layer) or isinstance(base, VectorLayer) or isinstance(base, RasterLayer):
                     layer = layerToNative(base, streamBranch, self.toolboxInputs.project)
                     if layer is not None:
                         print("Layer created: " + layer.name)
@@ -546,6 +547,7 @@ class Speckle(object):
             def loopVal(value: Any, name: str): # "name" is the parent object/property/layer name
                 if isinstance(value, Base): 
                     try: # dont go through parts of Speckle Geometry object
+                        print("objects to loop through: " + value.speckle_type)
                         if value.speckle_type.startswith("Objects.Geometry."): pass #.Brep") or value.speckle_type.startswith("Objects.Geometry.Mesh") or value.speckle_type.startswith("Objects.Geometry.Surface") or value.speckle_type.startswith("Objects.Geometry.Extrusion"): pass
                         else: loopObj(value, name)
                     except: loopObj(value, name)
@@ -553,6 +555,7 @@ class Speckle(object):
                 if isinstance(value, List):
                     for item in value:
                         loopVal(item, name)
+                        #print(item)
                         if item.speckle_type and item.speckle_type.startswith("Objects.Geometry."): 
                             pt, pl = cadLayerToNative(value, name, streamBranch, self.toolboxInputs.project)
                             if pt is not None: print("Layer group created: " + pt.name())

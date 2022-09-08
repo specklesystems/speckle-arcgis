@@ -166,40 +166,44 @@ def arcToNativePoints(poly: Arc, sr: arcpy.SpatialReference):
     points = []
     if poly.startPoint.x == poly.plane.origin.x: angle1 = math.pi/2
     else: angle1 = atan( abs ((poly.startPoint.y - poly.plane.origin.y) / (poly.startPoint.x - poly.plane.origin.x) )) # between 0 and pi/2
-    #print(angle1)
+    
     if poly.plane.origin.x < poly.startPoint.x and poly.plane.origin.y > poly.startPoint.y: angle1 = 2*math.pi - angle1
     if poly.plane.origin.x > poly.startPoint.x and poly.plane.origin.y > poly.startPoint.y: angle1 = math.pi + angle1
     if poly.plane.origin.x > poly.startPoint.x and poly.plane.origin.y < poly.startPoint.y: angle1 = math.pi - angle1
-    print(angle1)
-
+    #print(angle1)
     if poly.endPoint.x == poly.plane.origin.x: angle2 = math.pi/2
     else: angle2 = atan( abs ((poly.endPoint.y - poly.plane.origin.y) / (poly.endPoint.x - poly.plane.origin.x) )) # between 0 and pi/2
-    #print(angle2)
+
     if poly.plane.origin.x < poly.endPoint.x and poly.plane.origin.y > poly.endPoint.y: angle2 = 2*math.pi - angle2
     if poly.plane.origin.x > poly.endPoint.x and poly.plane.origin.y > poly.endPoint.y: angle2 = math.pi + angle2
     if poly.plane.origin.x > poly.endPoint.x and poly.plane.origin.y < poly.endPoint.y: angle2 = math.pi - angle2
-    print(angle2)
+    #print(angle2)
 
-    try: interval = math.floor(poly.endAngle - poly.startAngle)
-    except: interval = math.floor(angle2-angle1)
+    #print(poly.endAngle)
+    #print(poly.startAngle)
+
+    try: interval = (poly.endAngle - poly.startAngle); print(interval)
+    except: interval = (angle2-angle1); print("recalculate"); print(interval)
     pointsNum = math.floor( abs(interval)) * 12
     if pointsNum <4: pointsNum = 4
     points.append(pointToCoord(poly.startPoint))
-    print(points)
-    print(interval)
-    print(pointsNum)
+    #print(points)
+    #print(interval)
+    #print(pointsNum)
     for i in range(1, pointsNum + 1): 
         k = i/pointsNum # to reset values from 1/10 to 1
         if poly.plane.normal.z == 0: normal = 1
         else: normal = poly.plane.normal.z
         angle = angle1 + k * interval * normal
-        print(f"k: {str(i)} multiplied: {str(k*interval)} angle: {str(angle1 + k * interval)}")
+
+        #print(f"k: {str(i)} multiplied: {str(k*interval)} angle: {str(angle1 + k * interval)}")
         #print(cos(angle))
         pt = Point( x = poly.plane.origin.x + poly.radius * cos(angle), y = poly.plane.origin.y + poly.radius * sin(angle), z = 0) 
         pt.units = poly.startPoint.units 
         points.append(pointToCoord(pt))
         #print(pointToCoord(pt))
     points.append(pointToCoord(poly.endPoint))
+    #print(points)
     curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True )
     return curve
 
