@@ -82,19 +82,19 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
             for i, features in enumerate(rows_shapes):
                 print("____Feature # " + str(i+1))
                 if features[0] == None: continue 
-                #print(features[0].hasCurves)
-                if features[0].hasCurves: continue 
+                print(features[0].hasCurves)
+                #if features[0].hasCurves: continue 
                 rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
                 row_attr = []
                 for k, attrs in enumerate(rows_attributes):
                     if i == k: row_attr = attrs; break
 
                 #print(features) #(<Polygon object at 0x172592ae8c8[0x17258d2a600]>,)
-                #print(features[0].pointCount)
-                #print(features[0].partCount)
+                print(features[0])
+                print(features[0].partCount)
                 if features[0]:
                     b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
-                    layerObjs.append(b)
+                    if b is not None: layerObjs.append(b)
                     #print(layerObjs)
                 
             print("__ finish iterating features")

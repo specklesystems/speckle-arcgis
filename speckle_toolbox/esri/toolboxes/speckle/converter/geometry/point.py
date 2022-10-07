@@ -68,3 +68,7 @@ def scalePointToNative(pt: Point, units: str) -> Point:
     pt.y = pt.y * scaleFactor
     pt.z = 0 if math.isnan(pt.z) else pt.z * scaleFactor
     return pt
+
+def addZtoPoint(coords: List): 
+    if len(coords) == 2: coords.append(0)
+    return coords

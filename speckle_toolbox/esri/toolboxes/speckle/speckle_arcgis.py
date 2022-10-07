@@ -476,7 +476,15 @@ class Speckle(object):
                 return
 
         # next create a server transport - this is the vehicle through which you will send and receive
-        try: transport = ServerTransport(client=client, stream_id=streamId)
+        try: 
+            transport = ServerTransport(client=client, stream_id=streamId)
+            
+            client.commit.received(
+            streamId,
+            commit.id,
+            source_application="ArcGIS",
+            message="Received commit in ArcGIS",
+            )
         except: 
             arcpy.AddError("Make sure your account has access to the chosen stream")
             return

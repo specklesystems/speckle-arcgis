@@ -3,10 +3,11 @@ import arcpy
 import json 
 
 from specklepy.objects import Base
-from specklepy.objects.geometry import Point
+from specklepy.objects.geometry import Point, Arc, Circle, Polycurve
 from speckle.converter.geometry.mesh import rasterToMesh
 from speckle.converter.geometry.point import pointToCoord
-from speckle.converter.geometry.polyline import polylineFromVerticesToSpeckle, circleToSpeckle
+from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, circleToSpeckle, 
+                                                speckleArcCircleToPoints, curveToSpeckle, specklePolycurveToPoints)
 
 import math
 from panda3d.core import Triangulator
@@ -21,87 +22,60 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
     voidPointList = []
     voids = []
     boundary = None
+
+    print(multiType)
     
     if geom.hasCurves: 
+        print("has curves")
+        segments = []
         # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
         print(geom.JSON) 
-        # look for "curvePaths" or "curveRings"[[ (startPt, {arcs, beziers etc}, optional(endPt))],[],...], "rings" 
-        # examples: https://developers.arcgis.com/documentation/common-data-types/geometry-objects.htm
-        # e.g. {"hasZ":true,"curveRings":[[[631307.05960000027,5803698.4477999993,0],{"a":[[631307.05960000027,5803698.4477999993,0],[631307.05960000027,5803414.92656173],0,1]}]],"spatialReference":{"wkid":32631,"latestWkid":32631}}
-        # b - bezier curve (endPt, controlPts) 
-        # a - elliptical arc (endPt, centralPt)
-        # c - circular arc (endPt, throughPt) 
+        boundary = curveToSpeckle(geom, feature, layer)
+        
+    else: # no curves
+        if multiType is False: 
+            print("single type")
+            for p in geom:
+                for pt in p: 
+                    if pt != None: pointList.append(pt) 
+            boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
+        else: 
+            print("multi type")
+            for i, p in enumerate(geom):
+                for pt in p:  
+                    #print(pt) # 284394.58100903 5710688.11602606 NaN NaN
+                    if pt == None and boundary == None:  # first break 
+                        boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
+                        pointList = []
+                    elif pt == None and boundary != None: # breaks btw voids
+                        void = polylineFromVerticesToSpeckle(pointList, True, feature, layer)
+                        voids.append(void)
+                        pointList = []
+                    elif pt != None: # add points to whatever list (boundary or void) 
+                        pointList.append(pt)
 
-        #startPtCoords = geom.JSON.curveRings[0][0]
-        r'''
-        segments = []
-        for key, val in json.loads(geom.JSON).items(): 
-            if key == "curveRings": 
-                for segm in val:
-                    print(segm)
-                    segmStartCoord = segm[0]
-                    print(segmStartCoord) 
-
-                    segmData = segm[1]
-                    for key2, val2 in segmData.items():
-                        if key2 == "a":
-                            segmToCoord = val2[0] # elliptical arc 
-                            segmCenter = val2[1]
-                            print(segmToCoord)
-                            print(segmCenter)
-                            if segmStartCoord == segmToCoord: 
-                                print("full circle") 
-                                boundary = circleToSpeckle(segmCenter, segmToCoord, layer)
-
-                            try: 
-                                segmToCoord = segm[1].c # circular arc 
-                            except:
-                                try: 
-                                    segmToCoord = segm[1].b # bezier curve 
-                                except: pass
-
-                    segmEndCoord = None
-                    if len(segm)>2:
-                        segmEndCoord = segm[2]
-        '''
-
-    if multiType is False: 
-        print("single type")
-        for p in geom:
-            for pt in p: 
-                if pt != None: pointList.append(pt) 
-        boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
-    else: 
-        print("multi type")
-        for i, p in enumerate(geom):
-            for pt in p:  
-                #print(pt) # 284394.58100903 5710688.11602606 NaN NaN
-                if pt == None and boundary == None:  # first break 
-                    boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
-                    pointList = []
-                elif pt == None and boundary != None: # breaks btw voids
+                if boundary != None and len(pointList)>0: # remaining polyline
                     void = polylineFromVerticesToSpeckle(pointList, True, feature, layer)
                     voids.append(void)
-                    pointList = []
-                elif pt != None: # add points to whatever list (boundary or void) 
-                    pointList.append(pt)
-
-            if boundary != None and len(pointList)>0: # remaining polyline
-                void = polylineFromVerticesToSpeckle(pointList, True, feature, layer)
-                voids.append(void)
-
+    
+    if boundary is None: return None 
     polygon.boundary = boundary
     polygon.voids = voids
     polygon.displayValue = [ boundary ] + voids
 
     ############# mesh 
     vertices = []
+    polyBorder = []
     total_vertices = 0
-    polyBorder = boundary.as_points()
-
+    if isinstance(boundary, Circle) or isinstance(boundary, Arc): 
+        polyBorder = speckleArcCircleToPoints(boundary) 
+    elif isinstance(boundary, Polycurve): 
+        polyBorder = specklePolycurveToPoints(boundary) 
+    elif boundary is not None: 
+        polyBorder = boundary.as_points()
     #print(polyBorder)
 
-    if len(polyBorder)>2:
+    if len(polyBorder)>2: # at least 3 points 
         print("make meshes from polygons")
         if len(voids) == 0: # if there is a mesh with no voids
             for pt in polyBorder:
