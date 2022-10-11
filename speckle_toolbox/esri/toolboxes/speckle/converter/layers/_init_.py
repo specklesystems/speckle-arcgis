@@ -80,10 +80,11 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
             print("__ start iterating features")
             # write feature attributes
             for i, features in enumerate(rows_shapes):
-                print("____Feature # " + str(i+1))
+                print("____error Feature # " + str(i+1)) # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
+                print(features[0])
                 if features[0] == None: continue 
                 print(features[0].hasCurves)
-                #if features[0].hasCurves: continue 
+ 
                 rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
                 row_attr = []
                 for k, attrs in enumerate(rows_attributes):
@@ -96,6 +97,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                     b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
                     if b is not None: layerObjs.append(b)
                     #print(layerObjs)
+                print("____End of Feature # " + str(i+1))
                 
             print("__ finish iterating features")
             speckleLayer.features=layerObjs

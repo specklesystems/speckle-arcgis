@@ -3,7 +3,7 @@ from math import atan, cos, sin
 import math
 import json 
 from typing import List, Union, Tuple
-from specklepy.objects.geometry import Vector, Point, Line, Polyline, Curve, Arc, Circle, Polycurve, Plane, Interval  
+from specklepy.objects.geometry import Box, Vector, Point, Line, Polyline, Curve, Arc, Circle, Polycurve, Plane, Interval  
 import arcpy 
 import numpy as np
 
@@ -23,7 +23,7 @@ def circleToSpeckle(center, point):
 
     args = [0] + [rad] + domain + plane + [units] 
     #print(args) 
-    c = Circle().from_list(args)
+    c = Circle.from_list(args)
     c.plane.origin.units = "m"
     #print(c)
     return c 
@@ -32,17 +32,23 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
     print("___Polyline to Speckle____")
     polyline = None
     pointList = []
-    #print(geom.hasCurves) 
+    print(geom.hasCurves) 
 
     if multiType is False: 
-        for p in geom: 
-            for pt in p: 
-                if pt != None: pointList.append(pt)#; print(pt.Z)
-        closed = False
-        if pointList[0] == pointList[len(pointList)-1]: 
-            closed = True
-            pointList = pointList[:-1]
-        polyline = polylineFromVerticesToSpeckle(pointList, closed, feature, layer) 
+        if geom.hasCurves: 
+            print("has curves")
+            # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
+            print(geom.JSON) 
+            polyline = curveToSpeckle(geom, "Polyline", feature, layer)
+        else:
+            for p in geom: 
+                for pt in p: 
+                    if pt != None: pointList.append(pt)#; print(pt.Z)
+            closed = False
+            if pointList[0] == pointList[len(pointList)-1]: 
+                closed = True
+                pointList = pointList[:-1]
+            polyline = polylineFromVerticesToSpeckle(pointList, closed, feature, layer) 
     return polyline
 
 def polylineFromVerticesToSpeckle(vertices, closed, feature, layer) -> Polyline:
@@ -93,8 +99,47 @@ def arc3ptToSpeckle(p0: List, p1: List, p2: List, feature, layer) -> Arc:
 
     return arc
 
-def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycurve]:
+def curveBezierToSpeckle(segmStartCoord, segmEndCoord, knots, feature, layer): 
+    print("____bezier curve to Speckle____")
+    degree = 3
+    points = [
+        tuple(knots[0]), tuple(segmStartCoord), tuple(knots[1]), tuple(segmEndCoord)
+    ] #[segmStartCoord, *coords]
+    print(points)
+    num_points = len(points) #2
+
+    knot_count = num_points + degree - 1 #4
+    knots = [0] * knot_count
+    print(knots)
+    for i in range(1, len(knots)):
+        knots[i] = i // 3
+        print(knots[i])
+
+    length = 1 #spline.calc_length()
+    domain = Interval(start=0, end=length, totalChildrenCount=0)
+    points = [tuple(pt) for pt in points]
+    curve = Curve(
+        degree = degree,
+        closed = False, 
+        periodic= True if (segmStartCoord == segmEndCoord) else False,
+        points= list(sum(points, ())),  # magic (flatten list of tuples)
+        weights=[1] * num_points,
+        knots=knots,
+        rational=False,
+        area=0,
+        volume=0,
+        length=length,
+        domain=domain,
+        units="m",
+        bbox=Box(area=0.0, volume=0.0),
+    )
+    print(curve) 
+    return curve
+
+
+def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polyline, Polycurve]:
     print("____curve to Speckle____")
+    print(geomType)
     # look for "curvePaths" or "curveRings"[[ (startPt, {arcs, beziers etc}, optional(endPt))],[],...], "rings" 
     # examples: https://developers.arcgis.com/documentation/common-data-types/geometry-objects.htm
     # e.g. {"hasZ":true,
@@ -104,17 +149,23 @@ def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycur
     # b - bezier curve (endPt, controlPts) 
     # a - elliptical arc (endPt, centralPt) e.g. for circle: [[[631307.05960000027,5803698.4477999993,0],{"a":[[631307.05960000027,5803698.4477999993,0],[631307.05960000027,5803414.92656173],0,1]}]]
     # c - circular arc (endPt, throughPt) e.g. [[[633242.45179999992,5803058.0354999993,0],{"c":[[633718.26040000003,5803496.4210000001,0],[633337.75764975848,5803431.9997026781]]},[633242.45179999992,5803058.0354999993,0]]]
+    
+    boundary = Polycurve()
+    if geomType == "Polyline": boundary.closed = False
+    else: boundary.closed = True 
+    segments = [] 
 
     for key, val in json.loads(geom.JSON).items(): 
-        if key == "curveRings": 
-            boundary = Polycurve()
-            boundary.closed = True
+        print(key)
+        if key == "curveRings" or key == "curvePaths": 
+            
+            #boundary.closed = True
             includesLines = 0
 
             for segm in val: # segm: List
                 print(segm) #e.g. [[631307.05960000027,5803698.4477999993,0], {"a":[[631307.05960000027,5803698.4477999993,0],[631307.05960000027,5803414.92656173],0,1]}] 
-                segmStartCoord: List = segm[0]
-                segments = [] 
+                segmStartCoord: List = addZtoPoint(segm[0])
+                
 
                 # go through all elements (points, a, c, ...)
                 for k in range(1, len(segm)):
@@ -128,7 +179,7 @@ def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycur
                             segmOldData = segm[k-1] 
                             if isinstance(segmOldData, dict):  # get "end point" of previous segment 
                                 for key3, val3 in segmOldData.items(): 
-                                    segmStartCoord: List = val3[0] 
+                                    segmStartCoord: List = addZtoPoint(val2[0]) 
                             elif isinstance(segmOldData, list) and isinstance(segmOldData[0], float): 
                                   segmStartCoord: List = segmOldData 
                     segmStartCoord = addZtoPoint(segmStartCoord)
@@ -137,8 +188,8 @@ def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycur
                         for key2, val2 in segm[k].items():
                             if key2 == "a": # elliptical arc (endPt, centralPt)
                                 # e.g. {'a': [[633883.1035000002, 5802972.5812, 0], [634028.3379278888, 5802908.342895357], 0, 1, 1.1543577096027686, 473.59966687227444, 0.33531864204900685]}
-                                segmEndCoord = val2[0] # [631307.05960000027,5803698.4477999993,0]
-                                segmCenter = val2[1] # [631307.05960000027,5803414.92656173]
+                                segmEndCoord = addZtoPoint(val2[0]) # [631307.05960000027,5803698.4477999993,0]
+                                segmCenter = addZtoPoint(val2[1]) # [631307.05960000027,5803414.92656173]
                                 
                                 if segmStartCoord == segmEndCoord: 
                                     if len(val2) == 4: 
@@ -153,11 +204,13 @@ def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycur
                                         print(segmEndCoord)
                                     else: # ellipse
                                         arcpy.AddMessage("SpeckleWarning: ellipse geometry not supported yet") 
+                                        segments = []
+                                        break
 
                             if key2 == "c": # circular arc (endPt, throughPt) 
                                 
-                                segmEndCoord: List = val2[0] # [633718.26040000003,5803496.4210000001,0] 
-                                segmThrough: List = val2[1] # [633337.7576497585, 5803431.999702678] 
+                                segmEndCoord: List = addZtoPoint(val2[0]) # [633718.26040000003,5803496.4210000001,0] 
+                                segmThrough: List = addZtoPoint(val2[1]) # [633337.7576497585, 5803431.999702678] 
 
                                 segmentLocal = arc3ptToSpeckle(segmStartCoord, segmThrough, segmEndCoord, feature, layer) 
                                 segments.append(segmentLocal)
@@ -168,11 +221,25 @@ def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycur
                                 lastPt = segmEndCoord 
 
                             if key2 == "b": # bezier curve (endPt, controlPts) 
-                                segmEndCoord: List = val2[0] # [633718.26040000003,5803496.4210000001,0] 
-                                segmThrough: List = val2[1] # [633337.7576497585, 5803431.999702678] 
+                                arcpy.AddMessage("SpeckleWarning: bezier curve geometry not supported yet") 
+                                segments = []
+                                break
+                                r'''
+                                segmEndCoord: List = addZtoPoint(val2[0])  # [633718.26040000003,5803496.4210000001,0] 
+                                #segmThrough: List = val2[1] # [633337.7576497585, 5803431.999702678] 
+                                coords = val2[1:]
+                                segmentLocal = curveBezierToSpeckle(segmStartCoord, segmEndCoord, coords, feature, layer) 
+                                segments.append(segmentLocal)
+                                print("segmentLocal:")
+                                print(segmentLocal)
+                                print(segmStartCoord)
+                                print(segmEndCoord)
+                                
                                 lastPt = segmEndCoord 
+                                '''
                     
                     elif isinstance(segm[k], list) and isinstance(segm[k][0], float): # add line to point 
+                        print("add line")
                         segm[k] = addZtoPoint(segm[k]) 
                         segmentLocal = lineFrom2pt(segmStartCoord, segm[k])
                         includesLines = 1
@@ -186,17 +253,17 @@ def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycur
 
                     # for the last point
                     if k == len(segm)-1 and isinstance(segm[k], list): 
+                        print("last element is a point (adding line)")
                         lastPt = addZtoPoint(lastPt)
                         if lastPt != segm[0]: 
-                            segmentLocal = lineFrom2pt(lastPt, segm[0])
-                            segments.append(segmentLocal) 
-                            includesLines = 1
-                            print("segmentLocal:")
-                            print(segmentLocal)
-                            print(segmentLocal.start)
-                            print(segmentLocal.end)
-
-                    #boundary.closed = True 
+                            #segmentLocal = lineFrom2pt(lastPt, segm[0])
+                            #segments.append(segmentLocal) 
+                            #includesLines = 1
+                            #print("segmentLocal:")
+                            #print(segmentLocal)
+                            #print(segmentLocal.start)
+                            #print(segmentLocal.end)
+                            boundary.closed = True 
                     #pts = speckleArcCircleToPoints(segmentLocal)
                     #pts.append(segm[k])
                     #arcgisPts = [arcpy.Point(pt[0], pt[1], pt[2]) for pt in pts]
@@ -205,13 +272,25 @@ def curveToSpeckle(geom, feature, layer) -> Union[Circle, Arc, Polyline, Polycur
     boundary.segments = segments
     print(segments)
 
-    if len(segments) > 0: #includesLines == 1 and 
-        print("includes lines!")
-        points = specklePolycurveToPoints(boundary) 
-
-        boundary = Polyline.from_points(points)
-        boundary.closed = True 
+    if len(segments) == 1:
+        boundary = segments[0]
+        if isinstance(boundary, Arc) or isinstance(boundary, Circle): 
+            boundary.displayValue = Polyline.from_points(speckleArcCircleToPoints(boundary)) 
+        #if isinstance(boundary, Line):
+        #    boundary.displayValue = Polyline.from_points(specklePolycurveToPoints(boundary))
+    elif len(segments) > 1: # and includesLines == 0:
+        boundary.displayValue = Polyline.from_points(specklePolycurveToPoints(boundary)) 
+        pass
+        #boundary.closed = True 
+    #elif len(segments) > 1 and includesLines == 1: 
+    #    print("includes lines!")
+    #    points = specklePolycurveToPoints(boundary) 
+    #    boundary = Polyline.from_points(points)
     else: return None
+
+    #boundary.displayValue = Polyline.from_points(specklePolycurveToPoints(boundary)) 
+    
+    print(boundary)  
     return boundary 
 
 
@@ -338,14 +417,14 @@ def specklePolycurveToPoints(poly: Polycurve) -> List[Point]:
     points = []
     for segm in poly.segments:
         print(segm)
-        if isinstance(segm, Arc) or isinstance(segm, Circle) or isinstance(segm, Curve):
-            #print("Arc or Curve")
+        if isinstance(segm, Arc) or isinstance(segm, Circle): # or isinstance(segm, Curve):
+            print("Arc or Curve")
             pts: List[Point] = speckleArcCircleToPoints(segm) 
         elif isinstance(segm, Line): 
-            #print("Line")
+            print("Line")
             pts: List[Point] = [segm.start, segm.end]
         elif isinstance(segm, Polyline): 
-            #print("Polyline")
+            print("Polyline")
             pts: List[Point] = segm.as_points()
 
         points.extend(pts)
@@ -371,15 +450,15 @@ def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]:
         angle1, angle2 = getArcAngles(poly)
         interval = abs(angle2 - angle1)
         
-        print(angle1)
-        print(angle2)
+        #print(angle1)
+        #print(angle2)
         
         if (angle1 > angle2 and normal == -1) or (angle2 > angle1 and normal == 1): pass
         if angle1 > angle2 and normal == 1: interval = abs( (2*math.pi-angle1) + angle2)
         if angle2 > angle1 and normal == -1: interval = abs( (2*math.pi-angle2) + angle1)
 
-        print(interval)
-        print(normal)
+        #print(interval)
+        #print(normal)
     
     pointsNum = math.floor( abs(interval)) * 12
     if pointsNum <4: pointsNum = 4
@@ -387,8 +466,8 @@ def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]:
     for i in range(range_start, pointsNum + 1): 
         k = i/pointsNum # to reset values from 1/10 to 1
         angle = angle1 + k * interval * normal
-        print(k)
-        print(angle)
+        #print(k)
+        #print(angle)
         pt = Point( x = poly.plane.origin.x + poly.radius * cos(angle), y = poly.plane.origin.y + poly.radius * sin(angle), z = 0) 
         
         pt.units = poly.plane.origin.units 
@@ -435,8 +514,8 @@ def getArcNormal(poly: Arc, midPt: Point):
     if angle2 > angle1 > angle: normal.z = -1  
     if angle > angle1 > angle2: normal.z = 1  
 
-    if angle2 > angle > angle1: normal.z = -1  
-    if angle > angle2 > angle1: normal.z = 1  
+    if angle2 > angle > angle1: normal.z = 1  
+    if angle > angle2 > angle1: normal.z = -1  
     
     print(angle1)
     print(angle)
