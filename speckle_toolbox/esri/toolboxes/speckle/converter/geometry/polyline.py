@@ -85,6 +85,7 @@ def arc3ptToSpeckle(p0: List, p1: List, p2: List, feature, layer) -> Arc:
     arc.plane = Plane() #.from_list(Point(), Vector(Point(0, 0, 1)), Vector(Point(0,1,0)), Vector(Point(-1,0,0)))
     arc.plane.origin = Point.from_list(center)
     arc.plane.origin.units = "m" 
+    arc.angleRadians, startAngle, endAngle = getArcRadianAngle(arc)
 
     arc.radius = radius
     
@@ -274,12 +275,11 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
 
     if len(segments) == 1:
         boundary = segments[0]
-        if isinstance(boundary, Arc) or isinstance(boundary, Circle): 
-            boundary.displayValue = Polyline.from_points(speckleArcCircleToPoints(boundary)) 
-        #if isinstance(boundary, Line):
-        #    boundary.displayValue = Polyline.from_points(specklePolycurveToPoints(boundary))
+        #if isinstance(boundary, Arc) or isinstance(boundary, Circle): 
+        #    boundary.displayValue = Polyline.from_points(speckleArcCircleToPoints(boundary)) 
+        
     elif len(segments) > 1: # and includesLines == 0:
-        boundary.displayValue = Polyline.from_points(specklePolycurveToPoints(boundary)) 
+        #boundary.displayValue = Polyline.from_points(specklePolycurveToPoints(boundary)) 
         pass
         #boundary.closed = True 
     #elif len(segments) > 1 and includesLines == 1: 
@@ -447,7 +447,9 @@ def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]:
         points.append(poly.startPoint)
         range_start = 0 
 
-        angle1, angle2 = getArcAngles(poly)
+        #angle1, angle2 = getArcAngles(poly)
+        
+        interval, angle1, angle2 = getArcRadianAngle(poly)
         interval = abs(angle2 - angle1)
         
         #print(angle1)
@@ -475,6 +477,20 @@ def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]:
 
     if isinstance(poly, Arc): points.append(poly.endPoint)
     return points
+
+
+def getArcRadianAngle(arc: Arc) -> List[float]:
+
+    interval = None
+    normal = arc.plane.normal.z 
+    angle1, angle2 = getArcAngles(arc)
+    if angle1 is None or angle2 is  None: return None
+    interval = abs(angle2 - angle1)
+
+    if (angle1 > angle2 and normal == -1) or (angle2 > angle1 and normal == 1): pass
+    if angle1 > angle2 and normal == 1: interval = abs( (2*math.pi-angle1) + angle2)
+    if angle2 > angle1 and normal == -1: interval = abs( (2*math.pi-angle2) + angle1)
+    return interval, angle1, angle2
 
 def getArcAngles(poly: Arc) -> Tuple[float]: 
     

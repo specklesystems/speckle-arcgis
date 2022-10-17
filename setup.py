@@ -1,10 +1,14 @@
-# to build an installer: run cmd from this folder:
-# "%PROGRAMFILES%\\ArcGIS\\Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe"  C:\\Users\\username\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\setup.py sdist bdist_wheel 
+# to build an installer: run cmd from this folder or use terminal: "%PROGRAMFILES%\\ArcGIS\\Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe" 
+# 
+# python patch_version 2.x.x 
+# C:\\Users\\username\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\setup.py sdist bdist_wheel 
+# copy .whl to "speckle_arcgis_installer" 
+
+# ref: https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/distributing-python-modules.htm
 
 import os 
 from setuptools import setup 
 
-# https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/distributing-python-modules.htm
 
 def read(fname): 
     return open(os.path.join(os.path.dirname(__file__), fname)).read() 

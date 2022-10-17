@@ -113,5 +113,8 @@ def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference):
         return multiPointToNative(items, sr)
     elif isinstance(first, Line) or isinstance(first, Polyline):
         return multiPolylineToNative(items, sr)
-    elif first["boundary"] is not None and first["voids"] is not None:
-        return multiPolygonToNative(items, sr)
+    elif isinstance(first, Base): 
+        try:
+            if first["boundary"] is not None and first["voids"] is not None:
+                return multiPolygonToNative(items, sr)
+        except: return None 

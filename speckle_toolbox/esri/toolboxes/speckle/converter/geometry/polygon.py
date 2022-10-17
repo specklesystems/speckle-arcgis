@@ -82,7 +82,7 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
         polyBorder = speckleArcCircleToPoints(boundary) 
     elif isinstance(boundary, Polycurve): 
         polyBorder = specklePolycurveToPoints(boundary) 
-        polygon.boundary.displayValue.closed = True 
+        #polygon.boundary.displayValue.closed = True 
     elif isinstance(boundary, Line): pass
     elif isinstance(boundary, Polyline): 
         try: polyBorder = boundary.as_points()
