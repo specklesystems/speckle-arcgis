@@ -33,7 +33,7 @@ class uiInputs(object):
     instances = []
 
     def __init__(self):
-        print("start UI inputs________")
+        print("___start UI inputs________")
         self.instances.append(self)
         self.accounts = get_local_accounts()
         self.account = None

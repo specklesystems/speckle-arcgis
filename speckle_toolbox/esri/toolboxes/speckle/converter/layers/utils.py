@@ -1,6 +1,9 @@
-from typing import Any, List, Union
+from typing import Dict, Any, List, Union
+import json 
 from specklepy.objects import Base
 import arcpy 
+
+from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
@@ -115,3 +118,90 @@ def get_scale_factor(units: str) -> float:
     arcpy.AddWarning(f"Units {units} are not supported. Meters will be applied by default.")
     return 1.0
 
+def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, projectCRS: arcpy.SpatialReference, selectedLayer: arcLayer):
+    #apply transformation if needed
+    if layer_sr.name != projectCRS.name:
+        tr0 = tr1 = tr2 = tr_custom = None
+        transformations = arcpy.ListTransformations(layer_sr, projectCRS)
+        customTransformName = "layer_sr.name"+"_To_"+ projectCRS.name
+        if len(transformations) == 0:
+            midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
+            try:
+                tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
+                tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
+            except: 
+                #customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
+                #CreateCustomGeoTransformation(customTransformName, layer_sr, projectCRS)
+                tr_custom = customTransformName
+        else: 
+            #print("else")
+            # choose equation based instead of file-based/grid-based method, 
+            # to be consistent with QGIS: https://desktop.arcgis.com/en/arcmap/latest/map/projections/choosing-an-appropriate-transformation.htm
+            selecterTr = {}
+            for tr in transformations:
+                if "NTv2" not in tr and "NADCON" not in tr: 
+                    set1 = set( layer_sr.name.split("_") + projectCRS.name.split("_") )
+                    set2 = set( tr.split("_") )
+                    diff = len( set(set1).symmetric_difference(set2) )
+                    selecterTr.update({tr: diff})
+            selecterTr = dict(sorted(selecterTr.items(), key=lambda item: item[1]))
+            tr0 = list(selecterTr.keys())[0]
+
+        if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint":
+            arcpy.AddWarning("Unsupported or invalid geometry in layer " + selectedLayer.name)
+
+        # reproject geometry using chosen transformstion(s)
+        if tr0 is not None:
+            ptgeo1 = f_shape.projectAs(projectCRS, tr0)
+            f_shape = ptgeo1
+        elif tr1 is not None and tr2 is not None:
+            ptgeo1 = f_shape.projectAs(midSr, tr1)
+            ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
+            f_shape = ptgeo2
+        else:
+            ptgeo1 = f_shape.projectAs(projectCRS)
+            f_shape = ptgeo1
+
+    return f_shape    
+
+def traverseDictByKey(d: Dict, key:str ="", result = None) -> Dict:
+    print("__traverse")
+
+    result = None
+    #print(d)
+    for k, v in d.items():
+        
+        try: v = json.loads(v)
+        except: pass 
+        if isinstance(v, dict):
+            #print("__dict__")
+            if k == key: print("__break loop"); result = v; return result
+            else: 
+                result = traverseDictByKey(v, key, result)
+                if result is not None: return result
+        if isinstance(v, list):
+            for item in v: 
+                #print(item) 
+                if isinstance(item, dict): 
+                    result = traverseDictByKey(item, key, result)
+                    if result is not None: return result
+    #print("__result is: ____________")
+    #return result 
+
+def hsv_to_rgb(listHSV):
+    h, s, v = listHSV[0], listHSV[1], listHSV[2]
+    if s == 0.0: v*=255; return (v, v, v)
+    i = int(h*6.) # XXX assume int() truncates!
+    f = (h*6.)-i; p,q,t = int(255*(v*(1.-s))), int(255*(v*(1.-s*f))), int(255*(v*(1.-s*(1.-f)))); v*=255; i%=6
+    if i == 0: return (v, t, p)
+    if i == 1: return (q, v, p)
+    if i == 2: return (p, v, t)
+    if i == 3: return (p, q, v)
+    if i == 4: return (t, p, v)
+    if i == 5: return (v, p, q)
+
+def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
+    r = rgb_scale * (1.0 - c / float(cmyk_scale)) * (1.0 - k / float(cmyk_scale))
+    g = rgb_scale * (1.0 - m / float(cmyk_scale)) * (1.0 - k / float(cmyk_scale))
+    b = rgb_scale * (1.0 - y / float(cmyk_scale)) * (1.0 - k / float(cmyk_scale))
+    return r, g, b

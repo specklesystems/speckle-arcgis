@@ -7,7 +7,7 @@ from typing import Any, List, Union
 from regex import D
 from speckle.converter.layers.CRS import CRS
 from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative
+from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, rasterFeatureToSpeckle
 from specklepy.objects import Base
 
 import arcgisscripting
@@ -18,7 +18,6 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
                               AddFields, AlterField, DefineProjection )
 
 from speckle.converter.layers.utils import getLayerAttributes
-from speckle.converter.layers.feature import rasterFeatureToSpeckle
 
 
 def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
@@ -56,25 +55,34 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
     except OSError as e: arcpy.AddWarning(str(e.args[0])); return
     #print(projectCRS)
     #print(projectCRS.name)
-    crs = CRS(name = projectCRS.name, wkt = projectCRS.exportToString(), units = "m")
-    
-    layer_geo_crs = None
-    datum = None
+    layerName = layer.name
+    crs = data.SpatialReference
+    units = "m"
+    #datum = None
     #if data.spatialReference.type == "Projected": 
     #    #layer_geo_crs =  
     #    datum = CRS(name = layer_geo_crs.name, wkt = layer_geo_crs.exportToString(), units = "m")
+    layerObjs = []
+
+    # Convert CRS to speckle, use the projectCRS
+    speckleReprojectedCrs = CRS(name = projectCRS.name, wkt = projectCRS.exportToString(), units = "m")
+    layerCRS = CRS(name=crs.name, wkt=crs.exportToString(), units="m") 
+    
+    #renderer = selectedLayer.renderer()
+    #layerRenderer = rendererToSpeckle(renderer) 
     
     if layer.isFeatureLayer: 
         print("VECTOR LAYER HERE")
         
         speckleLayer = VectorLayer(units = "m")
         speckleLayer.type="VectorLayer"
-        speckleLayer.name = layer.name
-        speckleLayer.crs = crs
-        speckleLayer.datum = datum
+        speckleLayer.name = layerName
+        speckleLayer.crs = speckleReprojectedCrs
+        #speckleLayer.datum = datum
+
 
         try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
-            layerObjs = []
+            
             print(data.datasetType)
             if data.datasetType == "FeatureClass": #FeatureClass, ?Table Properties, ?Datasets
                 
@@ -84,7 +92,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                 print("__ start iterating features")
                 for i, features in enumerate(rows_shapes):
                     print("____error Feature # " + str(i+1)) # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
-                    print(features[0])
+                    print(features[0]) # <geoprocessing describe geometry object object at 0x000002A75D6A4BD0>
                     if features[0] == None: continue 
                     print(features[0].hasCurves)
     
@@ -104,16 +112,31 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                 speckleLayer.features=layerObjs
                 speckleLayer.geomType = data.shapeType
 
+                #layerBase.renderer = layerRenderer
+                #layerBase.applicationId = selectedLayer.id()
+
         except OSError as e: 
             arcpy.AddWarning(str(e))
             return
 
     elif layer.isRasterLayer:
-        #b = rasterFeatureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
         print("RASTER IN DA HOUSE")
         print(layer.name) # London_square.tif
         print(arcpy.Describe(layer.dataSource)) # <geoprocessing describe data object object at 0x000002507C7F3BB0>
         print(arcpy.Describe(layer.dataSource).datasetType) # RasterDataset
+        b = rasterFeatureToSpeckle(layer, projectCRS, project)
+        if b is not None: layerObjs.append(b)
+
+        speckleLayer = RasterLayer(units = "m", type="RasterLayer")
+        speckleLayer.name = layerName
+        speckleLayer.crs = speckleReprojectedCrs
+        speckleLayer.rasterCrs = layerCRS
+        speckleLayer.type="RasterLayer"
+        #speckleLayer.geomType="Raster"
+        speckleLayer.features = layerObjs
+        
+        #speckleLayer.renderer = layerRenderer
+        #speckleLayer.applicationId = selectedLayer.id()
 
     return speckleLayer
 

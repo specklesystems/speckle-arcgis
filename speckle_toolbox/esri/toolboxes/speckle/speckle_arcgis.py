@@ -72,7 +72,7 @@ class Toolbox(object):
     def __init__(self):
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
-        print("ping_Toolbox")
+        print("___ping_Toolbox")
         self.label = "Speckle Tools"
         self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
@@ -89,7 +89,7 @@ class Speckle(object):
                            "to/from other software using Speckle server." 
         self.toolboxInputs = None
         self.toRefresh = False
-        print("ping_Speckle")
+        print("___ping_Speckle")
         for instance in uiInputs.instances:
             #print(instance)
             if instance is not None: 

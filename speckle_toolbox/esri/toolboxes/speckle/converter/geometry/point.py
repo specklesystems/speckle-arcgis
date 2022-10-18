@@ -38,9 +38,10 @@ def pointToSpeckle(pt, feature, layer):
     specklePoint.y = y
     specklePoint.z = z
     '''
-    col = featureColorfromNativeRenderer(feature, layer)
-    specklePoint['displayStyle'] = {}
-    specklePoint['displayStyle']['color'] = col
+    if feature is not None and layer is not None: # can be if it's a point from raster layer 
+        col = featureColorfromNativeRenderer(feature, layer)
+        specklePoint['displayStyle'] = {}
+        specklePoint['displayStyle']['color'] = col
     '''
     #print(specklePoint)
     return specklePoint
