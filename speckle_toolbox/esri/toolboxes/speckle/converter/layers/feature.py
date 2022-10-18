@@ -163,3 +163,28 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     print(feat) 
     return feat
     
+def rasterFeatureToSpeckle(selectedLayer, projectCRS, project) -> Base:
+    r'''
+    rasterBandCount = selectedLayer.bandCount()
+    rasterBandNames = []
+    rasterDimensions = [selectedLayer.width(), selectedLayer.height()]
+    if rasterDimensions[0]*rasterDimensions[1] > 1000000 :
+      logger.logToUser("Large layer: ", Qgis.Warning)
+
+    ds = gdal.Open(selectedLayer.source(), gdal.GA_ReadOnly)
+    rasterOriginPoint = QgsPointXY(ds.GetGeoTransform()[0], ds.GetGeoTransform()[3])
+    rasterResXY = [float(ds.GetGeoTransform()[1]), float(ds.GetGeoTransform()[5])]
+    rasterBandNoDataVal = []
+    rasterBandMinVal = []
+    rasterBandMaxVal = []
+    rasterBandVals = []
+
+
+    
+    #my_raster = arcpy.Raster('elevation')
+    #my_min = my_raster.minimum
+    #my_max = my_raster.maximum
+    #my_area = (my_raster.width * my_raster.height) * my_raster.meanCellWidth
+    '''
+
+    return

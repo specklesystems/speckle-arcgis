@@ -18,6 +18,7 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
                               AddFields, AlterField, DefineProjection )
 
 from speckle.converter.layers.utils import getLayerAttributes
+from speckle.converter.layers.feature import rasterFeatureToSpeckle
 
 
 def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
@@ -32,9 +33,9 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
                 break
         if layerToSend is not None: 
             ds = layerToSend.dataSource #file path
-            if layerToSend.isFeatureLayer: 
-                newBaseLayer = layerToSpeckle(layerToSend, project)
-                if newBaseLayer is not None: result.append(newBaseLayer)
+            #if layerToSend.isFeatureLayer: 
+            newBaseLayer = layerToSpeckle(layerToSend, project)
+            if newBaseLayer is not None: result.append(newBaseLayer)
 
             elif layerToSend.isRasterLayer: pass
             '''
@@ -47,6 +48,8 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
 def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer, RasterLayer]: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
     """Converts a given QGIS Layer to Speckle"""
     print("________Convert Feature Layer_________")
+
+    speckleLayer = None
 
     projectCRS = project.activeMap.spatialReference
     try: data = arcpy.Describe(layer.dataSource)
@@ -61,51 +64,56 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
     #    #layer_geo_crs =  
     #    datum = CRS(name = layer_geo_crs.name, wkt = layer_geo_crs.exportToString(), units = "m")
     
-    speckleLayer = VectorLayer(units = "m")
-    speckleLayer.type="VectorLayer"
-    speckleLayer.name = layer.name
-    speckleLayer.crs = crs
-    speckleLayer.datum = datum
-    
-    try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
-        layerObjs = []
-        print(data.datasetType)
-        if data.datasetType == "FeatureClass": #FeatureClass, ?Table Properties, ?Datasets
-            # write feature attributes
-            fieldnames = [field.name for field in data.fields]
-            #print(layer.longName) # e.g. 17b0b76d13_custom_crs_04dcfaa936\04dcfaa936_Vector_lineGeom
-            #print(fieldnames) # e.g. ['OBJECTID', 'Shape', 'Shape_Length', 'Speckle_ID', 'number', 'area']
-            rows_shapes = arcpy.da.SearchCursor(layer.longName, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
-            #print(rows_shapes) # <da.SearchCursor object at 0x00000172565E6C10>
-            print("__ start iterating features")
-            # write feature attributes
-            for i, features in enumerate(rows_shapes):
-                print("____error Feature # " + str(i+1)) # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
-                print(features[0])
-                if features[0] == None: continue 
-                print(features[0].hasCurves)
- 
-                rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
-                row_attr = []
-                for k, attrs in enumerate(rows_attributes):
-                    if i == k: row_attr = attrs; break
+    if layer.isFeatureLayer: 
+        print("VECTOR LAYER HERE")
+        
+        speckleLayer = VectorLayer(units = "m")
+        speckleLayer.type="VectorLayer"
+        speckleLayer.name = layer.name
+        speckleLayer.crs = crs
+        speckleLayer.datum = datum
 
-                #print(features) #(<Polygon object at 0x172592ae8c8[0x17258d2a600]>,)
-                print(features[0])
-                print(features[0].partCount)
-                if features[0]:
-                    b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
-                    if b is not None: layerObjs.append(b)
-                    #print(layerObjs)
-                print("____End of Feature # " + str(i+1))
+        try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
+            layerObjs = []
+            print(data.datasetType)
+            if data.datasetType == "FeatureClass": #FeatureClass, ?Table Properties, ?Datasets
                 
-            print("__ finish iterating features")
-            speckleLayer.features=layerObjs
-            speckleLayer.geomType = data.shapeType
+                # write feature attributes
+                fieldnames = [field.name for field in data.fields]
+                rows_shapes = arcpy.da.SearchCursor(layer.longName, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
+                print("__ start iterating features")
+                for i, features in enumerate(rows_shapes):
+                    print("____error Feature # " + str(i+1)) # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
+                    print(features[0])
+                    if features[0] == None: continue 
+                    print(features[0].hasCurves)
+    
+                    rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
+                    row_attr = []
+                    for k, attrs in enumerate(rows_attributes):
+                        if i == k: row_attr = attrs; break
 
-    except OSError as e: 
-        arcpy.AddWarning(str(e))
-        return
+                    print(features[0])
+                    print(features[0].partCount)
+                    if features[0]:
+                        b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
+                        if b is not None: layerObjs.append(b)
+                    print("____End of Feature # " + str(i+1))
+                    
+                print("__ finish iterating features")
+                speckleLayer.features=layerObjs
+                speckleLayer.geomType = data.shapeType
+
+        except OSError as e: 
+            arcpy.AddWarning(str(e))
+            return
+
+    elif layer.isRasterLayer:
+        #b = rasterFeatureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
+        print("RASTER IN DA HOUSE")
+        print(layer.name) # London_square.tif
+        print(arcpy.Describe(layer.dataSource)) # <geoprocessing describe data object object at 0x000002507C7F3BB0>
+        print(arcpy.Describe(layer.dataSource).datasetType) # RasterDataset
 
     return speckleLayer
 

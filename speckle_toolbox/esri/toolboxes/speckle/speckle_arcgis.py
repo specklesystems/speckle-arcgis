@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 
+from typing import Any, Callable, List, Optional, Tuple
+#r'''
 from collections import defaultdict
-from typing import Any, Callable, List, Optional
-from xmlrpc.client import Boolean
+
 import arcpy
+#from arcpy import toolbox
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
+from arcpy import metadata as md
 
 from specklepy.api.models import Branch, Stream, Streams
 from speckle.converter.layers.Layer import Layer, RasterLayer
 
 from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative
 from arcgis.features import FeatureLayer
+import os
 import os.path
 
 import specklepy
@@ -19,17 +23,20 @@ from specklepy.api.credentials import get_local_accounts
 from specklepy.api.client import SpeckleClient
 from specklepy.api import operations
 from specklepy.logging.exceptions import (
+    GraphQLException,
     SpeckleException,
     SpeckleWarning,
 )
-from specklepy.api.credentials import StreamWrapper
-from specklepy.objects import Base
+#from specklepy.api.credentials import StreamWrapper
 from specklepy.api.wrapper import StreamWrapper
+from specklepy.objects import Base
 from specklepy.logging import metrics
-    
-    
+
+from speckle.ui.project_vars import uiInputs
 from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
 from speckle.converter.layers.Layer import VectorLayer
+
+#'''
 
 def traverseObject(
         base: Base,
@@ -65,69 +72,14 @@ class Toolbox(object):
     def __init__(self):
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
+        print("ping_Toolbox")
         self.label = "Speckle Tools"
         self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
         metrics.set_host_app("ArcGIS")  
-        #self.toolboxInputs = uiInputs() # initialize once together with a toolbox
 
-        
-        #print(self.toolboxInputs.selected_layers)
-        #try: 
         # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm#except: print("something happened")
-
-class uiInputs(object):
-    speckle_client: Any
-    streams: Optional[Streams]
-    active_stream: Optional[Stream]
-    active_branch: Optional[Branch]
-    all_layers: List[arcLayer]
-    selected_layers: List[Any]
-    messageSpeckle: str
-    project: ArcGISProject
-    action: int
-    instances = []
-
-    def __init__(self):
-        #print("start UI inputs________")
-        self.instances.append(self)
-        accounts = get_local_accounts()
-        account = None
-        for acc in accounts:
-            if acc.isDefault: account = acc; break
-        #account.userInfo.name, account.serverInfo.url
-        self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
-        self.speckle_client.authenticate_with_token(token=account.token)
-        #print("ping")
-        #print(self.speckle_client)
-        self.streams = self.speckle_client.stream.search("")
-        #print("ping")
-        self.active_stream = None
-        self.active_branch = None
-        self.active_commit = None
-        self.all_layers = []
-        self.selected_layers = []
-        self.messageSpeckle = ""
-        self.project = aprx = None
-        self.action = 1 #send
-        #print(self.streams)
-        try: aprx = ArcGISProject('CURRENT') 
-        except: 
-            #print(arcpy.env.workspace) # None
-            #arcpy.env.workspace = ""
-            #proj_path = "\\".join(arcpy.env.workspace.split("\\")[:-1]) + "\\"
-            #aprx = ArcGISProject(proj_path)
-            #print(aprx)
-            print("Project not found")
-        self.project = aprx
-        active_map = aprx.activeMap
-
-        if active_map is not None and isinstance(active_map, Map): # if project loaded
-            for layer in active_map.listLayers(): 
-                #print(layer)
-                if layer.isFeatureLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
-        
 
 class Speckle(object):
     def __init__(self):
@@ -137,7 +89,7 @@ class Speckle(object):
                            "to/from other software using Speckle server." 
         self.toolboxInputs = None
         self.toRefresh = False
-
+        print("ping_Speckle")
         for instance in uiInputs.instances:
             #print(instance)
             if instance is not None: 
@@ -146,36 +98,93 @@ class Speckle(object):
                     self.toolboxInputs = instance # take latest 
                 except: pass
         if self.toolboxInputs is None: 
-            #print("Instance is None")
             self.toolboxInputs = uiInputs() #in case Toolbox class was not initialized 
         # TODO react on project changes
-        
-        #print("______continue reset_______")
-        #print(self.toolboxInputs.all_layers)
+        #print("ping_Speckle2")
 
     def getParameterInfo(self):
         #data types: https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/defining-parameter-data-types-in-a-python-toolbox.htm
         # parameter details: https://pro.arcgis.com/en/pro-app/latest/arcpy/geoprocessing_and_python/customizing-tool-behavior-in-a-python-toolbox.htm
         print("Get parameter values")
+        cat1 = "Add Streams"
+        cat2 = "Send/Receive"
 
-        stream = arcpy.Parameter(
-            displayName="Stream",
-            name="stream",
+        streamsDefalut = arcpy.Parameter(
+            displayName="Add stream from default account",
+            name="streamsDefalut",
+            datatype="GPString",
+            parameterType="Optional",
+            #category="Sending data",
+            direction="Input",
+            category=cat1
+            )
+        streamsDefalut.filter.type = 'ValueList'
+        streamsDefalut.filter.list = [ (st.name + " - " + st.id) for st in self.toolboxInputs.streams_default ]
+
+        addDefStreams = arcpy.Parameter(
+            displayName="Add",
+            name="addDefStreams",
+            datatype="GPBoolean",
+            parameterType="Optional",
+            #category="Sending data",
+            direction="Input",
+            category=cat1
+            )
+        addDefStreams.value = False 
+
+        streamUrl = arcpy.Parameter(
+            displayName="Add stream by URL",
+            name="streamUrl",
+            datatype="GPString",
+            parameterType="Optional",
+            direction="Input",
+            category=cat1
+            )
+        streamUrl.value = ""
+
+        addUrlStreams = arcpy.Parameter(
+            displayName="Add",
+            name="addUrlStreams",
+            datatype="GPBoolean",
+            parameterType="Optional",
+            direction="Input",
+            category=cat1
+            )
+        addUrlStreams.value = False 
+
+
+        ####################################################################################################
+
+        savedStreams = arcpy.Parameter(
+            displayName="Select Stream",
+            name="savedStreams",
             datatype="GPString",
             parameterType="Required",
-            #category="Sending data",
-            direction="Input")
-        stream.filter.type = 'ValueList'
-        stream.filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
-        
+            direction="Input",
+            multiValue=False,
+            #category=cat2
+            )
+        savedStreams.filter.list = [f"Stream not accessible - {stream[0].stream_id}" if stream[1] is None or isinstance(stream[1], SpeckleException) else f"{stream[1].name} - {stream[1].id}" for i,stream in enumerate(self.toolboxInputs.saved_streams)] 
+
+        removeStream = arcpy.Parameter(
+            displayName="Remove",
+            name="removeStream",
+            datatype="GPBoolean",
+            parameterType="Optional",
+            direction="Input"
+            )
+        removeStream.value = False 
+
         branch = arcpy.Parameter(
             displayName="Branch",
             name="branch",
             datatype="GPString",
             parameterType="Required",
             #category="Sending data",
-            direction="Input")
-        branch.value = "main"
+            direction="Input",
+            #category=cat2
+            )
+        branch.value = ""
         branch.filter.type = 'ValueList'
 
         commit = arcpy.Parameter(
@@ -184,40 +193,34 @@ class Speckle(object):
             datatype="GPString",
             parameterType="Optional",
             #category="Sending data",
-            direction="Input")
+            direction="Input",
+            #category=cat2
+            )
         commit.value = ""
         commit.filter.type = 'ValueList'
 
-        ################################################################
         msg = arcpy.Parameter(
             displayName="Message",
             name="message",
             datatype="GPString",
             parameterType="Optional",
             direction="Input",
-            multiValue=False)
+            multiValue=False,
+            #category=cat2
+            )
         msg.value = ""
 
-        selected_layers = arcpy.Parameter(
+        selectedLayers = arcpy.Parameter(
             displayName="Selected Layers",
-            name="selected_layers",
+            name="selectedLayers",
             datatype="GPString",
             parameterType="Optional",
             direction="Input",
-            multiValue=True
+            multiValue=True,
+            #category=cat2
             )
-        selected_layers.filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)] #"Polyline"
+        selectedLayers.filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)] #"Polyline"
 
-        refresh = arcpy.Parameter(
-            displayName="Refresh",
-            name="refresh",
-            datatype="GPBoolean",
-            parameterType="Optional",
-            #category="Sending data",
-            direction="Input"
-            )
-        #refresh.filter.type = "ValueList"   
-        refresh.value = False 
         
         action = arcpy.Parameter(
             displayName="",
@@ -226,13 +229,24 @@ class Speckle(object):
             parameterType="Required",
             #category="Sending data",
             direction="Input",
-            multiValue=False
+            multiValue=False,
+            #category=cat2
             )
         action.value = "Send" 
         #action.filter.type = 'ValueList'
         action.filter.list = ["Send", "Receive"]  
 
-        parameters = [stream, branch, commit, selected_layers, msg, action, refresh]
+        refresh = arcpy.Parameter(
+            displayName="Refresh",
+            name="refresh",
+            datatype="GPBoolean",
+            parameterType="Optional",
+            direction="Input"
+            )
+        #refresh.filter.type = "ValueList"   
+        refresh.value = False 
+
+        parameters = [streamsDefalut, addDefStreams, streamUrl, addUrlStreams, savedStreams, removeStream, branch, commit, selectedLayers, msg, action, refresh]
         return parameters
 
     def isLicensed(self): #optional
@@ -241,130 +255,212 @@ class Speckle(object):
     def updateParameters(self, parameters: List, toRefresh = False): #optional
         print("UPDATING PARAMETERS")
         
-        if parameters[0].altered:
-
-            # Search for the stream by name
-            if parameters[0].valueAsText is not None:
-                selected_stream_name = parameters[0].valueAsText[:]
-                self.toolboxInputs.active_stream = None
-                #print(self.toolboxInputs.active_stream)
-                #print(self.toolboxInputs.streams)
-                for st in self.toolboxInputs.streams:
-                    if st.name == selected_stream_name.split(" | ")[0]: 
-                        self.toolboxInputs.active_stream = st
-                        break
-
-                # edit branches: globals and UI 
-                branch_list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
-                parameters[1].filter.list = branch_list
-                #print(parameters[1].filter.list)
-
-                if parameters[1].valueAsText not in branch_list: 
-                    parameters[1].value = "main"
-                for b in self.toolboxInputs.active_stream.branches.items:
-                    if b.name == parameters[1].value: 
-                        self.toolboxInputs.active_branch = b
-                        break 
-                
-                # setting commit value and list 
-                try: 
-                    #print("___editing the stream input")
-                    #print(self.toolboxInputs.active_branch.commits.items)
-                    parameters[2].filter.list = [f"{commit.id}"+ " | " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
-                    #print(parameters[2].filter.list)
-                    #print(parameters[2].valueAsText)
-                    if parameters[2].valueAsText not in parameters[2].filter.list:
-                        parameters[2].value = self.toolboxInputs.active_branch.commits.items[0].id + " | " + self.toolboxInputs.active_branch.commits.items[0].message 
-                        self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0] 
-                except: 
-                    parameters[2].filter.list = []
-                    parameters[2].value = None
-                    self.toolboxInputs.active_commit = None 
-
-        if parameters[1].altered: # branches
-            if parameters[1].valueAsText is not None:
-                selected_branch_name = parameters[1].valueAsText[:]
-                self.toolboxInputs.active_branch = None
-                if self.toolboxInputs.active_stream is not None:
-                    for br in self.toolboxInputs.active_stream.branches.items:
-                        if br.name == selected_branch_name: #.split(" | ")[0]: 
-                            self.toolboxInputs.active_branch = br
-                            break
-            # edit commit values 
-            if self.toolboxInputs.active_branch is not None: 
-                try: 
-                    #print("___editing the branch input")
-                    #print(self.toolboxInputs.active_branch)
-                    parameters[2].filter.list = [f"{commit.id}"+ " | " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
-                    #print(parameters[2].filter.list)
-                    #print(parameters[2].valueAsText)
-                    if parameters[2].valueAsText not in parameters[2].filter.list:
-                        parameters[2].value = self.toolboxInputs.active_branch.commits.items[0].id + " | " + self.toolboxInputs.active_branch.commits.items[0].message 
-                        self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0]
-                except: 
-                    parameters[2].filter.list = []
-                    parameters[2].value = None
-                    self.toolboxInputs.active_commit = None 
-
-        if parameters[2].altered: # commits
-            if parameters[2].valueAsText is not None:
-                selected_commit_id = parameters[2].valueAsText[:].split(" | ")[0]
-                self.toolboxInputs.active_commit = None
-                if self.toolboxInputs.active_branch is not None:
-                    for c in self.toolboxInputs.active_branch.commits.items:
-                        if c.id == selected_commit_id: 
-                            self.toolboxInputs.active_commit = c 
-                            break
-        
-        if parameters[3].altered: # selected layers
-            if parameters[3].valueAsText is not None:
-                self.toolboxInputs.selected_layers = parameters[3].values
-
-        if parameters[4].altered:
-            self.toolboxInputs.messageSpeckle = parameters[4].valueAsText
-
-        if parameters[5].altered:
-            if parameters[5].valueAsText == "Send": self.toolboxInputs.action = 1
-            else: self.toolboxInputs.action = 0
-
-        if parameters[6].altered: # refresh btn
-            if parameters[6].value == True: 
-                self.refresh(parameters) 
-        if self.toRefresh == True:
-            self.refresh(parameters) 
-            self.toRefresh = False
-        #if newParams: # apply fresh values 
-        #    print(newParams[2].filter.list)
-        #    parameters = newParams
+        for i, par in enumerate(parameters): 
             
-            ##parameters = newParams
-        #print("continue UPDATING PARAMETERS")
-        #print(parameters[2].filter.list)
-        #print(parameters[4].valueAsText)
-        return 
 
+            if par.name == "addDefStreams" and par.altered and par.value == True: 
+                for p in parameters:
+                    if p.name == "streamsDefalut" and p.valueAsText is not None:
+                        # add value from streamsDefault to saved streams
+                        selected_stream_name = p.valueAsText[:]
+                        #print(selected_stream_name)
+                        for stream in self.toolboxInputs.streams_default:
+                            #print(stream)
+                            if stream.name == selected_stream_name.split(" - ")[0]:
+                                print("_____Add from list___")
+                                wr = StreamWrapper(f"{self.toolboxInputs.account.serverInfo.url}/streams/{stream.id}?u={self.toolboxInputs.account.userInfo.id}")
+                                self.toolboxInputs.setProjectStreams(wr)
+                                
+                                for p_saved in parameters:
+                                    if p_saved.name == "savedStreams": 
+                                        saved_streams = self.toolboxInputs.getProjectStreams()
+                                        self.toolboxInputs.saved_streams = saved_streams
+                                        p_saved.filter.list = [f"Stream not accessible - {stream[0].stream_id}" if stream[1] is None or isinstance(stream[1], SpeckleException) else f"{stream[1].name} - {stream[1].id}" for i,stream in enumerate(saved_streams)] 
+                                        p_saved.value = p_saved.filter.list[0]
+                                break
+                        p.value = None
+                par.value = False
+            
+            if par.name == "addUrlStreams" and par.altered and par.value == True: 
+                for p in parameters:
+                    if p.name == "streamUrl" and p.valueAsText is not None:
+
+                        # add value from streamsDefault to saved streams
+                        query = p.valueAsText[:]
+                        if "http" in query and len(query.split("/")) >= 3: # URL
+                            steamId = query
+                            try: steamId = query.split("/streams/")[1].split("/")[0] 
+                            except: pass
+                            # quesry stream, add to saved
+                            stream = self.toolboxInputs.speckle_client.stream.get(steamId)
+                            if isinstance(stream, Stream): 
+                                print("_____Add by URL___")
+                                wr = StreamWrapper(f"{self.toolboxInputs.account.serverInfo.url}/streams/{stream.id}?u={self.toolboxInputs.account.userInfo.id}")
+                                self.toolboxInputs.setProjectStreams(wr)
+                                
+                                for p_saved in parameters:
+                                    if p_saved.name == "savedStreams": 
+                                        saved_streams = self.toolboxInputs.getProjectStreams()
+                                        self.toolboxInputs.saved_streams = saved_streams
+                                        p_saved.filter.list = [f"Stream not accessible - {st[0].stream_id}" if st[1] is None or isinstance(st[1], SpeckleException) else f"{st[1].name} - {st[1].id}" for i,st in enumerate(saved_streams)] 
+                                        p_saved.value = p_saved.filter.list[0]
+                            else: pass
+
+                        p.value = None
+                        break
+                par.value = False
+
+
+            if par.name == "removeStream" and par.altered and par.value == True: 
+                for p in parameters:
+                    if p.name == "savedStreams" and p.valueAsText is not None:
+
+                         # get value from savedStreams 
+                        selected_stream_name = p.valueAsText[:]
+                        #print(selected_stream_name)
+                        for streamTup in self.toolboxInputs.saved_streams:
+                            #print(stream)
+                            stream = streamTup[1]
+                            if stream.name == selected_stream_name.split(" - ")[0]:
+                                print("_____Remove stream___")
+                                wr = StreamWrapper(f"{self.toolboxInputs.account.serverInfo.url}/streams/{stream.id}?u={self.toolboxInputs.account.userInfo.id}")
+                                self.toolboxInputs.setProjectStreams(wr, False)
+                                
+                                for p_saved in parameters:
+                                    if p_saved.name == "savedStreams": 
+                                        saved_streams = self.toolboxInputs.getProjectStreams()
+                                        self.toolboxInputs.saved_streams = saved_streams
+                                        p_saved.filter.list = [f"Stream not accessible - {st[0].stream_id}" if st[1] is None or isinstance(st[1], SpeckleException) else f"{st[1].name} - {st[1].id}" for i,st in enumerate(saved_streams)] 
+                                        p_saved.value = None
+                                break
+                        p.value = None
+                par.value = False
+
+
+            if par.name == "savedStreams" and par.altered:
+                # Search for the stream by name
+                if par.value is not None and "Stream not accessible" not in par.valueAsText[:]:
+                    #print("SAVED STREAMS - selection")
+                    selected_stream_name = par.valueAsText[:]
+                    self.toolboxInputs.active_stream = None
+                    for st in self.toolboxInputs.saved_streams:
+                        if st[1].name == selected_stream_name.split(" - ")[0]: 
+                            self.toolboxInputs.active_stream = st[1]
+                            break
+
+                    # edit branches: globals and UI 
+                    branch_list = [branch.name for branch in self.toolboxInputs.active_stream.branches.items]
+                    for p in parameters:
+                        if p.name == "branch":
+                            p.filter.list = branch_list
+
+                            if p.valueAsText not in branch_list: 
+                                p.value = "main"
+                            for b in self.toolboxInputs.active_stream.branches.items:
+                                if b.name == p.value: 
+                                    self.toolboxInputs.active_branch = b
+                                    break 
+                    
+                    # setting commit value and list 
+                    for p in parameters:
+                        if p.name == "commit":
+                            try: 
+                                p.filter.list = [f"{commit.id}"+ " - " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
+                                if p.valueAsText not in p.filter.list:
+                                    p.value = self.toolboxInputs.active_branch.commits.items[0].id + " - " + self.toolboxInputs.active_branch.commits.items[0].message 
+                                    self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0] 
+                            except: 
+                                p.filter.list = []
+                                p.value = None
+                                self.toolboxInputs.active_commit = None 
+                else: par.value = None
+                #print(self.toolboxInputs.action)
+
+            if par.name == "branch" and par.altered: # branches
+                if par.value is not None:
+                    selected_branch_name = par.valueAsText[:]
+                    self.toolboxInputs.active_branch = None
+                    if self.toolboxInputs.active_stream is not None:
+                        for br in self.toolboxInputs.active_stream.branches.items:
+                            if br.name == selected_branch_name:
+                                self.toolboxInputs.active_branch = br
+                                break
+                # edit commit values 
+                if self.toolboxInputs.active_branch is not None: 
+                    for p in parameters:
+                        if p.name == "commit":
+                            try: 
+                                p.filter.list = [f"{commit.id}"+ " - " + f"{commit.message}" for commit in self.toolboxInputs.active_branch.commits.items]
+                                if p.valueAsText not in p.filter.list:
+                                    p.value = self.toolboxInputs.active_branch.commits.items[0].id + " - " + self.toolboxInputs.active_branch.commits.items[0].message 
+                                    self.toolboxInputs.active_commit = self.toolboxInputs.active_branch.commits.items[0]
+                            except: 
+                                p.filter.list = []
+                                p.value = None
+                                self.toolboxInputs.active_commit = None 
+
+            if par.name == "commit" and par.altered: # commits
+                if par.value is not None:
+                    selected_commit_id = par.valueAsText[:].split(" - ")[0]
+                    self.toolboxInputs.active_commit = None
+                    if self.toolboxInputs.active_branch is not None:
+                        for c in self.toolboxInputs.active_branch.commits.items:
+                            if c.id == selected_commit_id: 
+                                self.toolboxInputs.active_commit = c 
+                                break
+            
+            if par.name == "selectedLayers" and par.altered: # selected layers
+                if par.value is not None:
+                    self.toolboxInputs.selected_layers = par.values
+
+                    print("selected layers changed")
+                    print(self.toolboxInputs.action)
+                    print(self.toolboxInputs.selected_layers)
+
+            if par.name == "msg" and par.altered:
+                self.toolboxInputs.messageSpeckle = par.valueAsText
+
+            if par.name == "action" and par.altered:
+                print("action changed")
+                print(par.valueAsText)
+                if par.valueAsText == "Send": self.toolboxInputs.action = 1
+                else: self.toolboxInputs.action = 0
+
+                print(self.toolboxInputs.action)
+                print(self.toolboxInputs.selected_layers)
+
+            if par.name == "refresh" and par.altered: # refresh btn
+                if par.value == True: 
+                    self.refresh(parameters) 
+            if self.toRefresh == True:
+                self.refresh(parameters) 
+                self.toRefresh = False
+        return 
+    
     def refresh(self, parameters: List[Any]): 
         print("Refresh______")
         uiInputs()
         for instance in uiInputs.instances:
             if instance is not None: self.toolboxInputs = instance # take latest 
-        #self.__init__()
-        #self.streams = self.speckle_client.stream.search("")
-        #params_new = []
-        #for i,p in enumerate(parameters):
-         #   params_new.append(p)
-        parameters[0].value = None
-        parameters[1].value = "main"
-        parameters[2].value = None
-        parameters[3].value = None
-        parameters[4].value = ""
-        parameters[5].value = "Send"
-        parameters[6].value = False
-         
-        parameters[0].filter.list = [ (st.name + " | " + st.id) for st in self.toolboxInputs.streams ]
-        parameters[3].filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
-        #print("___continue_refresh______")
-        #print(parameters[2].filter.list)
+        
+        for par in parameters: 
+            if par.name == "streamUrl": par.value = None
+            if par.name == "streamsDefalut": par.value = None
+            if par.name == "savedStreams": par.value = None
+            if par.name == "branch": par.value = ""
+            if par.name == "commit": par.value = None
+            if par.name == "selectedLayers": par.value = None
+            if par.name == "msg": par.value = ""
+            if par.name == "action": par.value = "Send"
+            if par.name == "refresh": par.value = False
+            
+            if par.name == "streamsDefalut": par.filter.list = [ (st.name + " - " + st.id) for st in self.toolboxInputs.streams_default ]
+            if par.name == "savedStreams": 
+                #print("par.name")
+                saved_streams = self.toolboxInputs.getProjectStreams()
+                #print(saved_streams)
+                par.filter.list = [f"Stream not accessible - {stream[0].stream_id}" if stream[1] is None or isinstance(stream[1], SpeckleException) else f"{stream[1].name} - {stream[1].id}" for i,stream in enumerate(saved_streams)] 
+            if par.name == "selectedLayers": par.filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.toolboxInputs.all_layers)]
         
         return parameters
 
@@ -375,9 +471,12 @@ class Speckle(object):
         # https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/what-is-arcpy-.htm
         #Warning if any of the fields is invalid/empty 
         print("_______________________Run__________________________")
-        #print(self.toolboxInputs.action)
-        if self.toolboxInputs.action == 1: self.onSend(parameters)
-        elif self.toolboxInputs.action == 0: self.onReceive(parameters)
+        check = self.validateStreamBranch(parameters) # apparently pdate needed to assign proper self.values
+        print(self.toolboxInputs.selected_layers)
+        print(self.toolboxInputs.action)
+        
+        if self.toolboxInputs.action == 1 and check is True: self.onSend(parameters)
+        elif self.toolboxInputs.action == 0 and check is True: self.onReceive(parameters)
 
     def validateStreamBranch(self, parameters: List):
         	
@@ -392,10 +491,12 @@ class Speckle(object):
 
     def onSend(self, parameters: List):
 
-        if self.validateStreamBranch(parameters) == False: return
+        print("______________SEND_______________")
+
+        #if self.validateStreamBranch(parameters) == False: return
 
         if len(self.toolboxInputs.selected_layers) == 0: 
-            arcpy.AddError("No layers selected")
+            arcpy.AddError("No layers selected for sending")
             return
 
         streamId = self.toolboxInputs.active_stream.id #stream_id
@@ -441,18 +542,14 @@ class Speckle(object):
                 source_application="ArcGIS",
             )
             arcpy.AddMessage("Successfully sent data to stream: " + streamId)
-            #print("Successfully sent data to stream: " + streamId)
-            #parameters[2].value = ""
         except:
             arcpy.AddError("Error creating commit")
 
-        #print("sent")
-        #self.updateParameters(parameters, True)
-        #self.refresh(parameters)
-
     def onReceive(self, parameters: List[Any]): 
         
-        if self.validateStreamBranch(parameters) == False: return
+        print("______________RECEIVE_______________")
+
+        #if self.validateStreamBranch(parameters) == False: return
 
         try: 
             streamId = self.toolboxInputs.active_stream.id #stream_id
