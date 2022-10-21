@@ -1,13 +1,14 @@
 
 from regex import F
 from specklepy.objects import Base
-from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, Circle, Polycurve
+from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, Circle, Polycurve, Ellipse 
 
 import arcpy 
 from typing import Any, List, Union, Sequence
 from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle
-from speckle.converter.geometry.polyline import arcToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
+from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
 from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
+from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
 
 
 def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:
@@ -26,6 +27,11 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
         for pt in geom:
             return pointToSpeckle(pt, feature, layer)
     elif geomType == "Polyline":
+        #if geom.hasCurves: 
+        #    geom, feature = curvesToSegments(geom, feature, layer, geomMultiType)
+        #    geomMultiType = geom.isMultipart
+        #    return polylineToSpeckle(geom, feature, layer, geomMultiType)
+        #else:
         return polylineToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Polygon":
         return polygonToSpeckle(geom, feature, layer, geomMultiType)
@@ -48,6 +54,7 @@ def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
         (Curve, curveToNative),
         (Arc, arcToNative),
         (Circle, circleToNative),
+        (Ellipse, ellipseToNative),
         #(Mesh, meshToNative),
         (Polycurve, polycurveToNative),
         (Base, polygonToNative), # temporary solution for polygons (Speckle has no type Polygon yet)
@@ -84,26 +91,52 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
     
     print("_______Drawing Multipolygons____")
     #print(items)
+    full_array_list = []
     for item in items: # will be 1 item
         #print(item)
-        pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
+        #pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
+        pointsSpeckle = []
+        if isinstance(item["boundary"], Circle) or isinstance(item["boundary"], Arc): 
+            pointsSpeckle = speckleArcCircleToPoints(item["boundary"]) 
+        elif isinstance(item["boundary"], Polycurve): 
+            pointsSpeckle = specklePolycurveToPoints(item["boundary"]) 
+        elif isinstance(item["boundary"], Line): pass
+        else: 
+            try: pointsSpeckle = item["boundary"].as_points()
+            except: pass # if Line
+        pts = [pointToCoord(pt) for pt in pointsSpeckle]
+
         outer_arr = [arcpy.Point(*coords) for coords in pts]
         outer_arr.append(outer_arr[0])
-        list_of_arrs = []
+        geomPart = []
         try:
             for void in item["voids"]: 
                 #print(void)
-                pts = [pointToCoord(pt) for pt in void.as_points()]
+                #pts = [pointToCoord(pt) for pt in void.as_points()]
+                pointsSpeckle = []
+                if isinstance(void, Circle) or isinstance(void, Arc): 
+                    pointsSpeckle = speckleArcCircleToPoints(void) 
+                elif isinstance(void, Polycurve): 
+                    pointsSpeckle = specklePolycurveToPoints(void) 
+                elif isinstance(void, Line): pass
+                else: 
+                    try: pointsSpeckle = void.as_points()
+                    except: pass # if Line
                 #print(pts)
+                pts = [pointToCoord(pt) for pt in pointsSpeckle]
+
                 inner_arr = [arcpy.Point(*coords) for coords in pts]
                 inner_arr.append(inner_arr[0])
-                list_of_arrs.append(arcpy.Array(inner_arr))
+                geomPart.append(arcpy.Array(inner_arr))
         except:pass
     
-    list_of_arrs.insert(0, arcpy.Array(outer_arr))
-    array = arcpy.Array(list_of_arrs)
-    polygon = arcpy.Polygon(array, sr, has_z=True)
-
+        geomPart.insert(0, arcpy.Array(outer_arr))
+        geomPartsArray = arcpy.Polygon(geomPart)
+        full_array_list.extend(geomPart)
+        
+    polygon = arcpy.Polygon(arcpy.Array(full_array_list), sr, has_z=True)
+    print(polygon)
+    
     return polygon
 
 def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference): 

@@ -108,6 +108,7 @@ class Speckle(object):
         print("Get parameter values")
         cat1 = "Add Streams"
         cat2 = "Send/Receive"
+        cat3 = "Create custom Spatial Reference"
 
         streamsDefalut = arcpy.Parameter(
             displayName="Add stream from default account",
@@ -152,6 +153,37 @@ class Speckle(object):
             )
         addUrlStreams.value = False 
 
+        ############################################################################
+
+        lat = arcpy.Parameter(
+            displayName="Origin point LAT",
+            name="lat",
+            datatype="GPString",
+            parameterType="Optional",
+            direction="Input",
+            category=cat3
+            )
+        lat.value = str(self.toolboxInputs.lat)
+
+        lon = arcpy.Parameter(
+            displayName="Origin point LON",
+            name="lon",
+            datatype="GPString",
+            parameterType="Optional",
+            direction="Input",
+            category=cat3
+            )
+        lon.value = str(self.toolboxInputs.lon)
+        
+        setLatLon = arcpy.Parameter(
+            displayName="Create and apply",
+            name="setLatLon",
+            datatype="GPBoolean",
+            parameterType="Optional",
+            direction="Input",
+            category=cat3
+            )
+        setLatLon.value = False
 
         ####################################################################################################
 
@@ -246,7 +278,7 @@ class Speckle(object):
         #refresh.filter.type = "ValueList"   
         refresh.value = False 
 
-        parameters = [streamsDefalut, addDefStreams, streamUrl, addUrlStreams, savedStreams, removeStream, branch, commit, selectedLayers, msg, action, refresh]
+        parameters = [streamsDefalut, addDefStreams, streamUrl, addUrlStreams, lat, lon, setLatLon, savedStreams, removeStream, branch, commit, selectedLayers, msg, action, refresh]
         return parameters
 
     def isLicensed(self): #optional
@@ -336,6 +368,25 @@ class Speckle(object):
                         p.value = None
                 par.value = False
 
+            ####################################################################### 
+            if par.name == "setLatLon" and par.altered and par.value == True: 
+                lat = lon = 0
+                for p in parameters:
+                    if p.name == "lat" and p.valueAsText is not None:
+                        # add value from the UI to saved lat
+                        lat = p.valueAsText[:]
+                        try: lat = float(lat)
+                        except: lat = 0; p.value = "0.0"
+                    if p.name == "lon" and p.valueAsText is not None:
+                        # add value from the UI to saved lat
+                        lon = p.valueAsText[:]
+                        try: lon = float(lon)
+                        except: lon = 0; p.value = "0.0"
+                    coords = [lat, lon]
+                    self.toolboxInputs.set_survey_point(coords)
+                par.value = False
+            
+            ####################################################################### 
 
             if par.name == "savedStreams" and par.altered:
                 # Search for the stream by name
@@ -413,21 +464,21 @@ class Speckle(object):
                 if par.value is not None:
                     self.toolboxInputs.selected_layers = par.values
 
-                    print("selected layers changed")
-                    print(self.toolboxInputs.action)
-                    print(self.toolboxInputs.selected_layers)
+                    #print("selected layers changed")
+                    #print(self.toolboxInputs.action)
+                    #print(self.toolboxInputs.selected_layers)
 
-            if par.name == "msg" and par.altered:
+            if par.name == "msg" and par.altered and par.valueAsText is not None:
                 self.toolboxInputs.messageSpeckle = par.valueAsText
 
             if par.name == "action" and par.altered:
-                print("action changed")
-                print(par.valueAsText)
+                #print("action changed")
+                #print(par.valueAsText)
                 if par.valueAsText == "Send": self.toolboxInputs.action = 1
                 else: self.toolboxInputs.action = 0
 
-                print(self.toolboxInputs.action)
-                print(self.toolboxInputs.selected_layers)
+                #print(self.toolboxInputs.action)
+                #print(self.toolboxInputs.selected_layers)
 
             if par.name == "refresh" and par.altered: # refresh btn
                 if par.value == True: 
@@ -435,6 +486,11 @@ class Speckle(object):
             if self.toRefresh == True:
                 self.refresh(parameters) 
                 self.toRefresh = False
+        
+        print("____________________________parameters___________________________")
+        [print(x.valueAsText) for x in parameters]
+        [x.clearMessage() for x in parameters] # https://pro.arcgis.com/en/pro-app/latest/arcpy/geoprocessing_and_python/programming-a-toolvalidator-class.htm
+        #[print(x.valueAsText) for x in parameters]
         return 
     
     def refresh(self, parameters: List[Any]): 
@@ -454,6 +510,8 @@ class Speckle(object):
             if par.name == "action": par.value = "Send"
             if par.name == "refresh": par.value = False
             
+            if par.name == "lat": par.value = str(self.toolboxInputs.get_survey_point()[0])
+            if par.name == "lon": par.value = str(self.toolboxInputs.get_survey_point()[1])
             if par.name == "streamsDefalut": par.filter.list = [ (st.name + " - " + st.id) for st in self.toolboxInputs.streams_default ]
             if par.name == "savedStreams": 
                 #print("par.name")
@@ -470,8 +528,10 @@ class Speckle(object):
     def execute(self, parameters: List, messages): 
         # https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/what-is-arcpy-.htm
         #Warning if any of the fields is invalid/empty 
-        print("_______________________Run__________________________")
+        print("#########################________Run_________#########################")
         check = self.validateStreamBranch(parameters) # apparently pdate needed to assign proper self.values
+        
+        print(self.toolboxInputs)
         print(self.toolboxInputs.selected_layers)
         print(self.toolboxInputs.action)
         

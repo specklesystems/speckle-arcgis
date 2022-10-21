@@ -6,8 +6,12 @@ from specklepy.objects import Base
 from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, Line
 from speckle.converter.geometry.mesh import rasterToMesh
 from speckle.converter.geometry.point import pointToCoord
-from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, circleToSpeckle, 
-                                                speckleArcCircleToPoints, curveToSpeckle, specklePolycurveToPoints)
+from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
+                                                circleToSpeckle, 
+                                                speckleArcCircleToPoints, 
+                                                curveToSpeckle, 
+                                                specklePolycurveToPoints,
+                                                pointToNative)
 
 import math
 from panda3d.core import Triangulator
@@ -38,7 +42,7 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
             #boundary = Polyline.from_points(pts)
             #coundary.closed = True 
         else: 
-            print("single type")
+            print("no curves")
             for p in geom:
                 for pt in p: 
                     if pt != None: pointList.append(pt) 
@@ -94,6 +98,7 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
         print("make meshes from polygons")
         if len(voids) == 0: # if there is a mesh with no voids
             for pt in polyBorder:
+                if isinstance(pt, Point): pt = pointToNative(pt)
                 x = pt.x
                 y = pt.y
                 z = 0 if math.isnan(pt.z) else pt.z
@@ -136,7 +141,18 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
             #add void points
             for i in range(len(voids)):
               trianglator.beginHole()
-              pts = voids[i].as_points()
+
+
+              pts = []
+              if isinstance(voids[i], Circle) or isinstance(voids[i], Arc): 
+                  pts = speckleArcCircleToPoints(voids[i]) 
+              elif isinstance(voids[i], Polycurve): 
+                  pts = specklePolycurveToPoints(voids[i]) 
+              elif isinstance(voids[i], Line): pass
+              else: 
+                  try: pts = voids[i].as_points()
+                  except: pass # if Line
+              #pts = voids[i].as_points()
               for pt in pts:
                 trianglator.addHoleVertex(trianglator.addVertex(pt.x, pt.y))
                 vertices.extend([pt.x, pt.y, pt.z])
@@ -165,14 +181,37 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
     Each being a Speckle Polyline and List of polylines respectively."""
 
     print("_______Drawing polygons____")
-    pts = [pointToCoord(pt) for pt in poly["boundary"].as_points()]
+    #pts = [pointToCoord(pt) for pt in poly["boundary"].as_points()]
+    pointsSpeckle = []
+    if isinstance(poly["boundary"], Circle) or isinstance(poly["boundary"], Arc): 
+        pointsSpeckle = speckleArcCircleToPoints(poly["boundary"]) 
+    elif isinstance(poly["boundary"], Polycurve): 
+        pointsSpeckle = specklePolycurveToPoints(poly["boundary"]) 
+    elif isinstance(poly["boundary"], Line): pass
+    else: 
+        try: pointsSpeckle = poly["boundary"].as_points()
+        except: pass # if Line
+
+    pts = [pointToCoord(pt) for pt in pointsSpeckle]
+    print(pts)
     outer_arr = [arcpy.Point(*coords) for coords in pts]
     outer_arr.append(outer_arr[0])
     list_of_arrs = []
     try:
         for void in poly["voids"]: 
             #print(void)
-            pts = [pointToCoord(pt) for pt in void.as_points()]
+            #pts = [pointToCoord(pt) for pt in void.as_points()]
+            pointsSpeckle = []
+            if isinstance(void, Circle) or isinstance(void, Arc): 
+                pointsSpeckle = speckleArcCircleToPoints(void) 
+            elif isinstance(void, Polycurve): 
+                pointsSpeckle = specklePolycurveToPoints(void) 
+            elif isinstance(void, Line): pass
+            else: 
+                try: pointsSpeckle = void.as_points()
+                except: pass # if Line
+            pts = [pointToCoord(pt) for pt in pointsSpeckle]
+
             #print(pts)
             inner_arr = [arcpy.Point(*coords) for coords in pts]
             inner_arr.append(inner_arr[0])

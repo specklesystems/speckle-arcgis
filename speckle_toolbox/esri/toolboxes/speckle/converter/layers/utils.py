@@ -205,3 +205,43 @@ def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
     g = rgb_scale * (1.0 - m / float(cmyk_scale)) * (1.0 - k / float(cmyk_scale))
     b = rgb_scale * (1.0 - y / float(cmyk_scale)) * (1.0 - k / float(cmyk_scale))
     return r, g, b
+
+def newLayerGroupAndName(layerName: str, streamBranch: str, project: ArcGISProject) -> str:
+
+    #CREATE A GROUP "received blabla" with sublayers
+    layerGroup = None
+    newGroupName = f'{streamBranch}'
+    #print(newGroupName)
+    for l in project.activeMap.listLayers():
+        if l.longName == newGroupName: layerGroup = l; break 
+    
+    #find a layer with a matching name in the "latest" group 
+    newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
+
+    all_layer_names = []
+    layerExists = 0
+    for l in project.activeMap.listLayers(): 
+        if l.longName.startswith(newGroupName + "\\"):
+            all_layer_names.append(l.longName)
+    #print(all_layer_names)
+
+    longName = streamBranch + "\\" + newName 
+    if longName in all_layer_names: 
+        for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
+            if (longName + "_" + letter) not in all_layer_names: newName += "_"+letter; layerExists +=1; break 
+
+    return newName, layerGroup 
+
+
+def curvedFeatureClassToSegments(layer):
+    print("___densify___")
+    data = arcpy.Describe(layer.dataSource)
+    dataPath = data.path + "\\" + layer.longName
+    print(dataPath)
+    newPath = dataPath+"_backup"
+
+    arcpy.management.CopyFeatures(dataPath, newPath)
+
+    arcpy.edit.Densify(newPath)
+    print(newPath)
+    return newPath

@@ -2,8 +2,8 @@
 from math import atan, cos, sin
 import math
 import json 
-from typing import List, Union, Tuple
-from specklepy.objects.geometry import Box, Vector, Point, Line, Polyline, Curve, Arc, Circle, Polycurve, Plane, Interval  
+from typing import List, Union, Tuple 
+from specklepy.objects.geometry import Box, Vector, Point, Line, Polyline, Curve, Ellipse, Arc, Circle, Polycurve, Plane, Interval  
 import arcpy 
 import numpy as np
 
@@ -51,9 +51,19 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
             polyline = polylineFromVerticesToSpeckle(pointList, closed, feature, layer) 
     return polyline
 
-def polylineFromVerticesToSpeckle(vertices, closed, feature, layer) -> Polyline:
+def polylineFromVerticesToSpeckle(vertices: List[Point], closed: bool, feature, layer) -> Polyline:
     """Converts a Polyline to Speckle"""
     
+    print("___Polyline from vertices to Speckle____")
+    
+    if isinstance(vertices, list): 
+        if len(vertices) > 0 and isinstance(vertices[0], Point):
+            specklePts = vertices
+        else: specklePts = [pointToSpeckle(pt, feature, layer) for pt in vertices] #breaks unexplainably
+    #elif isinstance(vertices, QgsVertexIterator):
+    #    specklePts = [pointToSpeckle(pt, feature, layer) for pt in vertices]
+    else: return None
+
     print("___Polyline from vertices to Speckle____")
     specklePts = []
     for pt in vertices:
@@ -167,7 +177,6 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
                 print(segm) #e.g. [[631307.05960000027,5803698.4477999993,0], {"a":[[631307.05960000027,5803698.4477999993,0],[631307.05960000027,5803414.92656173],0,1]}] 
                 segmStartCoord: List = addZtoPoint(segm[0])
                 
-
                 # go through all elements (points, a, c, ...)
                 for k in range(1, len(segm)):
                     # e.g. one from the list: "curveRings":[[[631750.87200000044,5803159.6126000006,0],
@@ -207,6 +216,10 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
                                         arcpy.AddMessage("SpeckleWarning: ellipse geometry not supported yet") 
                                         segments = []
                                         break
+                                else: # elliptical curve
+                                    arcpy.AddMessage("SpeckleWarning: ellipse geometry not supported yet") 
+                                    segments = []
+                                    break
 
                             if key2 == "c": # circular arc (endPt, throughPt) 
                                 
@@ -310,7 +323,16 @@ def lineFrom2pt(pt1: List[float], pt2: List[float]):
 def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Polyline to QgsLineString"""
     print("__ convert poly to native __")
-    pts = [pointToCoord(pt) for pt in poly.as_points()]
+
+    if isinstance(poly, Polycurve): 
+        poly = specklePolycurveToPoints(poly)
+    if isinstance(poly, Arc) or isinstance(poly, Circle): 
+        try: poly = poly["displayValue"]
+        except: poly = speckleArcCircleToPoints(poly)
+        
+    if isinstance(poly, list): pts = [pointToCoord(pt) for pt in poly]
+    else: pts = [pointToCoord(pt) for pt in poly.as_points()]
+
     if poly.closed is True: 
         pts.append( pointToCoord(poly.as_points()[0]) )
 
@@ -337,6 +359,9 @@ def arcToNative(poly: Arc, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Arc to Native"""
     arc = arcToNativePolyline(poly, sr) #QgsCircularString(pointToNative(poly.startPoint), pointToNative(poly.midPoint), pointToNative(poly.endPoint))
     return arc
+
+def ellipseToNative():
+    return
 
 def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Circle to QgsLineString"""

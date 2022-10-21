@@ -377,7 +377,9 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                 print(colorizer.field)
                 print(colorizer.groups)
             '''
-            #else:                 
+            #else:     
+            try: bandIndex = int(colorizer.band)
+            except: pass            
             if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
                 # REMAP band values to (0,255) range
                 valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
