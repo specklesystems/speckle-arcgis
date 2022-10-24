@@ -9,7 +9,7 @@ from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle
 from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
 from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
 from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
-
+import numpy as np
 
 def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:
     """Converts the provided layer feature to Speckle objects"""
@@ -84,7 +84,20 @@ def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
     print("_______Drawing Multipolylines____")
     #print(items)
     poly = None
+    full_array_list = []
+    for item in items: # will be 1 item
+        pointsSpeckle = []
+        try: pointsSpeckle = item.as_points()
+        except: continue 
+        pts = [pointToCoord(pt) for pt in pointsSpeckle]
 
+        if item.closed is True: 
+            pts.append( pointToCoord(item.as_points()[0]) )
+        
+        arr = [arcpy.Point(*coords) for coords in pts]
+        full_array_list.append(arr)
+
+    poly = arcpy.Polyline( arcpy.Array(full_array_list), sr, has_z=True )
     return poly
 
 def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO fix multi features
@@ -92,6 +105,7 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
     print("_______Drawing Multipolygons____")
     #print(items)
     full_array_list = []
+
     for item in items: # will be 1 item
         #print(item)
         #pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
@@ -104,7 +118,9 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
         else: 
             try: pointsSpeckle = item["boundary"].as_points()
             except: pass # if Line
+
         pts = [pointToCoord(pt) for pt in pointsSpeckle]
+        print(pts)
 
         outer_arr = [arcpy.Point(*coords) for coords in pts]
         outer_arr.append(outer_arr[0])
@@ -122,7 +138,6 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
                 else: 
                     try: pointsSpeckle = void.as_points()
                     except: pass # if Line
-                #print(pts)
                 pts = [pointToCoord(pt) for pt in pointsSpeckle]
 
                 inner_arr = [arcpy.Point(*coords) for coords in pts]
@@ -131,10 +146,11 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
         except:pass
     
         geomPart.insert(0, arcpy.Array(outer_arr))
-        geomPartsArray = arcpy.Polygon(geomPart)
         full_array_list.extend(geomPart)
-        
-    polygon = arcpy.Polygon(arcpy.Array(full_array_list), sr, has_z=True)
+
+    geomPartArray = arcpy.Array(full_array_list)
+    polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
+    
     print(polygon)
     
     return polygon

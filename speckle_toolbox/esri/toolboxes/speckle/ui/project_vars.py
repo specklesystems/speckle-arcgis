@@ -1,109 +1,160 @@
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from specklepy.api.models import Branch, Stream, Streams
 import os.path
 
-import specklepy
-from specklepy.transports.server.server import ServerTransport
 from specklepy.api.credentials import get_local_accounts
 from specklepy.api.client import SpeckleClient
-from specklepy.api import operations
 from specklepy.logging.exceptions import (
     GraphQLException,
     SpeckleException,
-    SpeckleWarning,
 )
 #from specklepy.api.credentials import StreamWrapper
 from specklepy.api.wrapper import StreamWrapper
 from osgeo import osr
 
-class uiInputs(object):
-    speckle_client: Any
-    saved_streams: List[Tuple[StreamWrapper, Stream]]
-    stream_file_path: str
-    streams_default: Optional[Streams]
-    active_stream: Optional[Stream]
-    active_branch: Optional[Branch]
-    all_layers: List[arcLayer]
-    selected_layers: List[Any]
-    messageSpeckle: str
-    project: ArcGISProject
-    action: int
+class speckleInputsClass:
+    #def __init__(self):
+    print("CREATING speckle inputs first time________")
     instances = []
-    lat: float 
-    lon: float 
+    accounts = get_local_accounts()
+    account = None
+    streams_default: None or Streams = None 
 
-    def __init__(self):
-        print("___start UI inputs________")
+    project = None
+    active_map = None
+    saved_streams: List[None or Tuple[StreamWrapper, Stream]] = []
+    stream_file_path: str = ""
+    all_layers: List[arcLayer] = []
+
+    for acc in accounts:
+        if acc.isDefault:
+            account = acc
+            break
+    speckle_client = None
+    if account:
+        speckle_client = SpeckleClient(
+            account.serverInfo.url,
+            account.serverInfo.url.startswith("https")
+    )
+        speckle_client.authenticate_with_token(token=account.token)
+        streams_default = speckle_client.stream.search("")
+
+    def __init__(self) -> None:
+        print("___start speckle inputs________")
+        try:
+            aprx = ArcGISProject('CURRENT')
+            self.project = aprx
+            self.active_map = aprx.activeMap
+            
+            if self.active_map is not None and isinstance(self.active_map, Map): # if project loaded
+                for layer in self.active_map.listLayers(): 
+                    #print(layer)
+                    if layer.isFeatureLayer or layer.isRasterLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
+            self.stream_file_path: str = aprx.filePath.replace("aprx","gdb") + "\\speckle_streams.txt"
+
+            if os.path.exists(self.stream_file_path): 
+                try: 
+                    f = open(self.stream_file_path, "r")
+                    content = f.read()
+                    self.saved_streams = self.getProjectStreams(content)
+                    f.close()
+                except: pass
+                
+            else: 
+                f = open(self.stream_file_path, "w")
+                content = ""
+                f.write(content)
+                f.close()
+        except: self.project = None; print("Project not found")
         self.instances.append(self)
-        self.accounts = get_local_accounts()
-        self.account = None
-        for acc in self.accounts:
-            if acc.isDefault: self.account = acc; break
-        #account.userInfo.name, account.serverInfo.url
-        #print("ping1")
-        self.speckle_client = SpeckleClient(self.account.serverInfo.url, self.account.serverInfo.url.startswith("https"))
-        self.speckle_client.authenticate_with_token(token=self.account.token)
-        #print("ping2")
-        print(self.speckle_client)
-        #print(self.account.serverInfo.url)
-        #print(self.account.serverInfo.url.startswith("https"))
-        #print(self.account.token)
-        #print("ping")
-        self.saved_streams = []
-        self.lat = 0.0
-        self.lon = 0.0
-        self.active_stream = None
-        self.active_branch = None
-        self.active_commit = None
-        self.all_layers = []
-        self.selected_layers = []
-        self.messageSpeckle = ""
-        self.project = aprx = None
-        self.action = 1 #send
-        #print(self.streams)
-        try: aprx = ArcGISProject('CURRENT') 
-        except: aprx = None; print("Project not found")
-        self.project = aprx
-        self.streams_default = self.speckle_client.stream.search("")
-        #print("ping3")
 
-        active_map = aprx.activeMap
-        
-
-        if active_map is not None and isinstance(active_map, Map): # if project loaded
-            for layer in active_map.listLayers(): 
-                #print(layer)
-                if layer.isFeatureLayer or layer.isRasterLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
-        #print("ping4")
-        # Get the target item's Metadata object
-        self.stream_file_path = aprx.filePath.replace("aprx","gdb") + "\\speckle_streams.txt"
-        #print(path)
-        if os.path.exists(self.stream_file_path): 
+    def getProjectStreams(self, content: str = None):
+        print("get proj streams")
+        if not content: 
+            content = self.stream_file_path
             try: 
                 f = open(self.stream_file_path, "r")
                 content = f.read()
-                #print(content)
-                self.saved_streams = self.getProjectStreams(content)
-                self.lat, self.lon = self.get_survey_point(content)
-                #print("____already set lat_lon:")
-                #print(self.lat)
-                #print(self.lon)
                 f.close()
             except: pass
-            
-        else: 
-            f = open(self.stream_file_path, "w")
-            content = ""
-            f.write(content)
-            f.close()
-        
+
+        ######### need to check whether saved streams are available (account reachable)
+        if content:
+            streamsTuples = []
+            for i, url in enumerate(content.split(",")):
+
+                streamExists = 0
+                index = 0
+                try:
+                    sw = StreamWrapper(url)
+                    stream = self.tryGetStream(sw)
+
+                    for st in streamsTuples: 
+                        if isinstance(stream, Stream) and st[0].stream_id == stream.id: 
+                            streamExists = 1; 
+                            break 
+                        index += 1
+                    if streamExists == 1: del streamsTuples[index]
+                    streamsTuples.insert(0,(sw, stream))
+
+                except SpeckleException as e:
+                    arcpy.AddMessage(str(e.args[0]))
+            return streamsTuples
+        else: return []
+
+    def tryGetStream (self,sw: StreamWrapper) -> Stream:
+        #print("Try get streams")
+
+        steamId = sw.stream_id
+        try: steamId = sw.stream_id.split("/streams/")[1].split("/")[0] 
+        except: pass
+
+        client = sw.get_client()
+        stream = client.stream.get(steamId)
+        if isinstance(stream, GraphQLException):
+            raise SpeckleException(stream.errors[0]['message'])
+        return stream
+
+
+class toolboxInputsClass:
+    #def __init__(self):
+    print("CREATING UI inputs first time________")
+    # self.instances.append(self)
+    instances = []
+    lat: float = 0.0
+    lon: float = 0.0
+    active_stream: None or Stream = None
+    active_branch: None or Branch = None
+    active_commit = None
+    selected_layers: List[Any] = []
+    messageSpeckle: str = ""
+    action: int = 1 #send
+    stream_file_path: str = ""
+    # Get the target item's Metadata object
+    
+    def __init__(self) -> None:
+        print("___start UI inputs________")
+        try:
+            aprx = ArcGISProject('CURRENT')
+            project = aprx
+            self.stream_file_path: str = aprx.filePath.replace("aprx","gdb") + "\\speckle_streams.txt"
+            if os.path.exists(self.stream_file_path): 
+                try: 
+                    f = open(self.stream_file_path, "r")
+                    content = f.read()
+                    self.lat, self.lon = self.get_survey_point(content)
+                    f.close()
+                except: pass
+        except: print("Project not found")
+        self.instances.append(self)
+
     def setProjectStreams(self, wr: StreamWrapper, add = True): 
         # ERROR 032659 Error queueing metrics request: 
         # Cannot parse  into a stream wrapper class - invalid URL provided.
-        #print("___set proj streams__")
+        print("SET proj streamz")
 
         if os.path.exists(self.stream_file_path): 
 
@@ -128,60 +179,10 @@ class uiInputs(object):
             f = open(self.stream_file_path, "w")
             f.write(str(wr.stream_url) + ",")
             f.close()
-  
-    def getProjectStreams(self, content:str = None):
-        #print("___get proj streams__")
-        if not content: 
-            content = self.stream_file_path
-            try: 
-                f = open(self.stream_file_path, "r")
-                content = f.read()
-                f.close()
-            except: pass
-
-        ######### need to check whether saved streams are available (account reachable)
-        if content:
-            temp = []
-            for i, url in enumerate(content.split(",")):
-
-                streamExists = 0
-                index = 0
-                try:
-                    sw = StreamWrapper(url)
-                    stream = self.tryGetStream(sw)
-
-                    for st in temp: 
-                        if isinstance(stream, Stream) and st[0].stream_id == stream.id: 
-                            streamExists = 1; 
-                            break 
-                        index += 1
-                    if streamExists == 1: del temp[index]
-                    temp.insert(0,(sw, stream))
-
-                except SpeckleException as e:
-                    arcpy.AddMessage(str(e.args[0]))
-            #self.saved_streams = temp
-            #print(self.saved_streams)
-            #print("__return get proj streams___")
-            return temp
-        else: return []
-    
-    def tryGetStream (self,sw: StreamWrapper) -> Stream:
-
-        steamId = sw.stream_id
-        try: steamId = sw.stream_id.split("/streams/")[1].split("/")[0] 
-        except: pass
-
-        client = sw.get_client()
-        stream = client.stream.get(steamId)
-        if isinstance(stream, GraphQLException):
-            raise SpeckleException(stream.errors[0]['message'])
-        return stream
-    
-    
-    def get_survey_point(self, content: Union[str, None] = None) -> Tuple[float]:
+ 
+    def get_survey_point(self, content = None) -> Tuple[float]:
         # get from saved project 
-        #print(content)
+        print("get survey point")
         x = y = 0
         if not content: 
             content = self.stream_file_path
@@ -190,7 +191,6 @@ class uiInputs(object):
                 content = f.read()
                 f.close()
             except: pass
-        #print(content)
         if content:
             temp = []
             for i, coords in enumerate(content.split(",")):
@@ -198,15 +198,11 @@ class uiInputs(object):
                     try:
                         x, y = [float(c) for c in coords.replace("speckle_sr_origin_","").split(";")]
                     except: pass
-                    #break # only look at the latest one 
-        #self.lat, self.lon = x, y
-        #print(x)
-        #print(y)
         return (x, y)
-        
+
     def set_survey_point(self, coords: List[float]):
         # from widget (2 strings) to local vars + update SR of the map
-        #try: 
+        print("SET survey point")
 
         pt = "speckle_sr_origin_" + str(coords[0]) + ";" + str(coords[1]) 
         if os.path.exists(self.stream_file_path): 
@@ -247,8 +243,6 @@ class uiInputs(object):
         else:
             arcpy.AddWarning("Custom CRS could not be created")
 
-        #except:
-        #    arcpy.AddWarning("Custom CRS could not be created")
         return True
 
     

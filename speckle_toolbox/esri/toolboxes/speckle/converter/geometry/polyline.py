@@ -7,7 +7,7 @@ from specklepy.objects.geometry import Box, Vector, Point, Line, Polyline, Curve
 import arcpy 
 import numpy as np
 
-from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, addZtoPoint
+from speckle.converter.geometry.point import pointToCoord, pointToSpeckle, addZtoPoint
 from speckle.converter.layers.utils import get_scale_factor
 
 def circleToSpeckle(center, point):

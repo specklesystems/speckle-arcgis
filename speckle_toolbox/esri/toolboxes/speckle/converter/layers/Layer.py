@@ -29,7 +29,7 @@ class Layer(Base, chunkable={"features": 100}):
         self.renderer = renderer 
 
 class VectorLayer(Base, chunkable={"features": 100}):
-    """A GIS Layer"""
+    """A GIS Vector Layer"""
 
     def __init__(
         self,
@@ -52,13 +52,13 @@ class VectorLayer(Base, chunkable={"features": 100}):
         self.renderer = renderer 
 
 class RasterLayer(Base, chunkable={"features": 100}):
-    """A GIS Layer"""
+    """A GIS Raster Layer"""
 
     def __init__(
         self,
-        name=None,
-        crs=None,
-        rasterCrs=None,
+        name: Optional[str] = None,
+        crs: Optional[CRS] =None,
+        rasterCrs: Optional[CRS] = None,
         features: List[Base] = [],
         layerType: str = "None",
         geomType: str = "None",

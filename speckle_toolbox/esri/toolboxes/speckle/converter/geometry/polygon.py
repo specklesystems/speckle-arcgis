@@ -5,13 +5,13 @@ import json
 from specklepy.objects import Base
 from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, Line
 from speckle.converter.geometry.mesh import rasterToMesh
-from speckle.converter.geometry.point import pointToCoord
+from speckle.converter.geometry.point import pointToCoord, pointToNative
 from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
                                                 circleToSpeckle, 
                                                 speckleArcCircleToPoints, 
                                                 curveToSpeckle, 
-                                                specklePolycurveToPoints,
-                                                pointToNative)
+                                                specklePolycurveToPoints
+                                                )
 
 import math
 from panda3d.core import Triangulator
@@ -26,6 +26,8 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
     voidPointList = []
     voids = []
     boundary = None
+    data = arcpy.Describe(layer.dataSource)
+    sr = data.spatialReference
 
     print(multiType)
     
@@ -98,7 +100,7 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
         print("make meshes from polygons")
         if len(voids) == 0: # if there is a mesh with no voids
             for pt in polyBorder:
-                if isinstance(pt, Point): pt = pointToNative(pt)
+                if isinstance(pt, Point): pt = pointToNative(pt, sr) # SR unknown
                 x = pt.x
                 y = pt.y
                 z = 0 if math.isnan(pt.z) else pt.z
@@ -194,9 +196,10 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
 
     pts = [pointToCoord(pt) for pt in pointsSpeckle]
     print(pts)
+
     outer_arr = [arcpy.Point(*coords) for coords in pts]
     outer_arr.append(outer_arr[0])
-    list_of_arrs = []
+    geomPart = []
     try:
         for void in poly["voids"]: 
             #print(void)
@@ -212,13 +215,12 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
                 except: pass # if Line
             pts = [pointToCoord(pt) for pt in pointsSpeckle]
 
-            #print(pts)
             inner_arr = [arcpy.Point(*coords) for coords in pts]
             inner_arr.append(inner_arr[0])
-            list_of_arrs.append(arcpy.Array(inner_arr))
+            geomPart.append(arcpy.Array(inner_arr))
     except:pass
-    list_of_arrs.insert(0, outer_arr)
-    array = arcpy.Array(list_of_arrs)
-    polygon = arcpy.Polygon(array, sr, has_z=True)
+    geomPart.insert(0, outer_arr)
+    geomPartArray = arcpy.Array(geomPart)
+    polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
 
     return polygon
