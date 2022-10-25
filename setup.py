@@ -1,8 +1,8 @@
 # to build an installer: run cmd from this folder or use terminal: "%PROGRAMFILES%\\ArcGIS\\Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe" 
 # 
-# python patch_version 2.x.x 
-# C:\\Users\\username\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\setup.py sdist bdist_wheel 
-# copy .whl to "speckle_arcgis_installer" 
+# 1) python patch_version.py 2.x.x 
+# 2) (if needed: pip install wheel) python setup.py sdist bdist_wheel   #C:\\Users\\username\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\setup.py sdist bdist_wheel 
+# copy .whl from "dist" to "speckle_arcgis_installer" 
 
 # ref: https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/distributing-python-modules.htm
 
@@ -27,6 +27,7 @@ setup(name='speckle_toolbox',
                   'esri/toolboxes/speckle/converter/*', 'esri/toolboxes/speckle/converter/geometry/*', 'esri/toolboxes/speckle/converter/layers/*',
                   'esri/toolboxes/speckle/plugin_utils/*'] 
                   }, 
+      setup_requires=['wheel'],
       )
 
 # then to install in ArcGIS:

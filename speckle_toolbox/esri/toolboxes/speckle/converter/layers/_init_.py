@@ -20,6 +20,8 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
 import numpy as np
 
+from speckle.converter.layers.utils import findTransformation
+
 
 def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
     """Converts the current selected layers to Speckle"""
@@ -439,17 +441,19 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     active_map = project.activeMap
     path = project.filePath.replace("aprx","gdb")
     #path = '.'.join(path.split("\\")[:-1])
+    rasterHasSr = False
     print(path)
 
     try: 
-        crsRasterWkt = str(layer.rasterCrs.wkt)
+        srRasterWkt = str(layer.rasterCrs.wkt)
         print(layer.rasterCrs.wkt)
-        crsRaster = arcpy.SpatialReference(text=crsRasterWkt) # by native raster SR
+        srRaster = arcpy.SpatialReference(text=srRasterWkt) # by native raster SR
+        rasterHasSr = True
     except: 
-        crsRasterWkt = str(layer.crs.wkt)
-        crsRaster: arcpy.SpatialReference = sr # by layer
-    print(layer.rasterCrs.wkt)
-    print(crsRaster)
+        srRasterWkt = str(layer.crs.wkt)
+        srRaster: arcpy.SpatialReference = sr # by layer
+    #print(layer.rasterCrs.wkt)
+    print(srRaster)
 
     newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
     print(newName)
@@ -462,11 +466,20 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
 
     xsize= int(feat["X pixels"])
     ysize= int(feat["Y pixels"])
+    xres = float(feat["X resolution"])
+    yres = float(feat["Y resolution"])
     bandsCount=int(feat["Band count"])
     originPt = arcpy.Point(feat['displayValue'][0].x, feat['displayValue'][0].y, feat['displayValue'][0].z)
+    print(originPt)
+    #if source projection is different from layer display projection, convert display OriginPt to raster source projection 
+    if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
+        originPt = findTransformation(arcpy.PointGeometry(originPt, sr, has_z = True), "Point", sr, srRaster, None).getPart()
+    print(originPt)
 
     bandDatasets = ""
     rastersToMerge = []
+    rasterPathsToMerge = []
+
 
     arcpy.env.workspace = path 
     arcpy.env.overwriteOutput = True
@@ -479,33 +492,49 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         rasterbandPath = path + "\\" + newName + "_Band_" + str(i+1) #+ ".tif"
         bandDatasets += rasterbandPath + ";"
         rasterband = np.array(bandValues[i])
-        rasterband = np.reshape(rasterband,(xsize, ysize))
+        rasterband = np.reshape(rasterband,(ysize, xsize))
         print(rasterband)
-        leftLowerCorner = arcpy.Point(originPt.X, originPt.Y - (ysize*feat["Y pixels"]), originPt.Z)
-        upperRightCorner = arcpy.Point(originPt.X + (xsize*feat["X pixels"]), originPt.Y, originPt.Z)
-        print(leftLowerCorner)
+        print(np.shape(rasterband))
         print(xsize)
+        print(xres)
         print(ysize)
+        print(yres)
+        leftLowerCorner = arcpy.Point(originPt.X, originPt.Y + (ysize*yres), originPt.Z)
+        #upperRightCorner = arcpy.Point(originPt.X + (xsize*xres), originPt.Y, originPt.Z)
+        print(leftLowerCorner)
+        #print(upperRightCorner)
 
         # # Convert array to a geodatabase raster, add to layers 
-        try: myRaster = arcpy.NumPyArrayToRaster(rasterband, leftLowerCorner, xsize, ysize, float(feat["NoDataVal"][i]) ) 
-        except: myRaster = arcpy.NumPyArrayToRaster(rasterband, leftLowerCorner, xsize, ysize) 
-        #print(myRaster)
+        try: myRaster = arcpy.NumPyArrayToRaster(rasterband, leftLowerCorner, abs(xres), abs(yres), float(feat["NoDataVal"][i]) ) 
+        except: myRaster = arcpy.NumPyArrayToRaster(rasterband, leftLowerCorner, abs(xres), abs(yres)) 
 
-        myRaster.setProperty("spatialReference", crsRaster)
-        rastersToMerge.append(myRaster)
+        rasterbandPath = validate_path(rasterbandPath) #solved file saving issue 
         print(rasterbandPath)
+        #mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
+        myRaster.save(rasterbandPath)
 
-    mergedRaster = arcpy.ia.Merge(rastersToMerge)
-    print(path + "\\" + newName)
+        print(myRaster.width)
+        print(myRaster.height)
+
+        rastersToMerge.append(myRaster)
+        rasterPathsToMerge.append(rasterbandPath)
+        print(rasterbandPath)
 
     #mergedRaster.setProperty("spatialReference", crsRaster)
 
     full_path = validate_path(path + "\\" + newName) #solved file saving issue 
+    if os.path.exists(full_path):
+        for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
+            if os.path.exists(full_path + letter): pass
+            else: full_path += letter; break 
+
     print(full_path)
-    mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
+    #mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
+    #mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
     
-    arcpy.management.DefineProjection(full_path, crsRaster)
+    arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+    print(path + "\\" + newName)
+    arcpy.management.DefineProjection(full_path, srRaster)
 
     rasterLayer = arcpy.management.MakeRasterLayer(full_path, newName + "_").getOutput(0)
     print(layerGroup)

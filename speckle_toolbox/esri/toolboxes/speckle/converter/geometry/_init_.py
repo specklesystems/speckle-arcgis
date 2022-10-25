@@ -5,19 +5,22 @@ from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, 
 
 import arcpy 
 from typing import Any, List, Union, Sequence
-from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle
+from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle
 from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
 from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
-from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
+from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
 import numpy as np
 
 def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:
     """Converts the provided layer feature to Speckle objects"""
     print("___convertToSpeckle____________")
     geom = feature
-    #print(geom.isMultipart) # e.g. False 
+    print(geom.isMultipart) # e.g. False 
+    print(geom.partCount)
     geomMultiType = geom.isMultipart
     hasCurves = feature.hasCurves 
+    
+    # feature is <geoprocessing describe geometry object object at 0x000002A75D6A4BD0>
     
     #print(featureType) # e.g. Simple 
     #print(geomType) # e.g. Polygon 
@@ -32,9 +35,11 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
         #    geomMultiType = geom.isMultipart
         #    return polylineToSpeckle(geom, feature, layer, geomMultiType)
         #else:
-        return polylineToSpeckle(geom, feature, layer, geomMultiType)
+        if geom.partCount > 1: return multiPolylineToSpeckle(geom, feature, layer, geomMultiType)
+        else: return polylineToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Polygon":
-        return polygonToSpeckle(geom, feature, layer, geomMultiType)
+        if geom.partCount > 1: return multiPolygonToSpeckle(geom, feature, layer, geomMultiType)
+        else: return polygonToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Multipoint":
         return multiPointToSpeckle(geom, feature, layer, geomMultiType)
     else:
@@ -146,7 +151,7 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
         except:pass
     
         geomPart.insert(0, arcpy.Array(outer_arr))
-        full_array_list.extend(geomPart)
+        full_array_list.extend(geomPart) # outlines are written one by one, with no separation to "parts"
 
     geomPartArray = arcpy.Array(full_array_list)
     polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)

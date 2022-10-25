@@ -2,7 +2,8 @@
 from math import atan, cos, sin
 import math
 import json 
-from typing import List, Union, Tuple 
+from typing import List, Union, Tuple
+from specklepy.objects import Base 
 from specklepy.objects.geometry import Box, Vector, Point, Line, Polyline, Curve, Ellipse, Arc, Circle, Polycurve, Plane, Interval  
 import arcpy 
 import numpy as np
@@ -27,6 +28,18 @@ def circleToSpeckle(center, point):
     c.plane.origin.units = "m"
     #print(c)
     return c 
+
+def multiPolylineToSpeckle(geom, feature, layer, multiType: bool):
+
+    print("___MultiPolyline to Speckle____")
+    polyline = []
+    print(enumerate(geom.getPart()))
+    for i,x in enumerate(geom.getPart()):
+        poly = arcpy.Polyline(x, arcpy.Describe(layer.dataSource).SpatialReference, has_z = True)
+        print(poly)
+        polyline.append(polylineToSpeckle(poly, feature, layer, poly.isMultipart))
+
+    return polyline
 
 def polylineToSpeckle(geom, feature, layer, multiType: bool):
     print("___Polyline to Speckle____")
@@ -64,7 +77,6 @@ def polylineFromVerticesToSpeckle(vertices: List[Point], closed: bool, feature, 
     #    specklePts = [pointToSpeckle(pt, feature, layer) for pt in vertices]
     else: return None
 
-    print("___Polyline from vertices to Speckle____")
     specklePts = []
     for pt in vertices:
         newPt = pointToSpeckle(pt, feature, layer) 

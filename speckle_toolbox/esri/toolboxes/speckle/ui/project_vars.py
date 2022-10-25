@@ -132,6 +132,7 @@ class toolboxInputsClass:
     selected_layers: List[Any] = []
     messageSpeckle: str = ""
     action: int = 1 #send
+    project = None
     stream_file_path: str = ""
     # Get the target item's Metadata object
     
@@ -149,6 +150,10 @@ class toolboxInputsClass:
                     f.close()
                 except: pass
         except: print("Project not found")
+        try:
+            aprx = ArcGISProject('CURRENT')
+            self.project = aprx
+        except: self.project = None; print("Project not found")
         self.instances.append(self)
 
     def setProjectStreams(self, wr: StreamWrapper, add = True): 

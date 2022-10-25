@@ -149,7 +149,8 @@ def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, proj
             tr0 = list(selecterTr.keys())[0]
 
         if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint":
-            arcpy.AddWarning("Unsupported or invalid geometry in layer " + selectedLayer.name)
+            try: arcpy.AddWarning("Unsupported or invalid geometry in layer " + selectedLayer.name)
+            except: arcpy.AddWarning("Unsupported or invalid geometry")
 
         # reproject geometry using chosen transformstion(s)
         if tr0 is not None:

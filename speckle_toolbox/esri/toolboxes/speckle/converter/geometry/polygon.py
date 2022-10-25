@@ -1,6 +1,7 @@
 from typing import Sequence
 import arcpy 
-import json 
+import json
+from arcpy.arcobjects.arcobjects import SpatialReference 
 
 from specklepy.objects import Base
 from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, Line
@@ -17,10 +18,43 @@ import math
 from panda3d.core import Triangulator
 
 
+def multiPolygonToSpeckle(geom, feature, layer, multiType: bool):
+
+    print("___MultiPolygon to Speckle____")
+    polygon = []
+    #print(enumerate(geom.getPart())) # this method ignores curvature and voids
+    #print(json.loads(geom.JSON))
+    #js = json.loads(geom.JSON)['rings']
+    #https://desktop.arcgis.com/en/arcmap/latest/analyze/python/reading-geometries.htm
+    for i,x in enumerate(feature): # [[x,x,x]
+        print("Part # " + str(i+1))
+        print(x)
+        boundaryFinished = 0
+        arrBoundary = []
+        arrInnerRings = []
+        for ptn in x: # arcpy.Point
+            if ptn is None: 
+                boundaryFinished += 1
+                arrInnerRings.append([]) # start of new Inner Ring
+            elif boundaryFinished == 0 and ptn is not None: 
+                arrBoundary.append(ptn)
+            elif boundaryFinished == 1 and ptn is not None: 
+                arrInnerRings[len(arrInnerRings)-1].append(ptn)
+
+        full_arr = [arrBoundary] + arrInnerRings
+        print(full_arr)
+        poly = arcpy.Polygon(arcpy.Array(full_arr), arcpy.Describe(layer.dataSource).SpatialReference, has_z = True)
+        print(poly) #<geoprocessing describe geometry object object at 0x000002B2D3E338D0> 
+        polygon.append(polygonToSpeckle(poly, feature, layer, poly.isMultipart))
+
+    return polygon
+
+
 def polygonToSpeckle(geom, feature, layer, multiType: bool):
     """Converts a Polygon to Speckle"""
     #try: 
     print("___Polygon to Speckle____")
+    print(geom)
     polygon = Base(units = "m")
     pointList = []
     voidPointList = []
@@ -30,25 +64,26 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
     sr = data.spatialReference
 
     print(multiType)
-    
+    partsBoundaries = []
+    partsVoids = []
     
         
     #else: # no curves
-    if multiType is False: 
+    if multiType is False: # Multipolygon
         if geom.hasCurves: 
             print("has curves")
             # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
             print(geom.JSON) 
             boundary = curveToSpeckle(geom, "Polygon", feature, layer)
-            #pts = specklePolycurveToPoints(boundary)
-            #boundary = Polyline.from_points(pts)
-            #coundary.closed = True 
         else: 
             print("no curves")
             for p in geom:
                 for pt in p: 
                     if pt != None: pointList.append(pt) 
             boundary = polylineFromVerticesToSpeckle(pointList, True, feature, layer) 
+        partsBoundaries.append(boundary)
+        partsVoids.append([])
+
     else: 
         print("multi type")
         for i, p in enumerate(geom):
@@ -69,16 +104,14 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
                 void = polylineFromVerticesToSpeckle(pointList, True, feature, layer)
                 voids.append(void)
 
-    #if isinstance(boundary, Polycurve): 
-    #    pts = specklePolycurveToPoints(boundary)
-    #    boundary.displayValue = Polyline.from_points(pts) # + [pts[0]]) 
-    #    #boundary.displayValue.closed = True
+            #partsBoundaries.append(boundary)
+            #partsVoids.append(local_voids)
 
     if boundary is None: return None 
     polygon.boundary = boundary
     polygon.voids = voids
     polygon.displayValue = [ boundary ] + voids
-    print(boundary)
+    #print(boundary)
 
     ############# mesh 
     vertices = []
@@ -93,17 +126,17 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
     elif isinstance(boundary, Polyline): 
         try: polyBorder = boundary.as_points()
         except: pass # if Line
-    print(polyBorder)
+    #print(polyBorder)
     
 
     if len(polyBorder)>2: # at least 3 points 
         print("make meshes from polygons")
         if len(voids) == 0: # if there is a mesh with no voids
             for pt in polyBorder:
-                if isinstance(pt, Point): pt = pointToNative(pt, sr) # SR unknown
-                x = pt.x
-                y = pt.y
-                z = 0 if math.isnan(pt.z) else pt.z
+                if isinstance(pt, Point): pt = pointToNative(pt, sr).getPart() # SR unknown
+                x = pt.X
+                y = pt.Y
+                z = 0 if math.isnan(pt.Z) else pt.Z
                 vertices.extend([x, y, z])
                 total_vertices += 1
             #print(vertices)
