@@ -14,8 +14,8 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read() 
  
 setup(name='speckle_toolbox', 
-      version='0.1',
       author='SpeckleSystems',
+			version="2.9.2",
       description=("Example for extending geoprocessing through Python modules"),
       long_description=read('Readme.md'),
       python_requires='~=3.3',

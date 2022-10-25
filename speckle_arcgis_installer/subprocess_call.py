@@ -14,7 +14,7 @@ def subprocess_call(*args, **kwargs):
         startupinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
         kwargs['startupinfo'] = startupinfo
-        print("start")
+        #print("start")
         #print(*args)
     try: 
         # if manually: cmd.exe -> conda activate [env folder] -> pip install specklepy 
