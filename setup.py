@@ -15,7 +15,7 @@ def read(fname):
  
 setup(name='speckle_toolbox', 
       author='SpeckleSystems',
-			version="2.9.2",
+			version="2.9.5",
       description=("Example for extending geoprocessing through Python modules"),
       long_description=read('Readme.md'),
       python_requires='~=3.3',
@@ -25,7 +25,8 @@ setup(name='speckle_toolbox',
                   'esri/help/gp/*', 'esri/help/gp/toolboxes/*', 'esri/help/gp/messages/*',
                   'esri/toolboxes/*','esri/toolboxes/speckle/*',
                   'esri/toolboxes/speckle/converter/*', 'esri/toolboxes/speckle/converter/geometry/*', 'esri/toolboxes/speckle/converter/layers/*',
-                  'esri/toolboxes/speckle/plugin_utils/*'] 
+                  'esri/toolboxes/speckle/plugin_utils/*',
+                  'esri/toolboxes/speckle/ui/*'] 
                   }, 
       setup_requires=['wheel'],
       )

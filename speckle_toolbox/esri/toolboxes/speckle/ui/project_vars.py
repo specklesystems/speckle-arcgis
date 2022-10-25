@@ -63,7 +63,7 @@ class speckleInputsClass:
                     f.close()
                 except: pass
                 
-            else: 
+            elif len(self.stream_file_path) >10: 
                 f = open(self.stream_file_path, "x")
                 f.close()
                 f = open(self.stream_file_path, "w")
@@ -91,6 +91,7 @@ class speckleInputsClass:
                 streamExists = 0
                 index = 0
                 try:
+                    print(url)
                     sw = StreamWrapper(url)
                     stream = self.tryGetStream(sw)
 
@@ -103,7 +104,7 @@ class speckleInputsClass:
                     streamsTuples.insert(0,(sw, stream))
 
                 except SpeckleException as e:
-                    arcpy.AddMessage(str(e.args[0]))
+                    arcpy.AddMessage(str(e.args))
             return streamsTuples
         else: return []
 
@@ -182,7 +183,7 @@ class toolboxInputsClass:
 
             f.write(new_content)
             f.close()
-        else: 
+        elif len(self.stream_file_path) >10: 
             f = open(self.stream_file_path, "x")
             f.close()
             f = open(self.stream_file_path, "w")
@@ -230,7 +231,7 @@ class toolboxInputsClass:
             new_content += pt + "," # add point
             f.write(new_content)
             f.close()
-        else: 
+        elif len(self.stream_file_path) >10: 
             f = open(self.stream_file_path, "x")
             f.close()
             f = open(self.stream_file_path, "w")

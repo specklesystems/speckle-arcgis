@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import Any, Callable, List, Optional, Tuple
-#r'''
+r'''
 from collections import defaultdict
 
 import arcpy
@@ -36,7 +36,7 @@ from speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
 from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
 from speckle.converter.layers.Layer import VectorLayer
 
-#'''
+
 
 def traverseObject(
         base: Base,
@@ -73,7 +73,7 @@ class Toolbox:
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
         print("___ping_Toolbox")
-        self.label = "Speckle Tools"
+        self.label = "Speckle Tools Beta"
         self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
@@ -758,5 +758,6 @@ class Speckle:
         #self.updateParameters(parameters, True)
         #self.refresh(parameters)
     
-    
+   
 #__all__ = ["Toolbox", "Speckle"]
+'''

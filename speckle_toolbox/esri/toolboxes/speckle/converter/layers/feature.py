@@ -319,10 +319,10 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
     # identify symbology type and if Multiband, which band is which color
     for v in range(rasterDimensions[1] ): #each row, Y
         for h in range(rasterDimensions[0] ): #item in a row, X
-            pt1 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0],extent.YMin+v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
-            pt2 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0], extent.YMin+(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
-            pt3 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMin+(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
-            pt4 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMin+v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt1 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0],extent.YMax-v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt2 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0], extent.YMax-(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt3 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMax-(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt4 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMax-v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
             # first, get point coordinates with correct position and resolution, then reproject each:
             if my_raster.spatialReference.name != projectCRS.name:
                 pt1 = findTransformation(pt1, "Point", my_raster.spatialReference, projectCRS, selectedLayer)

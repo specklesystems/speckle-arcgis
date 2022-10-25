@@ -6,9 +6,9 @@ pythonPath = os.getenv('APPDATA').replace("\\Roaming","") + r"\Local\ESRI\conda\
 
 def installToolbox(newExec: str):
     print("Installing Speckle Toolbox")
-    whl_file = os.path.join(os.path.dirname(__file__), "speckle_toolbox-2.9.2-py3-none-any.whl" ) 
+    whl_file = os.path.join(os.path.dirname(__file__), "speckle_toolbox-2.9.5-py3-none-any.whl" ) 
     subprocess_call([newExec, '-m','pip','install','--upgrade', '--force-reinstall', whl_file])
-    # to uninstall: cmd.exe "C:\\Users\\username\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-2.9.2-py3-none-any.whl
+    # to uninstall: cmd.exe "C:\\Users\\username\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-2.9.5-py3-none-any.whl
     return
 
 def installDependencies(pythonExec: str):
