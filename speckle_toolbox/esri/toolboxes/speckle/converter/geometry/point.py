@@ -38,16 +38,17 @@ def pointToSpeckle(pt, feature, layer):
     specklePoint.y = y
     specklePoint.z = z
     '''
-    col = featureColorfromNativeRenderer(feature, layer)
-    specklePoint['displayStyle'] = {}
-    specklePoint['displayStyle']['color'] = col
+    if feature is not None and layer is not None: # can be if it's a point from raster layer 
+        col = featureColorfromNativeRenderer(feature, layer)
+        specklePoint['displayStyle'] = {}
+        specklePoint['displayStyle']['color'] = col
     '''
     #print(specklePoint)
     return specklePoint
 
 def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
     """Converts a Speckle Point to QgsPoint"""
-    print("___pointToNative__")
+    #print("___pointToNative__")
     #print(pt)
     pt = scalePointToNative(pt, pt.units)
     geom = arcpy.PointGeometry(arcpy.Point(pt.x, pt.y, pt.z), sr, has_z = True)
@@ -68,3 +69,7 @@ def scalePointToNative(pt: Point, units: str) -> Point:
     pt.y = pt.y * scaleFactor
     pt.z = 0 if math.isnan(pt.z) else pt.z * scaleFactor
     return pt
+
+def addZtoPoint(coords: List): 
+    if len(coords) == 2: coords.append(0)
+    return coords

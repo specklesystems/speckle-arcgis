@@ -23,7 +23,7 @@ def installDependencies(pythonExec: str):
         # just in case the included version is old
         subprocess_call([pythonExec, "-m", "pip", "install", "--upgrade", "pip"])
     
-    pkgVersion = "2.7.4" 
+    pkgVersion = "2.9.0" 
     pkgName = "specklepy"
     try:
         import specklepy # C:\Users\username\AppData\Roaming\Python\Python37\site-packages\specklepy\__init__.py 

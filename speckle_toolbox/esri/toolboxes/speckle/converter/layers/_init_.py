@@ -2,12 +2,12 @@
 Contains all Layer related classes and methods.
 """
 import os
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 
 from regex import D
 from speckle.converter.layers.CRS import CRS
-from speckle.converter.layers.Layer import Layer, RasterLayer
-from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative
+from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, rasterFeatureToSpeckle
 from specklepy.objects import Base
 
 import arcgisscripting
@@ -17,10 +17,13 @@ from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
                               AddFields, AlterField, DefineProjection )
 
-from speckle.converter.layers.utils import getLayerAttributes
+from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
+import numpy as np
+
+from speckle.converter.layers.utils import findTransformation
 
 
-def convertSelectedLayers(all_layers: List[arcpy._mp.Layer], selected_layers: List[str], project: arcpy.mp.ArcGISProject) -> List[Layer]:
+def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
     """Converts the current selected layers to Speckle"""
     print("________Convert Layers_________")
     result = []
@@ -32,82 +35,121 @@ def convertSelectedLayers(all_layers: List[arcpy._mp.Layer], selected_layers: Li
                 break
         if layerToSend is not None: 
             ds = layerToSend.dataSource #file path
-            if layerToSend.isFeatureLayer: 
-                newBaseLayer = layerToSpeckle(layerToSend, project)
-                if newBaseLayer is not None: result.append(newBaseLayer)
+            #if layerToSend.isFeatureLayer: 
+            newBaseLayer = layerToSpeckle(layerToSend, project)
+            if newBaseLayer is not None: result.append(newBaseLayer)
 
             elif layerToSend.isRasterLayer: pass
-            '''
-            if layer.name() in selectedLayerNames:
-                result.append(layerToSpeckle(layer, projectCRS, project))
-            '''
-    #print(result)
+
     return result
 
-def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Layer: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
+def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer, RasterLayer]: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
     """Converts a given QGIS Layer to Speckle"""
     print("________Convert Feature Layer_________")
+
+    speckleLayer = None
 
     projectCRS = project.activeMap.spatialReference
     try: data = arcpy.Describe(layer.dataSource)
     except OSError as e: arcpy.AddWarning(str(e.args[0])); return
-    #print(projectCRS)
-    #print(projectCRS.name)
-    crs = CRS(name = projectCRS.name, wkt = projectCRS.exportToString(), units = "m")
-    
-    layer_geo_crs = None
-    datum = None
-    #if data.spatialReference.type == "Projected": 
-    #    #layer_geo_crs =  
-    #    datum = CRS(name = layer_geo_crs.name, wkt = layer_geo_crs.exportToString(), units = "m")
-    
-    speckleLayer = Layer()
-    speckleLayer.type="VectorLayer"
-    speckleLayer.name = layer.name
-    speckleLayer.crs = crs
-    speckleLayer.datum = datum
-    
-    try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
-        layerObjs = []
-        print(data.datasetType)
-        if data.datasetType == "FeatureClass": #FeatureClass, ?Table Properties, ?Datasets
-            # write feature attributes
-            fieldnames = [field.name for field in data.fields]
-            #print(layer.longName) # e.g. 17b0b76d13_custom_crs_04dcfaa936\04dcfaa936_Vector_lineGeom
-            #print(fieldnames) # e.g. ['OBJECTID', 'Shape', 'Shape_Length', 'Speckle_ID', 'number', 'area']
-            rows_shapes = arcpy.da.SearchCursor(layer.longName, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
-            #print(rows_shapes) # <da.SearchCursor object at 0x00000172565E6C10>
-            print("__ start iterating features")
-            # write feature attributes
-            for i, features in enumerate(rows_shapes):
-                print("____Feature # " + str(i+1))
-                if features[0] == None: continue 
-                #print(features[0].hasCurves)
-                if features[0].hasCurves: continue 
-                rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
-                row_attr = []
-                for k, attrs in enumerate(rows_attributes):
-                    if i == k: row_attr = attrs; break
 
-                #print(features) #(<Polygon object at 0x172592ae8c8[0x17258d2a600]>,)
-                #print(features[0].pointCount)
-                #print(features[0].partCount)
-                if features[0]:
-                    b = featureToSpeckle(fieldnames, row_attr, features[0], projectCRS, project, layer)
-                    layerObjs.append(b)
-                    #print(layerObjs)
+    layerName = layer.name
+    crs = data.SpatialReference
+    units = "m"
+    layerObjs = []
+
+    # Convert CRS to speckle, use the projectCRS
+    speckleReprojectedCrs = CRS(name = projectCRS.name, wkt = projectCRS.exportToString(), units = units)
+    layerCRS = CRS(name=crs.name, wkt=crs.exportToString(), units = units) 
+    
+    #renderer = selectedLayer.renderer()
+    #layerRenderer = rendererToSpeckle(renderer) 
+    
+    if layer.isFeatureLayer: 
+        print("VECTOR LAYER HERE")
+        
+        speckleLayer = VectorLayer(units = "m")
+        speckleLayer.type="VectorLayer"
+        speckleLayer.name = layerName
+        speckleLayer.crs = speckleReprojectedCrs
+        #speckleLayer.datum = datum
+
+
+        try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
+            
+            #print(data.datasetType) # FeatureClass
+            if data.datasetType == "FeatureClass": #FeatureClass, ?Table Properties, ?Datasets
                 
-            print("__ finish iterating features")
-            speckleLayer.features=layerObjs
-            speckleLayer.geomType = data.shapeType
+                # write feature attributes
+                fieldnames = [field.name for field in data.fields]
+                rows_shapes = arcpy.da.SearchCursor(layer.longName, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
+                print("__ start iterating features")
+                row_shapes_list = [x for k, x in enumerate(rows_shapes)]
+                for i, features in enumerate(row_shapes_list):
 
-    except OSError as e: 
-        arcpy.AddWarning(str(e))
-        return
+                    print("____error Feature # " + str(i+1)) # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
+                    if features[0] is None: continue 
+                    feat = features[0]
+                    #print(feat) # <geoprocessing describe geometry object object at 0x000002A75D6A4BD0>
+                    #print(feat.hasCurves)
+                    #print(feat.partCount)
+
+                    if feat is not None: 
+                        print(feat)
+                        rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
+                        row_attr = []
+                        for k, attrs in enumerate(rows_attributes):
+                            if i == k: row_attr = attrs; break
+
+                        # if curves detected, createa new feature class, turn to segments and get the same feature but in straigt lines
+                        #print(feat.hasCurves)
+                        if feat.hasCurves:
+                            #f_class_modified = curvedFeatureClassToSegments(layer)
+                            #rows_shapes_modified = arcpy.da.SearchCursor(f_class_modified, "Shape@") 
+                            #row_shapes_list_modified = [x for k, x in enumerate(rows_shapes_modified)]
+
+                            feat = feat.densify("ANGLE", 1000, 0.12)
+                            #print(feat)
+
+
+                        b = featureToSpeckle(fieldnames, row_attr, feat, projectCRS, project, layer)
+                        if b is not None: layerObjs.append(b)
+                        
+                    print("____End of Feature # " + str(i+1))
+                    
+                print("__ finish iterating features")
+                speckleLayer.features=layerObjs
+                speckleLayer.geomType = data.shapeType
+
+                #layerBase.renderer = layerRenderer
+                #layerBase.applicationId = selectedLayer.id()
+
+        except OSError as e: 
+            arcpy.AddWarning(str(e))
+            return
+
+    elif layer.isRasterLayer:
+        print("RASTER IN DA HOUSE")
+        print(layer.name) # London_square.tif
+        print(arcpy.Describe(layer.dataSource)) # <geoprocessing describe data object object at 0x000002507C7F3BB0>
+        print(arcpy.Describe(layer.dataSource).datasetType) # RasterDataset
+        b = rasterFeatureToSpeckle(layer, projectCRS, project)
+        if b is not None: layerObjs.append(b)
+
+        speckleLayer = RasterLayer(units = "m", type="RasterLayer")
+        speckleLayer.name = layerName
+        speckleLayer.crs = speckleReprojectedCrs
+        speckleLayer.rasterCrs = layerCRS
+        speckleLayer.type="RasterLayer"
+        #speckleLayer.geomType="Raster"
+        speckleLayer.features = layerObjs
+        
+        #speckleLayer.renderer = layerRenderer
+        #speckleLayer.applicationId = selectedLayer.id()
 
     return speckleLayer
 
-def layerToNative(layer: Union[Layer, RasterLayer], streamBranch: str, project: ArcGISProject):
+def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: str, project: ArcGISProject):
 
     if layer.type is None:
         # Handle this case
@@ -119,7 +161,8 @@ def layerToNative(layer: Union[Layer, RasterLayer], streamBranch: str, project: 
     return None
 
 def cadLayerToNative(layerContentList:Base, layerName: str, streamBranch: str, project: ArcGISProject) :
-
+    print("01______Cad vector layer to native")
+    print(layerName)
     geom_points = []
     geom_polylines = []
     geom_polygones = []
@@ -129,7 +172,7 @@ def cadLayerToNative(layerContentList:Base, layerName: str, streamBranch: str, p
         #print(geom)
         if geom.speckle_type == "Objects.Geometry.Point": 
             geom_points.append(geom)
-        if geom.speckle_type == "Objects.Geometry.Line" or geom.speckle_type == "Objects.Geometry.Polyline" or geom.speckle_type == "Objects.Geometry.Curve" or geom.speckle_type == "Objects.Geometry.Arc" or geom.speckle_type == "Objects.Geometry.Circle" or geom.speckle_type == "Objects.Geometry.Polycurve":
+        if geom.speckle_type == "Objects.Geometry.Line" or geom.speckle_type == "Objects.Geometry.Polyline" or geom.speckle_type == "Objects.Geometry.Curve" or geom.speckle_type == "Objects.Geometry.Arc" or geom.speckle_type == "Objects.Geometry.Circle" or geom.speckle_type == "Objects.Geometry.Ellipse" or geom.speckle_type == "Objects.Geometry.Polycurve":
             geom_polylines.append(geom)
     
     if len(geom_points)>0: layer_points = cadVectorLayerToNative(geom_points, layerName, "Points", streamBranch, project)
@@ -138,7 +181,7 @@ def cadLayerToNative(layerContentList:Base, layerName: str, streamBranch: str, p
     return [layer_points, layer_polylines]
 
 def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
-    print("_________CAD vector layer to native_____")
+    print("02_________CAD vector layer to native_____")
     #get Project CRS, use it by default for the new received layer
     vl = None
     layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
@@ -184,7 +227,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     #path = r"C:\Users\username\Documents\ArcGIS\Projects\MyProject-test\MyProject-test.gdb\\"
     #https://community.esri.com/t5/arcgis-pro-questions/is-it-possible-to-create-a-new-group-layer-with/td-p/1068607
 
-    print("_________create feature class (cad)___________________________________")
+    #print("Create feature class (cad): ")
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
     class_name = ("f_class_" + newName)
     f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
@@ -227,7 +270,8 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
             fets.append(new_feat)
     #print("features created")
     #print(fets)
-
+    
+    if len(fets) == 0: return None
     count = 0
     rowValues = []
     for feat in fets:
@@ -259,7 +303,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
 
     return vl
 
-def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject):
+def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, project: ArcGISProject):
     print("_________Vector Layer to Native_________")
     vl = None
     layerName = layer.name.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
@@ -271,27 +315,7 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
     #if not os.path.exists(path): os.makedirs(path)
     #print(path) 
 
-    #CREATE A GROUP "received blabla" with sublayers
-    layerGroup = None
-    newGroupName = f'{streamBranch}'
-    #print(newGroupName)
-    for l in active_map.listLayers():
-        if l.longName == newGroupName: layerGroup = l; break 
-    
-    #find ID of the layer with a matching name in the "latest" group 
-    newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
-
-    all_layer_names = []
-    layerExists = 0
-    for l in project.activeMap.listLayers(): 
-        if l.longName.startswith(newGroupName + "\\"):
-            all_layer_names.append(l.longName)
-    #print(all_layer_names)
-
-    longName = streamBranch + "\\" + newName 
-    if longName in all_layer_names: 
-        for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
-            if (longName + "_" + letter) not in all_layer_names: newName += "_"+letter; layerExists +=1; break 
+    newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
 
     # particularly if the layer comes from ArcGIS
     geomType = layer.geomType # for ArcGIS: Polygon, Point, Polyline, Multipoint, MultiPatch
@@ -347,8 +371,10 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
         if new_feat != "" and new_feat!= None: fets.append(new_feat)
     
     print(fets)
+    if len(fets) == 0: return None
     count = 0
     rowValues = []
+    heads = None
     for feat in fets:
         #print(feat)
         try: feat['applicationId'] 
@@ -405,88 +431,145 @@ def vectorLayerToNative(layer: Layer, streamBranch: str, project: ArcGISProject)
 
 def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISProject):
 
-    raster_layer = None
-    '''
-    crs = QgsCoordinateReferenceSystem.fromWkt(layer.crs.wkt) #moved up, because CRS of existing layer needs to be rewritten
-    # try, in case of older version "rasterCrs" will not exist 
-    try: crsRaster = QgsCoordinateReferenceSystem.fromWkt(layer.rasterCrs.wkt) #moved up, because CRS of existing layer needs to be rewritten
-    except: 
-        crsRaster = crs
-        logger.logToUser(f"Raster layer {layer.name} might have been sent from the older version of plugin. Try sending it again for more accurate results.", Qgis.Warning)
+    rasterLayer = None
+
+    layerName = layer.name.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
     
-    #CREATE A GROUP "received blabla" with sublayers
-    newGroupName = f'{streamBranch}'
-    root = QgsProject.instance().layerTreeRoot()
-    layerGroup = QgsLayerTreeGroup(newGroupName)
+    print(layerName)
+    sr = arcpy.SpatialReference(text=layer.crs.wkt) 
+    print(layer.crs.wkt)
+    active_map = project.activeMap
+    path = project.filePath.replace("aprx","gdb")
+    #path = '.'.join(path.split("\\")[:-1])
+    rasterHasSr = False
+    print(path)
 
-    if root.findGroup(newGroupName) is not None:
-        layerGroup = root.findGroup(newGroupName)
-    else:
-        root.addChildNode(layerGroup)
-    layerGroup.setExpanded(True)
-    layerGroup.setItemVisibilityChecked(True)
-
-    #find ID of the layer with a matching name in the "latest" group 
-    newName = f'{streamBranch}/{layer.name}'
-
-    ######################## testing, only for receiving layers #################
-    source_folder = QgsProject.instance().absolutePath()
-
-    if(source_folder == ""):
-        logger.logToUser(f"Raster layers can only be received in an existing saved project. Layer {layer.name} will be ignored", Qgis.Warning)
-        return None
-
-    project = QgsProject.instance()
-    projectCRS = QgsCoordinateReferenceSystem.fromWkt(layer.crs.wkt)
-    crsid = crsRaster.authid()
-    try: epsg = int(crsid.split(":")[1]) 
+    try: 
+        srRasterWkt = str(layer.rasterCrs.wkt)
+        print(layer.rasterCrs.wkt)
+        srRaster = arcpy.SpatialReference(text=srRasterWkt) # by native raster SR
+        rasterHasSr = True
     except: 
-        epsg = int(str(projectCRS).split(":")[len(str(projectCRS).split(":"))-1].split(">")[0])
-        logger.logToUser(f"CRS of the received raster cannot be identified. Project CRS will be used.", Qgis.Warning)
+        srRasterWkt = str(layer.crs.wkt)
+        srRaster: arcpy.SpatialReference = sr # by layer
+    #print(layer.rasterCrs.wkt)
+    print(srRaster)
+
+    newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
+    print(newName)
+    if "." in newName: newName = '.'.join(newName.split(".")[:-1])
+    print(newName)
     
     feat = layer.features[0]
     bandNames = feat["Band names"]
     bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
 
-    #newName = f'{streamBranch}_latest_{layer.name}'
+    xsize= int(feat["X pixels"])
+    ysize= int(feat["Y pixels"])
+    xres = float(feat["X resolution"])
+    yres = float(feat["Y resolution"])
+    bandsCount=int(feat["Band count"])
+    originPt = arcpy.Point(feat['displayValue'][0].x, feat['displayValue'][0].y, feat['displayValue'][0].z)
+    print(originPt)
+    #if source projection is different from layer display projection, convert display OriginPt to raster source projection 
+    if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
+        originPt = findTransformation(arcpy.PointGeometry(originPt, sr, has_z = True), "Point", sr, srRaster, None).getPart()
+    print(originPt)
 
-    ###########################################################################
+    bandDatasets = ""
+    rastersToMerge = []
+    rasterPathsToMerge = []
 
-    ## https://opensourceoptions.com/blog/pyqgis-create-raster/
-    # creating file in temporary folder: https://stackoverflow.com/questions/56038742/creating-in-memory-qgsrasterlayer-from-the-rasterization-of-a-qgsvectorlayer-wit
 
-    fn = source_folder + '/' + newName.replace("/","_") + '.tif' #'_received_raster.tif'
-    driver = gdal.GetDriverByName('GTiff')
-    # create raster dataset
-    ds = driver.Create(fn, xsize=feat["X pixels"], ysize=feat["Y pixels"], bands=feat["Band count"], eType=gdal.GDT_Float32)
-
-    # Write data to raster band
-    for i in range(feat["Band count"]):
+    arcpy.env.workspace = path 
+    arcpy.env.overwriteOutput = True
+    # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/composite-bands.htm
+    
+    
+    for i in range(bandsCount):
+        print(i)
+        print(bandNames[i])
+        rasterbandPath = path + "\\" + newName + "_Band_" + str(i+1) #+ ".tif"
+        bandDatasets += rasterbandPath + ";"
         rasterband = np.array(bandValues[i])
-        rasterband = np.reshape(rasterband,(feat["Y pixels"], feat["X pixels"]))
-        ds.GetRasterBand(i+1).WriteArray(rasterband) # or "rasterband.T"
+        rasterband = np.reshape(rasterband,(ysize, xsize))
+        print(rasterband)
+        print(np.shape(rasterband))
+        print(xsize)
+        print(xres)
+        print(ysize)
+        print(yres)
+        leftLowerCorner = arcpy.Point(originPt.X, originPt.Y + (ysize*yres), originPt.Z)
+        #upperRightCorner = arcpy.Point(originPt.X + (xsize*xres), originPt.Y, originPt.Z)
+        print(leftLowerCorner)
+        #print(upperRightCorner)
 
-    # create GDAL transformation in format [top-left x coord, cell width, 0, top-left y coord, 0, cell height]
-    pt = pointToNative(feat["displayValue"][0])
-    xform = QgsCoordinateTransform(crs, crsRaster, project)
-    pt.transform(xform)
-    ds.SetGeoTransform([pt.x(), feat["X resolution"], 0, pt.y(), 0, feat["Y resolution"]])
-    # create a spatial reference object
-    srs = osr.SpatialReference()
-    #  For the Universal Transverse Mercator the SetUTM(Zone, North=1 or South=2)
-    srs.ImportFromEPSG(epsg) # from https://gis.stackexchange.com/questions/34082/creating-raster-layer-from-numpy-array-using-pyqgis
-    ds.SetProjection(srs.ExportToWkt())
-    # close the rater datasource by setting it equal to None
-    ds = None
+        # # Convert array to a geodatabase raster, add to layers 
+        try: myRaster = arcpy.NumPyArrayToRaster(rasterband, leftLowerCorner, abs(xres), abs(yres), float(feat["NoDataVal"][i]) ) 
+        except: myRaster = arcpy.NumPyArrayToRaster(rasterband, leftLowerCorner, abs(xres), abs(yres)) 
 
-    raster_layer = QgsRasterLayer(fn, newName, 'gdal')
-    QgsProject.instance().addMapLayer(raster_layer, False)
-    layerGroup.addLayer(raster_layer)
+        rasterbandPath = validate_path(rasterbandPath) #solved file saving issue 
+        print(rasterbandPath)
+        #mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
+        myRaster.save(rasterbandPath)
 
-    dataProvider = raster_layer.dataProvider()
-    rendererNew = rasterRendererToNative(layer, dataProvider)
+        print(myRaster.width)
+        print(myRaster.height)
 
-    try: raster_layer.setRenderer(rendererNew)
-    except: pass
+        rastersToMerge.append(myRaster)
+        rasterPathsToMerge.append(rasterbandPath)
+        print(rasterbandPath)
+
+    #mergedRaster.setProperty("spatialReference", crsRaster)
+
+    full_path = validate_path(path + "\\" + newName) #solved file saving issue 
+    if os.path.exists(full_path):
+        for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
+            if os.path.exists(full_path + letter): pass
+            else: full_path += letter; break 
+
+    print(full_path)
+    #mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
+    #mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
+    
+    arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+    print(path + "\\" + newName)
+    arcpy.management.DefineProjection(full_path, srRaster)
+
+    rasterLayer = arcpy.management.MakeRasterLayer(full_path, newName + "_").getOutput(0)
+    print(layerGroup)
+    active_map.addLayerToGroup(layerGroup, rasterLayer)
+
+    r'''
+    if arcpy.Exists(fileout):
+        arcpy.management.Delete(fileout)
+    arcpy.management.Rename(filelist[0], fileout)
+
+    # Remove temporary files
+    for fileitem in filelist:
+        if arcpy.Exists(fileitem):
+            arcpy.management.Delete(fileitem)
+
+    # Release raster objects from memory
+    del myRasterBlock
+    del myRaster
     '''
-    return raster_layer
+
+    r'''
+    rasterComposite = arcpy.management.CompositeBands(bandDatasets, path + "\\" + newName) # "band1.tif;band2.tif;band3.tif", "compbands.tif"
+    
+    # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/make-raster-layer.htm
+    rasterLayer = arcpy.MakeRasterLayer_management(rasterComposite, newName)
+    '''
+
+    
+    r'''
+    # WORKS: 
+    arcpy.CreateRasterDataset_management(r"C:\Users\Kateryna\Documents\ArcGIS\Projects\MyProject-test",
+    "EmptyTIFF.tif",
+    "2",
+    "8_BIT_UNSIGNED",
+    "PROJCS['DHDN_3_Degree_Gauss_Zone_3',GEOGCS['GCS_Deutsches_Hauptdreiecksnetz',DATUM['D_Deutsches_Hauptdreiecksnetz',SPHEROID['Bessel_1841',6377397.155,299.1528128]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Gauss_Kruger'],PARAMETER['False_Easting',3500000.0],PARAMETER['False_Northing',0.0],PARAMETER['Central_Meridian',9.0],PARAMETER['Scale_Factor',1.0],PARAMETER['Latitude_Of_Origin',0.0],UNIT['Meter',1.0]]", "3", "", "PYRAMIDS -1 NEAREST JPEG", "128 128", "NONE", "")
+    '''
+
+    return rasterLayer

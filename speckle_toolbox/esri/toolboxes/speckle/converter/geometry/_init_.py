@@ -1,22 +1,26 @@
 
 from regex import F
 from specklepy.objects import Base
-from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, Circle, Polycurve
+from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, Circle, Polycurve, Ellipse 
 
 import arcpy 
 from typing import Any, List, Union, Sequence
-from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle
-from speckle.converter.geometry.polyline import arcToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
+from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle
+from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
 from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
-
+from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
+import numpy as np
 
 def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:
     """Converts the provided layer feature to Speckle objects"""
     print("___convertToSpeckle____________")
     geom = feature
-    #print(geom.isMultipart) # e.g. False 
+    print(geom.isMultipart) # e.g. False 
+    print(geom.partCount)
     geomMultiType = geom.isMultipart
     hasCurves = feature.hasCurves 
+    
+    # feature is <geoprocessing describe geometry object object at 0x000002A75D6A4BD0>
     
     #print(featureType) # e.g. Simple 
     #print(geomType) # e.g. Polygon 
@@ -26,9 +30,16 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
         for pt in geom:
             return pointToSpeckle(pt, feature, layer)
     elif geomType == "Polyline":
-        return polylineToSpeckle(geom, feature, layer, geomMultiType)
+        #if geom.hasCurves: 
+        #    geom, feature = curvesToSegments(geom, feature, layer, geomMultiType)
+        #    geomMultiType = geom.isMultipart
+        #    return polylineToSpeckle(geom, feature, layer, geomMultiType)
+        #else:
+        if geom.partCount > 1: return multiPolylineToSpeckle(geom, feature, layer, geomMultiType)
+        else: return polylineToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Polygon":
-        return polygonToSpeckle(geom, feature, layer, geomMultiType)
+        if geom.partCount > 1: return multiPolygonToSpeckle(geom, feature, layer, geomMultiType)
+        else: return polygonToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Multipoint":
         return multiPointToSpeckle(geom, feature, layer, geomMultiType)
     else:
@@ -48,6 +59,7 @@ def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
         (Curve, curveToNative),
         (Arc, arcToNative),
         (Circle, circleToNative),
+        (Ellipse, ellipseToNative),
         #(Mesh, meshToNative),
         (Polycurve, polycurveToNative),
         (Base, polygonToNative), # temporary solution for polygons (Speckle has no type Polygon yet)
@@ -77,33 +89,75 @@ def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
     print("_______Drawing Multipolylines____")
     #print(items)
     poly = None
+    full_array_list = []
+    for item in items: # will be 1 item
+        pointsSpeckle = []
+        try: pointsSpeckle = item.as_points()
+        except: continue 
+        pts = [pointToCoord(pt) for pt in pointsSpeckle]
 
+        if item.closed is True: 
+            pts.append( pointToCoord(item.as_points()[0]) )
+        
+        arr = [arcpy.Point(*coords) for coords in pts]
+        full_array_list.append(arr)
+
+    poly = arcpy.Polyline( arcpy.Array(full_array_list), sr, has_z=True )
     return poly
 
 def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO fix multi features
     
     print("_______Drawing Multipolygons____")
     #print(items)
+    full_array_list = []
+
     for item in items: # will be 1 item
         #print(item)
-        pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
+        #pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
+        pointsSpeckle = []
+        if isinstance(item["boundary"], Circle) or isinstance(item["boundary"], Arc): 
+            pointsSpeckle = speckleArcCircleToPoints(item["boundary"]) 
+        elif isinstance(item["boundary"], Polycurve): 
+            pointsSpeckle = specklePolycurveToPoints(item["boundary"]) 
+        elif isinstance(item["boundary"], Line): pass
+        else: 
+            try: pointsSpeckle = item["boundary"].as_points()
+            except: pass # if Line
+
+        pts = [pointToCoord(pt) for pt in pointsSpeckle]
+        print(pts)
+
         outer_arr = [arcpy.Point(*coords) for coords in pts]
         outer_arr.append(outer_arr[0])
-        list_of_arrs = []
+        geomPart = []
         try:
             for void in item["voids"]: 
                 #print(void)
-                pts = [pointToCoord(pt) for pt in void.as_points()]
-                #print(pts)
+                #pts = [pointToCoord(pt) for pt in void.as_points()]
+                pointsSpeckle = []
+                if isinstance(void, Circle) or isinstance(void, Arc): 
+                    pointsSpeckle = speckleArcCircleToPoints(void) 
+                elif isinstance(void, Polycurve): 
+                    pointsSpeckle = specklePolycurveToPoints(void) 
+                elif isinstance(void, Line): pass
+                else: 
+                    try: pointsSpeckle = void.as_points()
+                    except: pass # if Line
+                pts = [pointToCoord(pt) for pt in pointsSpeckle]
+
                 inner_arr = [arcpy.Point(*coords) for coords in pts]
                 inner_arr.append(inner_arr[0])
-                list_of_arrs.append(arcpy.Array(inner_arr))
+                geomPart.append(arcpy.Array(inner_arr))
         except:pass
     
-    list_of_arrs.insert(0, arcpy.Array(outer_arr))
-    array = arcpy.Array(list_of_arrs)
-    polygon = arcpy.Polygon(array, sr, has_z=True)
+        geomPart.insert(0, arcpy.Array(outer_arr))
+        full_array_list.extend(geomPart) # outlines are written one by one, with no separation to "parts"
 
+    geomPartArray = arcpy.Array(full_array_list)
+    polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
+    
+    print(polygon)
+    
     return polygon
 
 def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference): 
@@ -113,5 +167,8 @@ def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference):
         return multiPointToNative(items, sr)
     elif isinstance(first, Line) or isinstance(first, Polyline):
         return multiPolylineToNative(items, sr)
-    elif first["boundary"] is not None and first["voids"] is not None:
-        return multiPolygonToNative(items, sr)
+    elif isinstance(first, Base): 
+        try:
+            if first["boundary"] is not None and first["voids"] is not None:
+                return multiPolygonToNative(items, sr)
+        except: return None 

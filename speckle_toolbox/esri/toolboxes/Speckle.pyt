@@ -1,1 +1,1 @@
-from speckle.speckle_arcgis import * 
+from speckle.speckle_arcgis import *
