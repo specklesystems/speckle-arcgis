@@ -64,6 +64,8 @@ class speckleInputsClass:
                 except: pass
                 
             else: 
+                f = open(self.stream_file_path, "x")
+                f.close()
                 f = open(self.stream_file_path, "w")
                 content = ""
                 f.write(content)
@@ -181,6 +183,8 @@ class toolboxInputsClass:
             f.write(new_content)
             f.close()
         else: 
+            f = open(self.stream_file_path, "x")
+            f.close()
             f = open(self.stream_file_path, "w")
             f.write(str(wr.stream_url) + ",")
             f.close()
@@ -227,6 +231,8 @@ class toolboxInputsClass:
             f.write(new_content)
             f.close()
         else: 
+            f = open(self.stream_file_path, "x")
+            f.close()
             f = open(self.stream_file_path, "w")
             f.write(pt + ",")
             f.close()

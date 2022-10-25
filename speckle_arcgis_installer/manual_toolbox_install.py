@@ -1,13 +1,13 @@
 # MANUAL INSTALLATION: 
 #   1. enter correct path to Python exe of your new environemnt in line 10 
 #   2. enter the location of 'manual_toolbox_install.py' in the following command and run this command in ArcGIS Python console (View -> Python Window)
-#   import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, 'C:\\...\\manual_toolbox_install.py'), capture_output=True, text=True, shell=True, timeout=1000 )
+#   import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, 'C:\\Users\\Kateryna\\Documents\\00_Speckle\\GitHub\\speckle-arcgis\\speckle_arcgis_installer\\manual_toolbox_install.py'), capture_output=True, text=True, shell=True, timeout=1000 )
 # then restart
 
 from subprocess_call import subprocess_call
 import os 
 
-pythonPath = "C:\\ ...\\custom_environment_name\\python.exe"
+pythonPath = "C:\\ Users\\Kateryna\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-py3-speckle\\python.exe"
 
 def installToolbox(newExec: str):
     print("Installing Speckle Toolbox")
