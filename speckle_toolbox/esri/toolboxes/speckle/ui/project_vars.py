@@ -44,6 +44,7 @@ class speckleInputsClass:
 
     def __init__(self) -> None:
         print("___start speckle inputs________")
+        self.all_layers = []
         try:
             aprx = ArcGISProject('CURRENT')
             self.project = aprx
@@ -162,7 +163,7 @@ class toolboxInputsClass:
     def setProjectStreams(self, wr: StreamWrapper, add = True): 
         # ERROR 032659 Error queueing metrics request: 
         # Cannot parse  into a stream wrapper class - invalid URL provided.
-        print("SET proj streamz")
+        print("SET proj streams")
 
         if os.path.exists(self.stream_file_path): 
 
