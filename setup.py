@@ -15,12 +15,13 @@ def read(fname):
  
 setup(name='speckle_toolbox', 
       author='SpeckleSystems',
-			version="2.9.5",
+			version="2.9.2",
       description=("Example for extending geoprocessing through Python modules"),
       long_description=read('Readme.md'),
       python_requires='~=3.3',
+      setup_requires=['wheel'],
       packages=['speckle_toolbox'], 
-      package_data={'speckle_toolbox':['esri/toolboxes/*',  
+      package_data={'speckle_toolbox':[
                   'esri/arcpy/*', 
                   'esri/help/gp/*', 'esri/help/gp/toolboxes/*', 'esri/help/gp/messages/*',
                   'esri/toolboxes/*','esri/toolboxes/speckle/*',
@@ -28,7 +29,6 @@ setup(name='speckle_toolbox',
                   'esri/toolboxes/speckle/plugin_utils/*',
                   'esri/toolboxes/speckle/ui/*'] 
                   }, 
-      setup_requires=['wheel'],
       )
 
 # then to install in ArcGIS:

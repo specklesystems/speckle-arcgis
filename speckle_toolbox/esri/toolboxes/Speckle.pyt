@@ -75,8 +75,8 @@ class Toolbox:
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
         print("___ping_Toolbox")
-        self.label = "Speckle Tools Beta"
-        self.alias = "speckle_toolbox"  
+        self.label = "Speckle Tools"
+        self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
         metrics.set_host_app("ArcGIS")  
@@ -333,7 +333,7 @@ class Speckle:
                                         saved_streams = self.speckleInputs.getProjectStreams()
                                         self.speckleInputs.saved_streams = saved_streams
                                         p_saved.filter.list = [f"Stream not accessible - {stream[0].stream_id}" if stream[1] is None or isinstance(stream[1], SpeckleException) else f"{stream[1].name} - {stream[1].id}" for i,stream in enumerate(saved_streams)] 
-                                        if len(p_saved.filter.list)>0: p_saved.value = p_saved.filter.list[0]
+                                        if len(p_saved.filter.list)>0: print(p_saved.filter.list); p_saved.value = p_saved.filter.list[0]
                                 break
                         p.value = None
                 par.value = False
@@ -360,7 +360,7 @@ class Speckle:
                                         saved_streams = self.speckleInputs.getProjectStreams()
                                         self.speckleInputs.saved_streams = saved_streams
                                         p_saved.filter.list = [f"Stream not accessible - {st[0].stream_id}" if st[1] is None or isinstance(st[1], SpeckleException) else f"{st[1].name} - {st[1].id}" for i,st in enumerate(saved_streams)] 
-                                        p_saved.value = p_saved.filter.list[0]
+                                        if len(p_saved.filter.list)>0: print(p_saved.filter.list); p_saved.value = p_saved.filter.list[0]
                             else: pass
 
                         p.value = None

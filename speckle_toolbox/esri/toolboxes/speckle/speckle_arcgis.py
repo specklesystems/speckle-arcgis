@@ -73,7 +73,7 @@ class Toolbox:
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
         print("___ping_Toolbox")
-        self.label = "Speckle Tools Beta"
+        self.label = "Speckle Tools"
         self.alias = "speckle_toolbox"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
