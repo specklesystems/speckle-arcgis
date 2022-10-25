@@ -25,7 +25,7 @@ class speckleInputsClass:
 
     project = None
     active_map = None
-    saved_streams: List[None or Tuple[StreamWrapper, Stream]] = []
+    saved_streams: List[Optional[Tuple[StreamWrapper, Stream]]] = []
     stream_file_path: str = ""
     all_layers: List[arcLayer] = []
 
@@ -129,8 +129,8 @@ class toolboxInputsClass:
     instances = []
     lat: float = 0.0
     lon: float = 0.0
-    active_stream: None or Stream = None
-    active_branch: None or Branch = None
+    active_stream: Optional[Stream] = None
+    active_branch: Optional[Branch] = None
     active_commit = None
     selected_layers: List[Any] = []
     messageSpeckle: str = ""
