@@ -25,7 +25,7 @@ class speckleInputsClass:
 
     project = None
     active_map = None
-    saved_streams: List[None or Tuple[StreamWrapper, Stream]] = []
+    saved_streams: List[Optional[Tuple[StreamWrapper, Stream]]] = []
     stream_file_path: str = ""
     all_layers: List[arcLayer] = []
 
@@ -44,6 +44,7 @@ class speckleInputsClass:
 
     def __init__(self) -> None:
         print("___start speckle inputs________")
+        self.all_layers = []
         try:
             aprx = ArcGISProject('CURRENT')
             self.project = aprx
@@ -63,7 +64,9 @@ class speckleInputsClass:
                     f.close()
                 except: pass
                 
-            else: 
+            elif len(self.stream_file_path) >10: 
+                f = open(self.stream_file_path, "x")
+                f.close()
                 f = open(self.stream_file_path, "w")
                 content = ""
                 f.write(content)
@@ -89,6 +92,7 @@ class speckleInputsClass:
                 streamExists = 0
                 index = 0
                 try:
+                    print(url)
                     sw = StreamWrapper(url)
                     stream = self.tryGetStream(sw)
 
@@ -101,7 +105,7 @@ class speckleInputsClass:
                     streamsTuples.insert(0,(sw, stream))
 
                 except SpeckleException as e:
-                    arcpy.AddMessage(str(e.args[0]))
+                    arcpy.AddMessage(str(e.args))
             return streamsTuples
         else: return []
 
@@ -126,8 +130,8 @@ class toolboxInputsClass:
     instances = []
     lat: float = 0.0
     lon: float = 0.0
-    active_stream: None or Stream = None
-    active_branch: None or Branch = None
+    active_stream: Optional[Stream] = None
+    active_branch: Optional[Branch] = None
     active_commit = None
     selected_layers: List[Any] = []
     messageSpeckle: str = ""
@@ -159,7 +163,7 @@ class toolboxInputsClass:
     def setProjectStreams(self, wr: StreamWrapper, add = True): 
         # ERROR 032659 Error queueing metrics request: 
         # Cannot parse  into a stream wrapper class - invalid URL provided.
-        print("SET proj streamz")
+        print("SET proj streams")
 
         if os.path.exists(self.stream_file_path): 
 
@@ -180,7 +184,9 @@ class toolboxInputsClass:
 
             f.write(new_content)
             f.close()
-        else: 
+        elif len(self.stream_file_path) >10: 
+            f = open(self.stream_file_path, "x")
+            f.close()
             f = open(self.stream_file_path, "w")
             f.write(str(wr.stream_url) + ",")
             f.close()
@@ -226,7 +232,9 @@ class toolboxInputsClass:
             new_content += pt + "," # add point
             f.write(new_content)
             f.close()
-        else: 
+        elif len(self.stream_file_path) >10: 
+            f = open(self.stream_file_path, "x")
+            f.close()
             f = open(self.stream_file_path, "w")
             f.write(pt + ",")
             f.close()

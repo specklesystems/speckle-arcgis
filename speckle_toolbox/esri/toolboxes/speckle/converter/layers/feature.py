@@ -161,7 +161,10 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
 
     #ds = gdal.Open(selectedLayer.source(), gdal.GA_ReadOnly)
     extent = my_raster.extent
-    rasterOriginPoint = arcpy.PointGeometry(arcpy.Point(extent.XMin, extent.YMin, extent.ZMin), my_raster.spatialReference, has_z = True)
+    print(extent.XMin)
+    print(extent.YMin)
+    rasterOriginPoint = arcpy.PointGeometry(arcpy.Point(extent.XMin, extent.YMax, extent.ZMin), my_raster.spatialReference, has_z = True)
+    #if extent.YMin>0: rasterOriginPoint = arcpy.PointGeometry(arcpy.Point(extent.XMin, extent.YMax, extent.ZMin), my_raster.spatialReference, has_z = True)
     print(rasterOriginPoint)
     rasterResXY = [my_raster.meanCellWidth, my_raster.meanCellHeight] #[float(ds.GetGeoTransform()[1]), float(ds.GetGeoTransform()[5])]
     rasterBandNoDataVal = [] #list(my_raster.noDataValues)
@@ -192,7 +195,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         print(np.shape(rb.read()))
         valMin = rb.minimum
         valMax = rb.maximum
-        bandVals = np.flip(np.swapaxes(rb.read(), 1, 2), 0).flatten() #.tolist()
+        bandVals = np.swapaxes(rb.read(), 1, 2).flatten() #.tolist() np.flip( , 0)
 
         bandValsFlat = []
         bandValsFlat.extend(bandVals.tolist())
@@ -240,7 +243,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         b["@(10000)" + item + "_values"] = bandValsFlat #[0:int(max_values/rasterBandCount)]
     
     b["X resolution"] = rasterResXY[0]
-    b["Y resolution"] = rasterResXY[1]
+    b["Y resolution"] = -1* rasterResXY[1]
     b["X pixels"] = rasterDimensions[0]
     b["Y pixels"] = rasterDimensions[1]
     b["Band count"] = rasterBandCount
@@ -316,10 +319,10 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
     # identify symbology type and if Multiband, which band is which color
     for v in range(rasterDimensions[1] ): #each row, Y
         for h in range(rasterDimensions[0] ): #item in a row, X
-            pt1 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0],extent.YMin+v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
-            pt2 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0], extent.YMin+(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
-            pt3 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMin+(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
-            pt4 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMin+v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt1 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0],extent.YMax-v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt2 = arcpy.PointGeometry(arcpy.Point(extent.XMin+h*rasterResXY[0], extent.YMax-(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt3 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMax-(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
+            pt4 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMax-v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
             # first, get point coordinates with correct position and resolution, then reproject each:
             if my_raster.spatialReference.name != projectCRS.name:
                 pt1 = findTransformation(pt1, "Point", my_raster.spatialReference, projectCRS, selectedLayer)
