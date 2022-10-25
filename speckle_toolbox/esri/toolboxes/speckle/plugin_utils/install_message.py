@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-
+r'''
 import arcpy
 
 class Toolbox(object):
     def __init__(self):
         """Define the toolbox (the name of the toolbox is the name of the
         .pyt file)."""
-        self.label = "Speckle Toolbox"
-        self.alias = "speckle_toolbox_"  
+        self.label = "Speckle Toolbox Beta"
+        self.alias = "speckle_toolbox"  
         self.tools = [Speckle]    
 
 class Speckle(object):
@@ -45,4 +45,4 @@ class Speckle(object):
     def execute(self, parameters): 
         return
     
-    
+'''    

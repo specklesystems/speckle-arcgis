@@ -74,7 +74,7 @@ class Toolbox:
         .pyt file)."""
         print("___ping_Toolbox")
         self.label = "Speckle Tools Beta"
-        self.alias = "speckle_toolbox_"  
+        self.alias = "speckle_toolbox"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
         metrics.set_host_app("ArcGIS")  
