@@ -10,12 +10,11 @@ def patch_installer(tag):
     #py_tag = get_specklepy_version()
     with open(iss_file, "r") as file:
         lines = file.readlines()
-        if "#define AppVersion" in lines[12]: lines[12] = f'#define AppVersion "{tag.split("-")[0]}"\n'
-        else: lines.insert(12, f'#define AppVersion "{tag.split("-")[0]}"\n')
-
-        if "#define AppInfoVersion" in lines[13]: lines[13] = f'#define AppInfoVersion "{tag}"\n'
-        else: lines.insert(13, f'#define AppInfoVersion "{tag}"\n')
-
+        for i, line in enumerate(lines):
+            if "#define AppVersion " in line: 
+                lines[i] = f'#define AppVersion "{tag.split("-")[0]}"\n'
+            if "#define AppInfoVersion " in line: 
+                lines[i] = f'#define AppInfoVersion "{tag}"\n'
         with open(iss_file, "w") as file:
             file.writelines(lines)
             print(f"Patched installer with connector v{tag} and specklepy ")
@@ -23,9 +22,10 @@ def patch_installer(tag):
 
     with open(setup_whl_file, "r") as file:
         lines = file.readlines()
-        if "version=" in lines[17]: lines[17] = f'\t\t\tversion="{tag.split("-")[0]}",\n'
-        else: lines.insert(17, f'\t\t\tversion="{tag.split("-")[0]}",\n')
-        
+        for i, line in enumerate(lines):
+            if "version=" in line: 
+                lines[i] = f'\t\t\tversion="{tag.split("-")[0]}",\n'
+                break
         with open(setup_whl_file, "w") as file:
             file.writelines(lines)
             print(f"Patched whl setup with connector v{tag} and specklepy ")
