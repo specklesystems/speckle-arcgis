@@ -34,15 +34,6 @@ def installDependencies(pythonExec: str):
     except Exception as e:
         subprocess_call([ pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
 
-    
-    pkgVersion = "1.10.11" 
-    pkgName = "panda3d"
-    try:
-        import panda3d
-    except Exception as e:
-        print("panda3d not installed")
-        subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
-
     # Check if specklpy needs updating
     try:
         print(f"Attempting to update specklepy to {pkgVersion}")
@@ -68,6 +59,33 @@ def installDependencies(pythonExec: str):
         print(e.with_traceback)
     return True
 
+
+def installDependenciesPanda3d(pythonExec: str):
+    print("Installing dependencies - panda3d")
+    print(pythonExec)
+    try:
+        import pip
+    except:
+        getPipFilePath = os.path.join(os.path.dirname(__file__), "get_pip.py") 
+        exec(open(getPipFilePath).read())
+
+        # just in case the included version is old
+        subprocess_call([pythonExec, "-m", "pip", "install", "--upgrade", "pip"])
+        
+    pkgVersion = "1.10.11" 
+    pkgName = "panda3d"
+    try:
+        import panda3d
+    except Exception as e:
+        print("panda3d not installed")
+        subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
+
+    except Exception as e:
+        print(e)
+        print(e.with_traceback)
+    return True
+
 installToolbox(pythonPath)
 installDependencies(pythonPath)
+installDependenciesPanda3d(pythonPath)
 

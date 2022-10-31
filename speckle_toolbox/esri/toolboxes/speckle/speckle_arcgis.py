@@ -1,7 +1,8 @@
+
 # -*- coding: utf-8 -*-
 
 from typing import Any, Callable, List, Optional, Tuple
-r'''
+#r'''
 from collections import defaultdict
 
 import arcpy
@@ -36,7 +37,7 @@ from speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
 from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
 from speckle.converter.layers.Layer import VectorLayer
 
-
+#'''
 
 def traverseObject(
         base: Base,
@@ -74,7 +75,7 @@ class Toolbox:
         .pyt file)."""
         print("___ping_Toolbox")
         self.label = "Speckle Tools"
-        self.alias = "speckle_toolbox"  
+        self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
         metrics.set_host_app("ArcGIS")  
@@ -331,7 +332,7 @@ class Speckle:
                                         saved_streams = self.speckleInputs.getProjectStreams()
                                         self.speckleInputs.saved_streams = saved_streams
                                         p_saved.filter.list = [f"Stream not accessible - {stream[0].stream_id}" if stream[1] is None or isinstance(stream[1], SpeckleException) else f"{stream[1].name} - {stream[1].id}" for i,stream in enumerate(saved_streams)] 
-                                        p_saved.value = p_saved.filter.list[0]
+                                        if len(p_saved.filter.list)>0: print(p_saved.filter.list); p_saved.value = p_saved.filter.list[0]
                                 break
                         p.value = None
                 par.value = False
@@ -358,7 +359,7 @@ class Speckle:
                                         saved_streams = self.speckleInputs.getProjectStreams()
                                         self.speckleInputs.saved_streams = saved_streams
                                         p_saved.filter.list = [f"Stream not accessible - {st[0].stream_id}" if st[1] is None or isinstance(st[1], SpeckleException) else f"{st[1].name} - {st[1].id}" for i,st in enumerate(saved_streams)] 
-                                        p_saved.value = p_saved.filter.list[0]
+                                        if len(p_saved.filter.list)>0: print(p_saved.filter.list); p_saved.value = p_saved.filter.list[0]
                             else: pass
 
                         p.value = None
@@ -681,14 +682,14 @@ class Speckle:
                 if self.speckleInputs.project.activeMap.spatialReference.type == "Geographic" or self.speckleInputs.project.activeMap.spatialReference is None: #TODO test with invalid CRS
                     arcpy.AddMessage("It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates")
                     print("It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates")
-            print(f"Succesfully received {objId}")
+            print(f"Successfully received {objId}")
 
             # Clear 'latest' group
             streamBranch = streamId + "_" + self.toolboxInputs.active_branch.name + "_" + str(commit.id)
             newGroupName = f'{streamBranch}'
             
             groupExists = 0
-            #print(newGroupName)
+            print(newGroupName)
             for l in self.speckleInputs.project.activeMap.listLayers(): 
                 #print(l.longName)
                 if l.longName.startswith(newGroupName + "\\"):
@@ -697,18 +698,25 @@ class Speckle:
                     groupExists+=1
                 elif l.longName == newGroupName: 
                     groupExists+=1
+            print(newGroupName)
             if groupExists == 0:
                 # create empty group layer file 
                 path = self.speckleInputs.project.filePath.replace("aprx","gdb") #"\\".join(self.toolboxInputs.project.filePath.split("\\")[:-1]) + "\\speckle_layers\\"
-                #print(path)
-                f = open(path + "\\" + newGroupName + ".lyrx", "w")
-                content = createGroupLayer().replace("TestGroupLayer", newGroupName)
-                f.write(content)
-                f.close()
-                smth = arcpy.mp.LayerFile(path + "\\" + newGroupName + ".lyrx")
-                #print(smth)
-                layerGroup = self.speckleInputs.project.activeMap.addLayer(smth)[0]
+                print(path)
+                try:
+                    f = open(path + "\\" + newGroupName + ".lyrx", "w")
+                    content = createGroupLayer().replace("TestGroupLayer", newGroupName)
+                    f.write(content)
+                    f.close()
+                    newGroupLayer = arcpy.mp.LayerFile(path + "\\" + newGroupName + ".lyrx")
+                    layerGroup = self.speckleInputs.project.activeMap.addLayer(newGroupLayer)[0]
+                except: # for 3.0.0
+                    layerGroup = self.speckleInputs.active_map.createGroupLayer(newGroupName)
+
+                print(layerGroup)
+                print("layer added")
                 layerGroup.name = newGroupName
+                print(newGroupName)
 
             if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, Layer) or isinstance(base, VectorLayer) or isinstance(base, RasterLayer)
             else: check: Callable[[Base], bool] = lambda base: isinstance(base, Base)
@@ -758,6 +766,5 @@ class Speckle:
         #self.updateParameters(parameters, True)
         #self.refresh(parameters)
     
-   
+    
 #__all__ = ["Toolbox", "Speckle"]
-'''
