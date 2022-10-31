@@ -32,7 +32,7 @@ def subprocess_call(*args, **kwargs):
         #print(str(e))
         return False
     except: print("unknown error") 
-    print("end")
+    #print("end")
     return True
 
     
