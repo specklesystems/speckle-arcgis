@@ -26,6 +26,7 @@ def circleToSpeckle(center, point):
     #print(args) 
     c = Circle.from_list(args)
     c.plane.origin.units = "m"
+    c.units = "m"
     #print(c)
     return c 
 
@@ -107,6 +108,7 @@ def arc3ptToSpeckle(p0: List, p1: List, p2: List, feature, layer) -> Arc:
     arc.plane = Plane() #.from_list(Point(), Vector(Point(0, 0, 1)), Vector(Point(0,1,0)), Vector(Point(-1,0,0)))
     arc.plane.origin = Point.from_list(center)
     arc.plane.origin.units = "m" 
+    arc.units = "m"
     arc.angleRadians, startAngle, endAngle = getArcRadianAngle(arc)
 
     arc.radius = radius
@@ -173,7 +175,7 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
     # a - elliptical arc (endPt, centralPt) e.g. for circle: [[[631307.05960000027,5803698.4477999993,0],{"a":[[631307.05960000027,5803698.4477999993,0],[631307.05960000027,5803414.92656173],0,1]}]]
     # c - circular arc (endPt, throughPt) e.g. [[[633242.45179999992,5803058.0354999993,0],{"c":[[633718.26040000003,5803496.4210000001,0],[633337.75764975848,5803431.9997026781]]},[633242.45179999992,5803058.0354999993,0]]]
     
-    boundary = Polycurve()
+    boundary = Polycurve(units = "m")
     if geomType == "Polyline": boundary.closed = False
     else: boundary.closed = True 
     segments = [] 
@@ -326,7 +328,7 @@ def lineFrom2pt(pt1: List[float], pt2: List[float]):
     dist = math.sqrt( math.pow((pt2[0] - pt1[0]), 2) + math.pow((pt2[1] - pt1[1]), 2) + math.pow((pt2[2] - pt1[2]), 2) ) 
     print(dist) 
     domain = [0, dist, 0, 0] 
-    line = Line()#.from_list([*pt1, *pt2, *domain]) 
+    line = Line(units = "m" )#.from_list([*pt1, *pt2, *domain]) 
     line.start = Point.from_list(pt1)
     line.end = Point.from_list(pt2)
     line.start.units = line.end.units = "m" 
@@ -377,7 +379,7 @@ def ellipseToNative():
 
 def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Circle to QgsLineString"""
-    print("___Convert Circle from Native___")
+    print("___Convert Circle to Native___")
     points = []
     angle1 = math.pi/2
     
@@ -393,7 +395,8 @@ def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
         if poly.plane.normal.z == 0: normal = 1
         else: normal = poly.plane.normal.z
         angle = angle1 + k * math.pi*2 * normal
-        pt = Point( x = poly.plane.origin.x + radScaled * cos(angle), y = poly.plane.origin.y + radScaled * sin(angle), z = 0) 
+        pt = Point( x = poly.plane.origin.x * get_scale_factor(poly.units) + radScaled * cos(angle), y = poly.plane.origin.y * get_scale_factor(poly.units) + radScaled * sin(angle), z = 0) 
+        print(pt)
         pt.units = "m"
         points.append(pointToCoord(pt))
     points.append(points[0])
@@ -404,10 +407,10 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
     points = []
     curve = None
     print("___Polycurve to native___")
-    
-    try:
-        for segm in poly.segments: # Line, Polyline, Curve, Arc, Circle
-            #print(segm)
+
+    try: 
+        for i, segm in enumerate(poly.segments): # Line, Polyline, Curve, Arc, Circle
+            print("___start segment")            
             if isinstance(segm,Line):  converted = lineToNative(segm, sr) # QgsLineString
             elif isinstance(segm,Polyline):  converted = polylineToNative(segm, sr) # QgsLineString
             elif isinstance(segm,Curve):  converted = curveToNative(segm, sr) # QgsLineString
@@ -420,6 +423,7 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
             if converted is not None: 
                 #print(converted) # <geoprocessing describe geometry object object at 0x000002B2D3E338D0>
                 for part in converted:
+                    #print("Part: ")
                     #print(part) # <geoprocessing array object object at 0x000002B2D2E09530>
                     for pt in part: 
                         #print(pt) # 64.4584221540162 5.5 NaN NaN
@@ -428,8 +432,7 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
                         #print(pt_z)
                         #print(len(points)) 
                         if len(points)>0 and pt.X == points[len(points)-1][0] and pt.Y == points[len(points)-1][1] and pt_z == points[len(points)-1][2]: pass
-                        else: points.append(pointToCoord(Point(x=pt.X, y = pt.Y, z = pt_z)))
-                        #print(points)
+                        else: points.append(pointToCoord(Point(x=pt.X, y = pt.Y, z = pt_z, units = "m"))) # e.g. [[64.4584221540162, 5.499999999999999, 0.0], [64.45461685210796, 5.587155742747657, 0.0]]
             else:
                 arcpy.AddWarning(f"Part of the polycurve cannot be converted")
                 curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True )
@@ -441,7 +444,7 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
     return curve
 
 def arcToNativePolyline(poly: Union[Arc, Circle], sr: arcpy.SpatialReference):
-    print("__Arc/Circle to native__")
+    print("__Arc/Circle to native polyline__")
     pointsSpeckle = speckleArcCircleToPoints(poly)
     points = [pointToCoord(p) for p in pointsSpeckle]
     curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True )
@@ -454,6 +457,7 @@ def specklePolycurveToPoints(poly: Polycurve) -> List[Point]:
     points = []
     for segm in poly.segments:
         print(segm)
+        pts = []
         if isinstance(segm, Arc) or isinstance(segm, Circle): # or isinstance(segm, Curve):
             print("Arc or Curve")
             pts: List[Point] = speckleArcCircleToPoints(segm) 
@@ -470,8 +474,8 @@ def specklePolycurveToPoints(poly: Polycurve) -> List[Point]:
 def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]: 
     print("__Arc or Circle to Points___")
     points = []
-    print(poly.plane) 
-    print(poly.plane.normal) 
+    #print(poly.plane) 
+    #print(poly.plane.normal) 
     if poly.plane is None or poly.plane.normal.z == 0: normal = 1 
     else: normal = poly.plane.normal.z 
     #print(poly.plane.origin)
@@ -511,7 +515,6 @@ def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]:
         
         pt.units = poly.plane.origin.units 
         points.append(pt)
-
     if isinstance(poly, Arc): points.append(poly.endPoint)
     return points
 

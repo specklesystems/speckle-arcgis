@@ -386,11 +386,17 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
             if colorizer:   
                 try: bandIndex = int(colorizer.band)
                 except: pass            
-                if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
+                try:
+                    if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
+                        # REMAP band values to (0,255) range
+                        valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                        colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
+                        if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                        color =  (colorVal<<16) + (colorVal<<8) + colorVal
+                except: # if no Min Max labels:
                     # REMAP band values to (0,255) range
-                    valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                    colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
-                    if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                    valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                    colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
                     color =  (colorVal<<16) + (colorVal<<8) + colorVal
             else:
                 # REMAP band values to (0,255) range
