@@ -21,8 +21,9 @@ def installToolbox(newExec: str):
 def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
     # install package
     try:
-        import importlib
-        importlib.import_module(pkgName)
+        #import importlib #importlib.import_module(pkgName)
+        if pkgName == "specklepy": import specklepy 
+        elif pkgName == "panda3d": import panda3d 
     except Exception as e:
         print(f"{pkgName} not installed")
         subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])

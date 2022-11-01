@@ -43,14 +43,20 @@ def clone_env(pythonExec_old: str, env_new_name: str):
     conda_exe = pythonExec_old.replace("Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe","Pro\\bin\\Python\\Scripts\\conda.exe") #%PROGRAMFILES%\ArcGIS\Pro\bin\Python\Scripts\conda.exe #base: %PROGRAMDATA%\Anaconda3\condabin\conda.bat
     new_env = install_folder + "\\" + env_new_name # %LOCALAPPDATA%\ESRI\conda\envs\...
 
-    subprocess_call( [ conda_exe, 'config', '--set', 'ssl_verify', 'False'] )
-    print("Press Enter to continue")
-    #print(conda_exe)
-    #print(default_env)
-    #print(new_env)
-    subprocess_call( [ conda_exe, 'create', '--clone', default_env, '-p', new_env] ) # will not execute if already exists
-    subprocess_call( [ conda_exe, 'config', '--set', 'ssl_verify', 'True'] )
-    
+    if os.path.exists(conda_exe) and os.path.exists(default_env) and os.path.exists(new_env) and not os.path.exists(new_env + "\\python.exe"): 
+        # conda environment invalid: delete it's folder 
+        print(f"Removing invalid environment {new_env}")
+        os.remove(new_env)
+
+    if os.path.exists(conda_exe) and os.path.exists(default_env) and not os.path.exists(new_env): 
+        print("Wait for the default ArcGIS Pro conda environment to be cloned")
+        subprocess_call( [ conda_exe, 'config', '--set', 'ssl_verify', 'False'] )
+        subprocess_call( [ conda_exe, 'create', '--clone', default_env, '-p', new_env] ) # will not execute if already exists
+        subprocess_call( [ conda_exe, 'config', '--set', 'ssl_verify', 'True'] )
+
+    elif os.path.exists(new_env) and os.path.exists(new_env + "\\python.exe"):
+        print(f"Environment {new_env} already exists, preparing to install packages..")
+
     print(new_env + "\\python.exe")
     return new_env + "\\python.exe"
 
@@ -81,13 +87,24 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
         
     # install package
     try:
-        import importlib
-        importlib.import_module(pkgName)
+        #import importlib #importlib.import_module(pkgName)
+        if pkgName == "specklepy":
+            import specklepy 
+            if pythonExec.replace("\\python.exe","") not in (os.path.abspath(specklepy.__file__)): 
+                print(f"Installing {pkgName} to {pythonExec}")
+                #subprocess_call( [pythonExec, "-m", "pip", "uninstall", f"{pkgName}"])
+                subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
+        elif pkgName == "panda3d":
+            import panda3d 
+            if pythonExec.replace("\\python.exe","") not in (os.path.abspath(panda3d.__file__)): 
+                print(f"Installing {pkgName} to {pythonExec}")
+                subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
     except Exception as e:
         print(f"{pkgName} not installed")
         subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
 
     # Check if package needs updating
+    r'''
     try:
         print(f"Attempting to update {pkgName} to {pkgVersion}")
         result = subprocess_call(
@@ -108,6 +125,7 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
     except Exception as e:
         print(e)
         print(e.with_traceback)
+    '''
     return True
     
 pythonPath = setup()

@@ -526,8 +526,8 @@ class Speckle:
             if par.name == "streamUrl": par.value = None
             if par.name == "streamsDefalut": par.value = None
             if par.name == "savedStreams": par.value = None
-            if par.name == "branch": par.value = ""
-            if par.name == "commit": par.value = None
+            if par.name == "branch": par.value = ""; par.filter.list = []
+            if par.name == "commit": par.value = None; par.filter.list = []
             if par.name == "selectedLayers": par.value = None
             if par.name == "msg": par.value = ""
             if par.name == "action": par.value = "Send"
@@ -711,7 +711,11 @@ class Speckle:
                     newGroupLayer = arcpy.mp.LayerFile(path + "\\" + newGroupName + ".lyrx")
                     layerGroup = self.speckleInputs.project.activeMap.addLayer(newGroupLayer)[0]
                 except: # for 3.0.0
-                    layerGroup = self.speckleInputs.active_map.createGroupLayer(newGroupName)
+                    if self.speckleInputs.active_map is not None:
+                        layerGroup = self.speckleInputs.active_map.createGroupLayer(newGroupName)
+                    else:
+                        arcpy.AddWarning("The map didn't fully load, try refreshing the plugin.")
+                        return
 
                 print(layerGroup)
                 print("layer added")
