@@ -55,19 +55,20 @@ def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
     #print(geom)
     return geom
 
-def pointToCoord(pt: Point) -> List[float]:
+def pointToCoord(point: Point) -> List[float]:
     """Converts a Speckle Point to QgsPoint"""
-    pt = scalePointToNative(pt, pt.units)
+    pt = scalePointToNative(point, point.units)
     coords = [pt.x, pt.y, pt.z]
     #print(coords)
     return coords
 
-def scalePointToNative(pt: Point, units: str) -> Point:
+def scalePointToNative(point: Point, units: str) -> Point:
     """Scale point coordinates to meters"""
     scaleFactor = get_scale_factor(units)
-    pt.x = pt.x * scaleFactor
-    pt.y = pt.y * scaleFactor
-    pt.z = 0 if math.isnan(pt.z) else pt.z * scaleFactor
+    pt = Point(units = "m")
+    pt.x = point.x * scaleFactor
+    pt.y = point.y * scaleFactor
+    pt.z = 0 if math.isnan(point.z) else point.z * scaleFactor
     return pt
 
 def addZtoPoint(coords: List): 

@@ -379,7 +379,7 @@ def ellipseToNative():
 
 def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Circle to QgsLineString"""
-    print("___Convert Circle from Native___")
+    print("___Convert Circle to Native___")
     points = []
     angle1 = math.pi/2
     
@@ -395,7 +395,8 @@ def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
         if poly.plane.normal.z == 0: normal = 1
         else: normal = poly.plane.normal.z
         angle = angle1 + k * math.pi*2 * normal
-        pt = Point( x = poly.plane.origin.x + radScaled * cos(angle), y = poly.plane.origin.y + radScaled * sin(angle), z = 0) 
+        pt = Point( x = poly.plane.origin.x * get_scale_factor(poly.units) + radScaled * cos(angle), y = poly.plane.origin.y * get_scale_factor(poly.units) + radScaled * sin(angle), z = 0) 
+        print(pt)
         pt.units = "m"
         points.append(pointToCoord(pt))
     points.append(points[0])
@@ -406,9 +407,10 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
     points = []
     curve = None
     print("___Polycurve to native___")
-    
-    try:
-        for segm in poly.segments: # Line, Polyline, Curve, Arc, Circle
+
+    try: 
+        for i, segm in enumerate(poly.segments): # Line, Polyline, Curve, Arc, Circle
+            print("___start segment")            
             if isinstance(segm,Line):  converted = lineToNative(segm, sr) # QgsLineString
             elif isinstance(segm,Polyline):  converted = polylineToNative(segm, sr) # QgsLineString
             elif isinstance(segm,Curve):  converted = curveToNative(segm, sr) # QgsLineString
