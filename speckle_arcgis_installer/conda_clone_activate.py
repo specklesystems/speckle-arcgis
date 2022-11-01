@@ -22,7 +22,7 @@ def get_python_path(): # create a full copy of default env
     pythonExec = os.environ["ProgramFiles"] + r'\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe' #(r"%PROGRAMFILES%\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe") #os.path.dirname(sys.executable) + "\\python.exe" # default python.exe
     #print(pythonExec)
     if not os.path.exists(pythonExec):
-        pythonExec = os.getenv('APPDATA') + r'\Programs\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe'
+        pythonExec = os.getenv('APPDATA').replace("Roaming", "Local") + r'\Programs\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe'
         if not os.path.exists(pythonExec): return None
     #print(os.getenv('APPDATA') + r'\Programs\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe')
 
