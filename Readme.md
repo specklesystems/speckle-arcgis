@@ -74,7 +74,7 @@ Setup is adapted from [this tutorial](https://pro.arcgis.com/en/pro-app/2.8/arcp
 
 #### Dev Environment
 
-For a better development experience in your editor, we recommend creating a [virtual environment in ArcGIS](https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/work-with-python-environments.htm). In the venv, you'll just need to install `specklepy`. 
+For a better development experience in your editor, we recommend creating a [virtual conda environment in ArcGIS](https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/work-with-python-environments.htm). In the new conda environment, you'll just need to install `specklepy` and `panda3d`. 
 
 ### Debugging
 
