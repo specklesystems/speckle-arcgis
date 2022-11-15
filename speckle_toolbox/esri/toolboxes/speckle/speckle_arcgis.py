@@ -602,6 +602,9 @@ class Speckle:
         base_obj = Base(units = "m")
         base_obj.layers = convertSelectedLayers(self.speckleInputs.all_layers, self.toolboxInputs.selected_layers, self.speckleInputs.project)
         
+        if len(base_obj.layers) == 0: 
+            arcpy.AddMessage("No data sent to stream " + streamId)
+            return 
         try:
             # this serialises the block and sends it to the transport
             objId = operations.send(base=base_obj, transports=[transport])

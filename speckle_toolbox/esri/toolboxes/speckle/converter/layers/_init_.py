@@ -38,8 +38,8 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
             #if layerToSend.isFeatureLayer: 
             newBaseLayer = layerToSpeckle(layerToSend, project)
             if newBaseLayer is not None: result.append(newBaseLayer)
-
             elif layerToSend.isRasterLayer: pass
+            print(result)
 
     return result
 
@@ -120,6 +120,8 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                 print("__ finish iterating features")
                 speckleLayer.features=layerObjs
                 speckleLayer.geomType = data.shapeType
+
+                if len(speckleLayer.features) == 0: return None
 
                 #layerBase.renderer = layerRenderer
                 #layerBase.applicationId = selectedLayer.id()

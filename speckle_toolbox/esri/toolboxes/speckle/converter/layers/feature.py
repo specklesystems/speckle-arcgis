@@ -27,10 +27,18 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     layer_sr = data.spatialReference # if sr.type == "Projected":
     geomType = data.shapeType #Polygon, Point, Polyline, Multipoint, MultiPatch
     featureType = data.featureType # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
-
+    print(geomType)
+    print(hasattr(data, "isRevit")) 
+    print(hasattr(data, "isIFC")) 
+    print(hasattr(data, "bimLevels")) 
+    if geomType == "MultiPatch" or hasattr(data, "isRevit") or hasattr(data, "isIFC") or hasattr(data, "bimLevels"): 
+        print(f"Layer {selectedLayer.name} has unsupported data type")
+        arcpy.AddWarning(f"Layer {selectedLayer.name} has unsupported data type")
+        return None 
     #print(layer_sr.name)
     #print(projectCRS.name)
     f_shape = findTransformation(f_shape, geomType, layer_sr, projectCRS, selectedLayer)
+    if f_shape is None: return None
 
     ######################################### Convert geometry ##########################################
     try:
@@ -181,6 +189,8 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         reprojectedPt = rasterOriginPoint
         if my_raster.spatialReference.name != projectCRS.name: 
             reprojectedPt = findTransformation(reprojectedPt, "Point", my_raster.spatialReference, projectCRS, selectedLayer)
+            if reprojectedPt is None: 
+                reprojectedPt = rasterOriginPoint
         geom = pointToSpeckle(reprojectedPt.getPart(), None, None)
         if (geom != None):
             b['displayValue'] = [geom]
