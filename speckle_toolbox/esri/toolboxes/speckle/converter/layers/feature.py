@@ -31,6 +31,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     print(hasattr(data, "isRevit")) 
     print(hasattr(data, "isIFC")) 
     print(hasattr(data, "bimLevels")) 
+    print(hasattr(data, "hasSpatialIndex")) 
     if geomType == "MultiPatch" or hasattr(data, "isRevit") or hasattr(data, "isIFC") or hasattr(data, "bimLevels"): 
         print(f"Layer {selectedLayer.name} has unsupported data type")
         arcpy.AddWarning(f"Layer {selectedLayer.name} has unsupported data type")
