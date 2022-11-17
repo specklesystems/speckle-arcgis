@@ -30,6 +30,7 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
 
 def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry'] ) -> dict:
     print("03________ get layer attributes")
+    if not isinstance(features, list): features = [features]
     fields = {}
     all_props = []
     for feature in features: 
@@ -52,7 +53,7 @@ def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometr
             if not variant: variant = None #LongLong #4 
 
             # go thought the dictionary object
-            print("go thought the dictionary object")
+            #print("go thought the dictionary object")
             if value and isinstance(value, list) and isinstance(value[0], dict) :
                 all_props.remove(name) # remove generic dict name
                 newF, newVals = traverseDict( {}, {}, name, value[0])
@@ -61,7 +62,7 @@ def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometr
                 for i, (k,v) in enumerate(newF.items()):
                     fields.update({k: v}) 
                     if k not in all_props: all_props.append(k)
-                #print(fields)
+                print(fields)
             
             # add a field if not existing yet AND if variant is known
             elif variant and (name not in fields.keys()): 

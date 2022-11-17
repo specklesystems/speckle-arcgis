@@ -13,7 +13,7 @@ from arcpy import metadata as md
 from specklepy.api.models import Branch, Stream, Streams
 from speckle.converter.layers.Layer import Layer, RasterLayer
 
-from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative
+from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
 from arcgis.features import FeatureLayer
 import os
 import os.path
@@ -758,10 +758,18 @@ class Speckle:
                     for item in value:
                         loopVal(item, name)
                         #print(item)
+                        pt = None
                         if item.speckle_type and item.speckle_type.startswith("Objects.Geometry."): 
+
                             pt, pl = cadLayerToNative(value, name, streamBranch, self.speckleInputs.project)
                             if pt is not None: print("Layer group created: " + pt.name())
                             if pl is not None: print("Layer group created: " + pl.name())
+                            break
+                        
+                        if item.speckle_type and "Revit" in item.speckle_type and item.speckle_type.startswith("Objects.BuiltElements."): 
+
+                            msh_bool = bimLayerToNative(value, name, streamBranch, self.speckleInputs.project)
+                            #if msh is not None: print("Layer group created: " + msh.name())
                             break
                 
             traverseObject(commitObj, callback, check)

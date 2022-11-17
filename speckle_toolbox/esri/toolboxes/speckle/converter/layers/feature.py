@@ -14,7 +14,7 @@ from speckle.converter.layers.utils import (findTransformation, getVariantFromVa
                                             traverseDictByKey, hsv_to_rgb)
 
 from speckle.converter.geometry.point import pointToSpeckle
-from speckle.converter.geometry.mesh import rasterToMesh
+from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
 
 import numpy as np
 import colorsys
@@ -91,6 +91,55 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
             if variant == "LONG": feat.update({key: None})
             if variant == "SHORT": feat.update({key: None})
     return feat
+             
+def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, path: str):
+    #print("04_________BIM Feature To Native____________")
+    feat = {}
+    try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
+    except:  speckle_geom = feature # for created in other software
+
+    #if isinstance(speckle_geom, list):
+    #    if len(speckle_geom)>1: arcGisGeom = convertToNativeMulti(speckle_geom, sr)
+    #    else: arcGisGeom = convertToNative(speckle_geom[0], sr) 
+    #else:
+    arcGisGeom = "" #meshToNative(speckle_geom, path)
+    if arcGisGeom is not None:
+        feat.update({"arcGisGeomFromSpeckle": ""})
+    else: return None
+    #print(feat)
+    try: 
+        if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
+    except: pass
+    #print(feat)
+    #### setting attributes to feature
+    for key, variant in fields.items(): 
+        #value = feature[key]
+        #print()
+        if key == "Speckle_ID": 
+            value = str(feature["id"])
+            feat[key] = value 
+        else:
+            try: value = feature[key]
+            except:
+                rootName = key.split("_")[0]
+                newF, newVals = traverseDict({}, {}, rootName, feature[rootName][0])
+                for i, (k,v) in enumerate(newVals.items()):
+                    if k == key: value = v; break
+        # for all values: 
+        if variant == "TEXT": value = str(value) 
+
+        if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
+            feat.update({key: value})   
+        else: 
+            if variant == "TEXT": feat.update({key: None})
+            if variant == "FLOAT": feat.update({key: None})
+            if variant == "LONG": feat.update({key: None})
+            if variant == "SHORT": feat.update({key: None})
+            
+    #print(feat) 
+    #print(fields.items())
+    return feat
+                
 
 def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     print("04_________CAD Feature To Native____________")

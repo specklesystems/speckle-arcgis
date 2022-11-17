@@ -227,3 +227,20 @@ result = arcpy.management.CreateFeatureclass(arcpy.env.scratchGDB, "test_multipa
 feature_class = result[0]
 
 
+################################# reading shapefile - works ####################
+
+fc = r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\BIM_layers_speckle\00f70159b9104180f622cca87f5dd2cb.shp'
+rows = arcpy.da.SearchCursor(fc, 'Shape@')
+for r in rows:
+        if r is not None: shape = r
+print(shape)
+cl = arcpy.conversion.FeatureClassToFeatureClass(r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\BIM_layers_speckle\16d73b756a_main_2f8cfa8644\__Floors_Mesh\00c7696966e4cfda2bd8c03860a414a6', r'C:\Users\katri\Documents\ArcGIS\tests', 'copyclass')
+
+##################################### update rows in feature class - working #############
+with arcpy.da.UpdateCursor('f_class_2f8cfa8644___Structural_Framing_Mesh', 'name') as cursor:
+    # For each row, evaluate the WELL_YIELD value (index position 
+    # of 0), and update WELL_CLASS (index position of 1)
+    for row in cursor: 
+        row[0] = "newName"
+        cursor.updateRow(row)
+
