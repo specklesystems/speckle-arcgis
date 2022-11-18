@@ -173,7 +173,7 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
     for geom in layerContentList:
         #print(geom)
         if geom.displayMesh and isinstance(geom.displayMesh, Mesh): 
-            geom_meshes.append(geom.displayMesh)
+            geom_meshes.append(geom)
 
     if len(geom_meshes)>0: layer_meshes = bimVectorLayerToNative(geom_meshes, layerName, "Mesh", streamBranch, project)
 
@@ -187,6 +187,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     vl = None
     layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
     layerName = layerName + "_" + geomType
+    #if not "__Structural_Foundations_Mesh" in layerName: return None
     
     sr = arcpy.SpatialReference(project.activeMap.spatialReference.name)
     active_map = project.activeMap
@@ -232,7 +233,15 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
 
 
     shp = meshToNative(geomList, path_bim + newName)
-    f_class = arcpy.conversion.FeatureClassToFeatureClass(shp, path, class_name)
+    print("____ meshes saved___")
+    print(shp)
+    #print(path)
+    #print(class_name)
+    validated_class_path = validate_path(class_name)
+    print(validated_class_path)
+    validated_class_name = validated_class_path.split("\\")[len(validated_class_path.split("\\"))-1]
+    print(validated_class_name)
+    f_class = arcpy.conversion.FeatureClassToFeatureClass(shp, path, validated_class_name)
     # , spatial_reference = sr
     #arcpy.management.Project(in_dataset, f_class, sr, in_coor_system=sr)
 
@@ -249,9 +258,10 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     all_key_types = []
     max_len = 52
 
+    print("___ after layer attributes: ___________")
     print(newFields.items())
     for key, value in newFields.items(): 
-        existingFields = [fl.name for fl in arcpy.ListFields(class_name)]
+        existingFields = [fl.name for fl in arcpy.ListFields(validated_class_name)]
         #print(existingFields)
         if key not in existingFields  and key.lower() not in fields_to_ignore: # exclude geometry and default existing fields
             #print(key)
@@ -271,14 +281,15 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 matrix.append([key, value, key, 255])
                 #print(matrix)
     if len(matrix)>0: AddFields(str(f_class), matrix)
-    print(f_class)
+    print(matrix)
     fets = []
     for f in geomList[:]: 
+        #print(f)
         new_feat = bimFeatureToNative(f, newFields, sr, path_bim)
         if new_feat != "" and new_feat != None: 
             fets.append(new_feat)
     #print("features created")
-    print(fets)
+    print(len(fets))
     
     if len(fets) == 0: return None
     count = 0
@@ -288,8 +299,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         except: feat.update({'applicationId': count})
 
         row = []
-        heads = [ ]
-        #print(feat.items())
+        heads = []
         for key,value in feat.items(): 
             if key in all_keys and key.lower() not in fields_to_ignore: 
                 heads.append(key)
@@ -303,24 +313,34 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     #    print(tuple(row))
     #    #cur.insertRow(tuple(row))
     #    print(cur)
-    r'''
-    with arcpy.da.UpdateCursor('f_class_2f8cfa8644___Structural_Framing_Mesh', 'name') as cur:
+    
+    with arcpy.da.UpdateCursor(f_class, heads) as cur:
         # For each row, evaluate the WELL_YIELD value (index position 
         # of 0), and update WELL_CLASS (index position of 1)
-        for row in cur: 
-            for i,r in enumerate(row):
-                for k,h in enumerate(heads):
-                    if h == 
-            row[0] = "newName"
-            cur.updateRow(row)
-
+        shp_num = 0
+        try:
+            for rowShape in cur: 
+                for i,r in enumerate(rowShape):
+                    #print(rowValues[shp_num])
+                    rowShape[i] = rowValues[shp_num][i]
+                    if isinstance(rowValues[shp_num][i], str): rowShape[i] = rowValues[shp_num][i][:255]
+                    #if all_key_types[i] == "LONG" and rowValues[shp_num][i] == True: 
+                    #    rowShape[i] = 1
+                    #elif all_key_types[i] == "LONG" and rowValues[shp_num][i] == False: 
+                    #    rowShape[i] = 0
+                print(rowShape)
+                print(all_key_types)
+                cur.updateRow(rowShape)
+                shp_num += 1
+        except Exception as e: print(e)
     del cur 
-    '''
+    
     print("create layer:")
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
     active_map.addLayerToGroup(layerGroup, vl)
     print("created2")
+    #os.remove(path_bim)
 
     return True #last one
 

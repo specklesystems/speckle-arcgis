@@ -8,24 +8,32 @@ from shapefile import TRIANGLE_STRIP, TRIANGLE_FAN
 from speckle.converter.layers.utils import get_scale_factor
 
 def meshToNative(meshes: List[Mesh], path: str):
-    """Converts a Speckle Mesh to MultiPatch. Currently UNSUPPORTED"""
-    #print("06___________________Mesh to Native")
-    #print(mesh)
+    """Converts a Speckle Mesh to MultiPatch"""
+    print("06___________________Mesh to Native")
+    #print(meshes)
     #print(mesh.units)
     w = shapefile.Writer(path) 
-    w.field('speckleType', 'C')
+    w.field('speckleTyp', 'C')
 
     shapes = []
-    for mesh in meshes:
-        scale = get_scale_factor(mesh.units)
+    for mesh_full in meshes:
+        #print(mesh_full)
+        #print(mesh_full.get_dynamic_member_names())
+        mesh = mesh_full.displayMesh
+        #print(mesh)
+        w = fill_mesh_parts(w, mesh)
+    w.close()
+    return path
 
-        
+def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh):
+    scale = get_scale_factor(mesh.units)
+
+    parts_list = []
+    types_list = []
+    count = 0 # sequence of vertex (not of flat coord list) 
+    try:
+        #print(len(mesh.faces))
         if len(mesh.faces) % 4 == 0 and mesh.faces[0] == 0:
-            
-
-            parts_list = []
-            types_list = []
-            count = 0 # sequence of vertex (not of flat coord list) 
             for f in mesh.faces:
                 try:
                     if mesh.faces[count] == 0 or mesh.faces[count] == 3: # only handle triangles
@@ -40,18 +48,11 @@ def meshToNative(meshes: List[Mesh], path: str):
                 except: break
             w.multipatch(parts_list, partTypes=types_list ) # one type for each part
             w.record('displayMesh')
-            
         else: print("not triangulated mesh")
 
-        #shape = None
-        #rows = arcpy.da.SearchCursor(path + mesh.id, 'Shape@')
-        #for r in rows:
-        #    if r is not None: shape = r
-
-    w.close()
-
-    return path
-
+    except Exception as e: print(e)
+    return w
+    
 def rasterToMesh(vertices, faces, colors):
     mesh = Mesh.create(vertices, faces, colors)
     mesh.units = "m"

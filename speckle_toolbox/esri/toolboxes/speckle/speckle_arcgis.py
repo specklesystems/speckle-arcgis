@@ -494,6 +494,7 @@ class Speckle:
 
             if par.name == "msg" and par.altered and par.valueAsText is not None:
                 self.toolboxInputs.messageSpeckle = par.valueAsText
+                print(self.toolboxInputs.messageSpeckle)
 
             if par.name == "action" and par.altered:
                 #print("action changed")
@@ -617,7 +618,9 @@ class Speckle:
             
 
         message = self.toolboxInputs.messageSpeckle
+        print(message)
         if message is None or ( isinstance(message, str) and len(message) == 0):  message = "Sent from ArcGIS"
+        print(message)
         try:
             # you can now create a commit on your stream with this object
             client.commit.create(

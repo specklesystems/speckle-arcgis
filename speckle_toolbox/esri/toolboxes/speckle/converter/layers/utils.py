@@ -8,6 +8,7 @@ import os
 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
+    #print("_________get variant from value_______")
     # TODO add Base object
     pairs = [
         (str, "TEXT"), # 10
@@ -28,9 +29,11 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
 
     return res
 
-def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry'] ) -> dict:
+def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry', 'displayMesh'] ) -> dict:
     print("03________ get layer attributes")
-    if not isinstance(features, list): features = [features]
+    #print(featuresList)
+    if not isinstance(featuresList, List): features = [featuresList]
+    else: features = featuresList[:]
     fields = {}
     all_props = []
     for feature in features: 
@@ -42,7 +45,9 @@ def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometr
             except: pass
 
         dynamicProps.sort()
-        print(dynamicProps)
+        #print(dynamicProps)
+        #print(feature.get_dynamic_member_names())
+        #print(feature.get_typed_member_names())
 
         # add field names and variands 
         for name in dynamicProps:
@@ -83,16 +88,26 @@ def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometr
     return fields
 
 def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
-    #print("Traverse Dict")
+    #print("__Traverse Dict")
+    #print(val)
+    try: val = val[0]
+    except: pass
     if isinstance(val, dict):
+        #print("if")
         for i, (k,v) in enumerate(val.items()):
             traverseDict( newF, newVals, nam+"_"+k, v)
+        #print("end-if")
     else: 
+        #print("else")
         var = getVariantFromValue(val)
+        #print(var)
         if not var: var = None #LongLong #4 
         else: 
+            #print("double else")
             newF.update({nam: var})
+            #print(newF)
             newVals.update({nam: val})  
+           # print(newVals)
     #print(newF)
     #print(newVals)
     #print("traverse end")
@@ -259,12 +274,12 @@ def curvedFeatureClassToSegments(layer) -> str:
     print(newPath)
     return newPath
 
-def validate_path(path):
+def validate_path(path: str):
     # https://github.com/EsriOceans/btm/commit/a9c0529485c9b0baa78c1f094372c0f9d83c0aaf
     """If our path contains a DB name, make sure we have a valid DB name and not a standard file name."""
     dirname, file_name = os.path.split(path)
-    print(dirname)
-    print(file_name)
+    #print(dirname)
+    #print(file_name)
     file_base = os.path.splitext(file_name)[0]
     if dirname == '':
         # a relative path only, relying on the workspace
