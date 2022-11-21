@@ -16,6 +16,8 @@ def read(fname):
 setup(name='speckle_toolbox', 
       author='SpeckleSystems',
 			version="2.9.4",
+      author_email="connectors@speckle.systems",
+      url="https://speckle.systems/",
       description=("Example for extending geoprocessing through Python modules"),
       long_description=read('Readme.md'),
       python_requires='~=3.3',
