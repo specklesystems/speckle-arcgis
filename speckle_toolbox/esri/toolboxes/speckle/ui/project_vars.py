@@ -60,8 +60,9 @@ class speckleInputsClass:
             
             if self.active_map is not None and isinstance(self.active_map, Map): # if project loaded
                 for layer in self.active_map.listLayers(): 
-                    #print(layer)
-                    if layer.isFeatureLayer or layer.isRasterLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
+                    try: geomType = arcpy.Describe(layer.dataSource).shapeType.lower()
+                    except: geomType = '' #print(arcpy.Describe(layer.dataSource)) #and arcpy.Describe(layer.dataSource).shapeType.lower() != "multipatch")
+                    if (layer.isFeatureLayer and geomType != "multipatch") or layer.isRasterLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
             self.stream_file_path: str = aprx.filePath.replace("aprx","gdb") + "\\speckle_streams.txt"
 
             if os.path.exists(self.stream_file_path): 
@@ -165,7 +166,7 @@ class toolboxInputsClass:
         try:
             aprx = ArcGISProject('CURRENT')
             self.project = aprx
-        except: self.project = None; print("Project not found")
+        except: self.project = None; print("Project not found"); arcpy.AddWarning("Project not found")
         self.instances.append(self)
 
     def setProjectStreams(self, wr: StreamWrapper, add = True): 
