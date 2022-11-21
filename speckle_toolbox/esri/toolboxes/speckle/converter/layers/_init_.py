@@ -284,16 +284,12 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     print(len(all_keys))
     if len(matrix)>0: AddFields(str(f_class), matrix)
     
-    #except Exception as e: print(e)
-
-    #print(matrix)
     fets = []
     print("_________BIM FeatureS To Native___________")
     for f in geomList[:]: 
         new_feat = bimFeatureToNative(f, newFields, sr, path_bim)
         if new_feat != "" and new_feat != None: 
             fets.append(new_feat)
-    #print("features created")
     print(len(fets))
         
     
@@ -301,33 +297,19 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     count = 0
     rowValues = []
     for i, feat in enumerate(fets):
-        #try: feat['applicationId'] 
-        #except: feat.update({'applicationId': count})
 
         row = []
         heads = []
         for key in all_keys:
             try:
-                #for key, value in feat.items(): 
-                #try:
-                #if feat[key]: # and key.lower() not in fields_to_ignore:
-                    #if key in all_keys and key.lower() not in fields_to_ignore: 
                 row.append(feat[key])
                 heads.append(key)
             except Exception as e: 
-                #print(e) 
                 row.append(None)
                 heads.append(key)
 
         rowValues.append(row)
         count += 1
-    #print(heads)
-    #cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
-    #for row in rowValues: 
-    #    print(tuple(heads))
-    #    print(tuple(row))
-    #    #cur.insertRow(tuple(row))
-    #    print(cur)
     
     with arcpy.da.UpdateCursor(f_class, heads) as cur:
         # For each row, evaluate the WELL_YIELD value (index position 
@@ -486,14 +468,10 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 row.append(value)
         rowValues.append(row)
         count += 1
-    #print(heads)
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     for row in rowValues: 
-        #print(tuple(heads))
-        #print(tuple(row))
         cur.insertRow(tuple(row))
     del cur 
-    #print(f_class)
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis

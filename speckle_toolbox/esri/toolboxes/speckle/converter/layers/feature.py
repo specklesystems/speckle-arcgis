@@ -104,10 +104,7 @@ def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, 
     try: 
         if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
     except: pass
-    #print(feat)
     feat_updated = updateFeat(feat, fields, feature)
-    #print("___after_updated_feat_____")
-    #print(feat_updated)
 
     return feat_updated
                 
@@ -123,29 +120,23 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
         else: arcGisGeom = convertToNative(speckle_geom[0], sr) 
     else:
         arcGisGeom = convertToNative(speckle_geom, sr)
-    #print(feat)
+        
     if arcGisGeom is not None:
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
     else: return None
-    #print(feat)
+    
     try: 
         if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
     except: pass
-    #print(feat) # {'arcGisGeomFromSpeckle': <Polyline object at 0x23498321280[0x234873061e0]>}
 
     #### setting attributes to feature
     feat_updated = updateFeat(feat, fields, feature)
-    #print("___after_updated_feat_____")
-            
-    #print(feat_updated) 
     return feat_updated
 
 def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
     
-    #print("________update feature")
     for key, variant in fields.items(): 
         try:
-            #print("Starting field - " + str(key))
             if key == "Speckle_ID": 
                 value = str(feature["id"])
                 if key != "parameters": print(value)
@@ -190,9 +181,7 @@ def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
                                 if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
                                 elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
                         except Exception as e: feat.update({key: None})
-            #print("ended field - " + str(key))
         except Exception as e: 
-            #print(e)
             feat.update({key: None})
     feat_sorted = {k: v for k, v in sorted(feat.items(), key=lambda item: item[0])}
     #print("_________________end of updating a feature_________________________")
