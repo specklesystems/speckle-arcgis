@@ -257,7 +257,7 @@ class Speckle:
 
         msg = arcpy.Parameter(
             displayName="Message",
-            name="message",
+            name="msg",
             datatype="GPString",
             parameterType="Optional",
             direction="Input",
