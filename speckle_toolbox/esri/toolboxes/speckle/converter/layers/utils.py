@@ -6,6 +6,7 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import os
 
+ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh'] 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
     #print("_________get variant from value_______")
@@ -29,7 +30,7 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
 
     return res
 
-def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry', 'displayMesh'] ) -> dict:
+def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTRS_REMOVE ) -> dict[str, str]:
     print("03________ get layer attributes")
     #print(featuresList)
     if not isinstance(featuresList, List): features = [featuresList]
@@ -39,7 +40,6 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geo
     for feature in features: 
         #get object properties to add as attributes
         dynamicProps = feature.get_dynamic_member_names()
-        #attrsToRemove = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry']
         for att in attrsToRemove:
             try: dynamicProps.remove(att)
             except: pass
@@ -47,64 +47,76 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geo
 
         # add field names and variands 
         for name in dynamicProps:
-            if name not in all_props: all_props.append(name)
+            #if name not in all_props: all_props.append(name)
 
             value = feature[name]
             variant = getVariantFromValue(value)
             if not variant: variant = None #LongLong #4 
 
             # go thought the dictionary object
-            if value and isinstance(value, list) and isinstance(value[0], dict) :
-                all_props.remove(name) # remove generic dict name
-                newF, newVals = traverseDict( {}, {}, name, value[0])
+            if value and isinstance(value, list):
+                #all_props.remove(name) # remove generic dict name
+                for i, val_item in enumerate(value):
+                    newF, newVals = traverseDict( {}, {}, name+"_"+str(i), val_item)
+                    for i, (k,v) in enumerate(newF.items()):
+                        fields.update({k: v}) 
+                        if k not in all_props: all_props.append(k)
+                    #print(fields)
+            
+            # add a field if not existing yet 
+            else: # if str, Base, etc
+                newF, newVals = traverseDict( {}, {}, name, value)
                 for i, (k,v) in enumerate(newF.items()):
-                    fields.update({k: v}) 
                     if k not in all_props: all_props.append(k)
-                print(fields)
-            
-            # add a field if not existing yet AND if variant is known
-            elif variant and (name not in fields.keys()): 
-                fields.update({name: variant})
-            
-            elif name in fields.keys(): #check if the field was empty previously: 
-                oldVariant = fields[name]
-                # replace if new one is NOT LongLong or IS String
-                if oldVariant != "TEXT" and variant == "TEXT": 
-                    fields.update({name: variant}) 
+                    
+                    if k not in fields.keys(): fields.update({k: v}) #if variant is known
+                    elif k in fields.keys(): #check if the field was empty previously: 
+                        oldVariant = fields[k]
+                        # replace if new one is NOT LongLong or IS String
+                        if oldVariant != "TEXT" and variant == "TEXT": 
+                            fields.update({k: variant}) 
+                #print(fields)
 
     # replace all empty ones wit String
     for name in all_props:
         if name not in fields.keys(): 
-            fields.update({name: "TEXT"}) 
-    print(fields)
-    return fields
+            fields.update({name: 'TEXT'}) 
+    #print(fields)
+    fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
+    return fields_sorted
 
 def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
-    print("______05___Traverse Dict")
-    print(val)
-    try: val = val[0]
-    except: pass
+    #print("______05___Traverse Dict")
+    #print(nam)
+    #print(val)
+    
     if isinstance(val, dict):
-        #print("if")
+        #print("DICT")
         for i, (k,v) in enumerate(val.items()):
-            traverseDict( newF, newVals, nam+"_"+k, v)
-        #print("end-if")
+            newF, newVals = traverseDict( newF, newVals, nam+"_"+k, v)
+    elif isinstance(val, Base):
+        #print("BASE")
+        dynamicProps = val.get_dynamic_member_names()
+        for att in ATTRS_REMOVE:
+            try: dynamicProps.remove(att)
+            except: pass
+        dynamicProps.sort()
+
+        item_dict = {} 
+        for prop in dynamicProps:
+            item_dict.update({prop: val[prop]})
+
+        for i, (k,v) in enumerate(item_dict.items()):
+            newF, newVals = traverseDict( newF, newVals, nam+"_"+k, v)
     else: 
-        print("else")
+        #print("ELSE")
         var = getVariantFromValue(val)
-        #print(val)
-        print(type(val))
-        if isinstance(val, List): print(type(val[0]))
-        if not var: var = None #LongLong #4 
-        else: 
-            #print("double else")
-            newF.update({nam: var})
-            #print(newF)
-            newVals.update({nam: val})  
-           # print(newVals)
-    #print(newF)
-    #print(newVals)
-    #print("traverse end")
+        if var is None: 
+            var = 'TEXT'
+            val = str(val)
+        newF.update({nam: var})
+        newVals.update({nam: val})  
+
     return newF, newVals
 
 def get_scale_factor(units: str) -> float:

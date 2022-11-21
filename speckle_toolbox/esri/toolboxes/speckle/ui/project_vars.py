@@ -28,11 +28,19 @@ class speckleInputsClass:
     saved_streams: List[Optional[Tuple[StreamWrapper, Stream]]] = []
     stream_file_path: str = ""
     all_layers: List[arcLayer] = []
+    clients = []
 
     for acc in accounts:
         if acc.isDefault:
             account = acc
-            break
+            #break
+        new_client = SpeckleClient(
+            acc.serverInfo.url,
+            acc.serverInfo.url.startswith("https")
+        )
+        new_client.authenticate_with_token(token=acc.token)
+        clients.append(new_client)
+
     speckle_client = None
     if account:
         speckle_client = SpeckleClient(

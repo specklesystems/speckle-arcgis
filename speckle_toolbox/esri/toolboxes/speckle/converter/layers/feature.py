@@ -93,7 +93,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
     return feat
              
 def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, path: str):
-    print("04_________BIM Feature To Native____________")
+    #print("04_________BIM Feature To Native____________")
 
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
@@ -104,37 +104,16 @@ def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, 
     try: 
         if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
     except: pass
+    #print(feat)
+    feat_updated = updateFeat(feat, fields, feature)
+    #print("___after_updated_feat_____")
+    #print(feat_updated)
 
-    for key, variant in fields.items(): 
-        if key == "Speckle_ID": 
-            value = str(feature["id"])
-            if key != "parameters": print(value)
-            feat[key] = value 
-        else:
-            try: value = feature[key] 
-            except:
-                value = None
-                rootName = key.split("_")[0]
-                try: # if the root category exists
-                    newF, newVals = traverseDict({}, {}, rootName, feature[rootName])
-                    for i, (k,v) in enumerate(newVals.items()):
-                        if k == key: value = v; break
-                except: pass 
-
-        if variant == "TEXT": value = str(value) 
-        if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
-            feat.update({key: value})   
-        else: 
-            if variant == "TEXT": feat.update({key: None})
-            if variant == "FLOAT": feat.update({key: None})
-            if variant == "LONG": feat.update({key: None})
-            if variant == "SHORT": feat.update({key: None})
-
-    return feat
+    return feat_updated
                 
 
 def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
-    print("04_________CAD Feature To Native____________")
+    #print("04_________CAD Feature To Native____________")
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
     except:  speckle_geom = feature # for created in other software
@@ -144,43 +123,81 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
         else: arcGisGeom = convertToNative(speckle_geom[0], sr) 
     else:
         arcGisGeom = convertToNative(speckle_geom, sr)
-    print(feat)
+    #print(feat)
     if arcGisGeom is not None:
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
     else: return None
-    print(feat)
+    #print(feat)
     try: 
         if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
     except: pass
-    print(feat)
-    #### setting attributes to feature
-    for key, variant in fields.items(): 
-        #value = feature[key]
-        #print()
-        if key == "Speckle_ID": 
-            value = str(feature["id"])
-            feat[key] = value 
-        else:
-            try: value = feature[key]
-            except:
-                rootName = key.split("_")[0]
-                newF, newVals = traverseDict({}, {}, rootName, feature[rootName][0])
-                for i, (k,v) in enumerate(newVals.items()):
-                    if k == key: value = v; break
-        # for all values: 
-        if variant == "TEXT": value = str(value) 
+    #print(feat) # {'arcGisGeomFromSpeckle': <Polyline object at 0x23498321280[0x234873061e0]>}
 
-        if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
-            feat.update({key: value})   
-        else: 
-            if variant == "TEXT": feat.update({key: None})
-            if variant == "FLOAT": feat.update({key: None})
-            if variant == "LONG": feat.update({key: None})
-            if variant == "SHORT": feat.update({key: None})
+    #### setting attributes to feature
+    feat_updated = updateFeat(feat, fields, feature)
+    #print("___after_updated_feat_____")
             
-    print(feat) 
-    return feat
+    #print(feat_updated) 
+    return feat_updated
+
+def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
     
+    #print("________update feature")
+    for key, variant in fields.items(): 
+        try:
+            #print("Starting field - " + str(key))
+            if key == "Speckle_ID": 
+                value = str(feature["id"])
+                if key != "parameters": print(value)
+                feat[key] = value 
+
+                if variant == "TEXT": value = str(value) 
+                if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+
+            else:
+                try: 
+                    value = feature[key] 
+                    if variant == "TEXT": value = str(value) 
+                    if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                    elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+
+                except:
+                    value = None
+                    rootName = key.split("_")[0]
+                    #try: # if the root category exists
+                    # if its'a list 
+                    if isinstance(feature[rootName], list):
+                        for i in range(len(feature[rootName])):
+                            try:
+                                newF, newVals = traverseDict({}, {}, rootName + "_" + str(i), feature[rootName][i])
+                                for i, (key,value) in enumerate(newVals.items()):
+                                    for k, (x,y) in enumerate(newF.items()):
+                                        if key == x: variant = y; break
+                                    if variant == "TEXT": value = str(value) 
+                                    if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                                    elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+                            except Exception as e: print(e)
+                    #except: # if not a list
+                    else:
+                        try:
+                            newF, newVals = traverseDict({}, {}, rootName, feature[rootName])
+                            for i, (key,value) in enumerate(newVals.items()):
+                                for k, (x,y) in enumerate(newF.items()):
+                                    if key == x: variant = y; break
+                                #print(variant)
+                                if variant == "TEXT": value = str(value) 
+                                if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                                elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+                        except Exception as e: feat.update({key: None})
+            #print("ended field - " + str(key))
+        except Exception as e: 
+            #print(e)
+            feat.update({key: None})
+    feat_sorted = {k: v for k, v in sorted(feat.items(), key=lambda item: item[0])}
+    #print("_________________end of updating a feature_________________________")
+    return feat_sorted
+
 def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialReference, project: ArcGISProject) -> Base:
     print("_________ Raster feature to speckle______") 
     # https://pro.arcgis.com/en/pro-app/latest/arcpy/classes/raster-object.htm 

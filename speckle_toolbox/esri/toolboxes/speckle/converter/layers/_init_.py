@@ -260,6 +260,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
 
     print("___ after layer attributes: ___________")
     print(newFields.items())
+    #try:
     for key, value in newFields.items(): 
         existingFields = [fl.name for fl in arcpy.ListFields(validated_class_name)]
         #print(existingFields)
@@ -279,31 +280,45 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 all_key_types.append(value)
                 #print(all_keys)
                 matrix.append([key, value, key, 255])
-                #print(matrix)
+    print(all_keys)
+    print(len(all_keys))
     if len(matrix)>0: AddFields(str(f_class), matrix)
+    
+    #except Exception as e: print(e)
+
     #print(matrix)
     fets = []
+    print("_________BIM FeatureS To Native___________")
     for f in geomList[:]: 
-        #print(f)
         new_feat = bimFeatureToNative(f, newFields, sr, path_bim)
         if new_feat != "" and new_feat != None: 
             fets.append(new_feat)
     #print("features created")
     print(len(fets))
+        
     
     if len(fets) == 0: return None
     count = 0
     rowValues = []
-    for feat in fets:
-        try: feat['applicationId'] 
-        except: feat.update({'applicationId': count})
+    for i, feat in enumerate(fets):
+        #try: feat['applicationId'] 
+        #except: feat.update({'applicationId': count})
 
         row = []
         heads = []
-        for key,value in feat.items(): 
-            if key in all_keys and key.lower() not in fields_to_ignore: 
+        for key in all_keys:
+            try:
+                #for key, value in feat.items(): 
+                #try:
+                #if feat[key]: # and key.lower() not in fields_to_ignore:
+                    #if key in all_keys and key.lower() not in fields_to_ignore: 
+                row.append(feat[key])
                 heads.append(key)
-                row.append(value)
+            except Exception as e: 
+                #print(e) 
+                row.append(None)
+                heads.append(key)
+
         rowValues.append(row)
         count += 1
     #print(heads)
@@ -321,18 +336,18 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         try:
             for rowShape in cur: 
                 for i,r in enumerate(rowShape):
-                    #print(rowValues[shp_num])
                     rowShape[i] = rowValues[shp_num][i]
                     if isinstance(rowValues[shp_num][i], str): rowShape[i] = rowValues[shp_num][i][:255]
-                    #if all_key_types[i] == "LONG" and rowValues[shp_num][i] == True: 
-                    #    rowShape[i] = 1
-                    #elif all_key_types[i] == "LONG" and rowValues[shp_num][i] == False: 
-                    #    rowShape[i] = 0
-                #print(rowShape)
-                #print(all_key_types)
+
                 cur.updateRow(rowShape)
                 shp_num += 1
-        except Exception as e: print(e)
+        except Exception as e: 
+            print(e)
+            print(i)
+            print(shp_num)
+            print(len(rowValues))
+            print(rowValues[i-1])
+            print(len(rowValues[i-1]))
     del cur 
     
     print("create layer:")
@@ -415,7 +430,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
     class_name = ("f_class_" + newName)
     f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
-    #print(f_class)
+    print(f_class)
     #print(geomList)
 
     # get and set Layer attribute fields
@@ -453,7 +468,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         if new_feat != "" and new_feat != None: 
             fets.append(new_feat)
     #print("features created")
-    #print(fets)
+    print(len(fets))
     
     if len(fets) == 0: return None
     count = 0
@@ -484,6 +499,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
     #active_map.addLayer(new_layer)
     active_map.addLayerToGroup(layerGroup, vl)
+    print("Layer created")
 
     return vl
 
