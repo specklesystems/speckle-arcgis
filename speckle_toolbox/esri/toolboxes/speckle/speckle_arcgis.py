@@ -13,7 +13,7 @@ from arcpy import metadata as md
 from specklepy.api.models import Branch, Stream, Streams
 from speckle.converter.layers.Layer import Layer, RasterLayer
 
-from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative
+from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
 from arcgis.features import FeatureLayer
 import os
 import os.path
@@ -494,6 +494,7 @@ class Speckle:
 
             if par.name == "msg" and par.altered and par.valueAsText is not None:
                 self.toolboxInputs.messageSpeckle = par.valueAsText
+                print(self.toolboxInputs.messageSpeckle)
 
             if par.name == "action" and par.altered:
                 #print("action changed")
@@ -602,6 +603,9 @@ class Speckle:
         base_obj = Base(units = "m")
         base_obj.layers = convertSelectedLayers(self.speckleInputs.all_layers, self.toolboxInputs.selected_layers, self.speckleInputs.project)
         
+        if len(base_obj.layers) == 0: 
+            arcpy.AddMessage("No data sent to stream " + streamId)
+            return 
         try:
             # this serialises the block and sends it to the transport
             objId = operations.send(base=base_obj, transports=[transport])
@@ -614,7 +618,9 @@ class Speckle:
             
 
         message = self.toolboxInputs.messageSpeckle
+        print(message)
         if message is None or ( isinstance(message, str) and len(message) == 0):  message = "Sent from ArcGIS"
+        print(message)
         try:
             # you can now create a commit on your stream with this object
             client.commit.create(
@@ -755,10 +761,18 @@ class Speckle:
                     for item in value:
                         loopVal(item, name)
                         #print(item)
+                        pt = None
                         if item.speckle_type and item.speckle_type.startswith("Objects.Geometry."): 
+
                             pt, pl = cadLayerToNative(value, name, streamBranch, self.speckleInputs.project)
                             if pt is not None: print("Layer group created: " + pt.name())
                             if pl is not None: print("Layer group created: " + pl.name())
+                            break
+                        
+                        if item.speckle_type and "Revit" in item.speckle_type and item.speckle_type.startswith("Objects.BuiltElements."): 
+
+                            msh_bool = bimLayerToNative(value, name, streamBranch, self.speckleInputs.project)
+                            #if msh is not None: print("Layer group created: " + msh.name())
                             break
                 
             traverseObject(commitObj, callback, check)

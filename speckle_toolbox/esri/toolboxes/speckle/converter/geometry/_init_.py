@@ -9,6 +9,7 @@ from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle
 from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
 from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
 from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
+from speckle.converter.geometry.mesh import meshToNative
 import numpy as np
 
 def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:

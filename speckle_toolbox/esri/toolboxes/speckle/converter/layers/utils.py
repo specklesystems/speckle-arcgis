@@ -6,8 +6,10 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import os
 
+ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh'] 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
+    #print("_________get variant from value_______")
     # TODO add Base object
     pairs = [
         (str, "TEXT"), # 10
@@ -28,73 +30,93 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
 
     return res
 
-def getLayerAttributes(features: List[Base], attrsToRemove: List[str] =['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry'] ) -> dict:
+def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTRS_REMOVE ) -> dict[str, str]:
     print("03________ get layer attributes")
+    #print(featuresList)
+    if not isinstance(featuresList, List): features = [featuresList]
+    else: features = featuresList[:]
     fields = {}
     all_props = []
     for feature in features: 
         #get object properties to add as attributes
         dynamicProps = feature.get_dynamic_member_names()
-        #attrsToRemove = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'geometry']
         for att in attrsToRemove:
             try: dynamicProps.remove(att)
             except: pass
-
         dynamicProps.sort()
-        print(dynamicProps)
 
         # add field names and variands 
         for name in dynamicProps:
-            if name not in all_props: all_props.append(name)
+            #if name not in all_props: all_props.append(name)
 
             value = feature[name]
             variant = getVariantFromValue(value)
             if not variant: variant = None #LongLong #4 
 
             # go thought the dictionary object
-            print("go thought the dictionary object")
-            if value and isinstance(value, list) and isinstance(value[0], dict) :
-                all_props.remove(name) # remove generic dict name
-                newF, newVals = traverseDict( {}, {}, name, value[0])
-                #print(newF)
-                #print(newF.items())
+            if value and isinstance(value, list):
+                #all_props.remove(name) # remove generic dict name
+                for i, val_item in enumerate(value):
+                    newF, newVals = traverseDict( {}, {}, name+"_"+str(i), val_item)
+                    for i, (k,v) in enumerate(newF.items()):
+                        fields.update({k: v}) 
+                        if k not in all_props: all_props.append(k)
+                    #print(fields)
+            
+            # add a field if not existing yet 
+            else: # if str, Base, etc
+                newF, newVals = traverseDict( {}, {}, name, value)
                 for i, (k,v) in enumerate(newF.items()):
-                    fields.update({k: v}) 
                     if k not in all_props: all_props.append(k)
+                    
+                    if k not in fields.keys(): fields.update({k: v}) #if variant is known
+                    elif k in fields.keys(): #check if the field was empty previously: 
+                        oldVariant = fields[k]
+                        # replace if new one is NOT LongLong or IS String
+                        if oldVariant != "TEXT" and variant == "TEXT": 
+                            fields.update({k: variant}) 
                 #print(fields)
-            
-            # add a field if not existing yet AND if variant is known
-            elif variant and (name not in fields.keys()): 
-                fields.update({name: variant})
-            
-            elif name in fields.keys(): #check if the field was empty previously: 
-                oldVariant = fields[name]
-                # replace if new one is NOT LongLong or IS String
-                if oldVariant != "TEXT" and variant == "TEXT": 
-                    fields.update({name: variant}) 
-        #print(all_props)
 
     # replace all empty ones wit String
     for name in all_props:
         if name not in fields.keys(): 
-            fields.update({name: "TEXT"}) 
-    print(fields)
-    return fields
+            fields.update({name: 'TEXT'}) 
+    #print(fields)
+    fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
+    return fields_sorted
 
 def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
-    #print("Traverse Dict")
+    #print("______05___Traverse Dict")
+    #print(nam)
+    #print(val)
+    
     if isinstance(val, dict):
+        #print("DICT")
         for i, (k,v) in enumerate(val.items()):
-            traverseDict( newF, newVals, nam+"_"+k, v)
+            newF, newVals = traverseDict( newF, newVals, nam+"_"+k, v)
+    elif isinstance(val, Base):
+        #print("BASE")
+        dynamicProps = val.get_dynamic_member_names()
+        for att in ATTRS_REMOVE:
+            try: dynamicProps.remove(att)
+            except: pass
+        dynamicProps.sort()
+
+        item_dict = {} 
+        for prop in dynamicProps:
+            item_dict.update({prop: val[prop]})
+
+        for i, (k,v) in enumerate(item_dict.items()):
+            newF, newVals = traverseDict( newF, newVals, nam+"_"+k, v)
     else: 
+        #print("ELSE")
         var = getVariantFromValue(val)
-        if not var: var = None #LongLong #4 
-        else: 
-            newF.update({nam: var})
-            newVals.update({nam: val})  
-    #print(newF)
-    #print(newVals)
-    #print("traverse end")
+        if var is None: 
+            var = 'TEXT'
+            val = str(val)
+        newF.update({nam: var})
+        newVals.update({nam: val})  
+
     return newF, newVals
 
 def get_scale_factor(units: str) -> float:
@@ -123,46 +145,52 @@ def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, proj
     #apply transformation if needed
     if layer_sr.name != projectCRS.name:
         tr0 = tr1 = tr2 = tr_custom = None
-        transformations = arcpy.ListTransformations(layer_sr, projectCRS)
-        customTransformName = "layer_sr.name"+"_To_"+ projectCRS.name
-        if len(transformations) == 0:
-            midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
-            try:
-                tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
-                tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
-            except: 
-                #customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
-                #CreateCustomGeoTransformation(customTransformName, layer_sr, projectCRS)
-                tr_custom = customTransformName
-        else: 
-            #print("else")
-            # choose equation based instead of file-based/grid-based method, 
-            # to be consistent with QGIS: https://desktop.arcgis.com/en/arcmap/latest/map/projections/choosing-an-appropriate-transformation.htm
-            selecterTr = {}
-            for tr in transformations:
-                if "NTv2" not in tr and "NADCON" not in tr: 
-                    set1 = set( layer_sr.name.split("_") + projectCRS.name.split("_") )
-                    set2 = set( tr.split("_") )
-                    diff = len( set(set1).symmetric_difference(set2) )
-                    selecterTr.update({tr: diff})
-            selecterTr = dict(sorted(selecterTr.items(), key=lambda item: item[1]))
-            tr0 = list(selecterTr.keys())[0]
+        print(layer_sr)
+        try:
+            transformations = arcpy.ListTransformations(layer_sr, projectCRS)
+            customTransformName = "layer_sr.name"+"_To_"+ projectCRS.name
+            if len(transformations) == 0:
+                midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
+                try:
+                    tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
+                    tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
+                except: 
+                    #customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
+                    #CreateCustomGeoTransformation(customTransformName, layer_sr, projectCRS)
+                    tr_custom = customTransformName
+            else: 
+                #print("else")
+                # choose equation based instead of file-based/grid-based method, 
+                # to be consistent with QGIS: https://desktop.arcgis.com/en/arcmap/latest/map/projections/choosing-an-appropriate-transformation.htm
+                selecterTr = {}
+                for tr in transformations:
+                    if "NTv2" not in tr and "NADCON" not in tr: 
+                        set1 = set( layer_sr.name.split("_") + projectCRS.name.split("_") )
+                        set2 = set( tr.split("_") )
+                        diff = len( set(set1).symmetric_difference(set2) )
+                        selecterTr.update({tr: diff})
+                selecterTr = dict(sorted(selecterTr.items(), key=lambda item: item[1]))
+                tr0 = list(selecterTr.keys())[0]
 
-        if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint":
-            try: arcpy.AddWarning("Unsupported or invalid geometry in layer " + selectedLayer.name)
-            except: arcpy.AddWarning("Unsupported or invalid geometry")
+            if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint":
+                try: arcpy.AddWarning("Unsupported or invalid geometry in layer " + selectedLayer.name)
+                except: arcpy.AddWarning("Unsupported or invalid geometry")
 
-        # reproject geometry using chosen transformstion(s)
-        if tr0 is not None:
-            ptgeo1 = f_shape.projectAs(projectCRS, tr0)
-            f_shape = ptgeo1
-        elif tr1 is not None and tr2 is not None:
-            ptgeo1 = f_shape.projectAs(midSr, tr1)
-            ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
-            f_shape = ptgeo2
-        else:
-            ptgeo1 = f_shape.projectAs(projectCRS)
-            f_shape = ptgeo1
+            # reproject geometry using chosen transformstion(s)
+            if tr0 is not None:
+                ptgeo1 = f_shape.projectAs(projectCRS, tr0)
+                f_shape = ptgeo1
+            elif tr1 is not None and tr2 is not None:
+                ptgeo1 = f_shape.projectAs(midSr, tr1)
+                ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
+                f_shape = ptgeo2
+            else:
+                ptgeo1 = f_shape.projectAs(projectCRS)
+                f_shape = ptgeo1
+        
+        except:
+            arcpy.AddWarning(f"Spatial Transformation not found for layer {selectedLayer.name}")
+            return None
 
     return f_shape    
 
@@ -252,12 +280,12 @@ def curvedFeatureClassToSegments(layer) -> str:
     print(newPath)
     return newPath
 
-def validate_path(path):
+def validate_path(path: str):
     # https://github.com/EsriOceans/btm/commit/a9c0529485c9b0baa78c1f094372c0f9d83c0aaf
     """If our path contains a DB name, make sure we have a valid DB name and not a standard file name."""
     dirname, file_name = os.path.split(path)
-    print(dirname)
-    print(file_name)
+    #print(dirname)
+    #print(file_name)
     file_base = os.path.splitext(file_name)[0]
     if dirname == '':
         # a relative path only, relying on the workspace

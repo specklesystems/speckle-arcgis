@@ -7,8 +7,10 @@ from typing import Any, List, Tuple, Union
 from regex import D
 from speckle.converter.layers.CRS import CRS
 from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, rasterFeatureToSpeckle
+from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
 from specklepy.objects import Base
+from specklepy.objects.geometry import Mesh
+from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
 
 import arcgisscripting
 import pandas as pd
@@ -38,8 +40,8 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
             #if layerToSend.isFeatureLayer: 
             newBaseLayer = layerToSpeckle(layerToSend, project)
             if newBaseLayer is not None: result.append(newBaseLayer)
-
             elif layerToSend.isRasterLayer: pass
+            print(result)
 
     return result
 
@@ -121,6 +123,8 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                 speckleLayer.features=layerObjs
                 speckleLayer.geomType = data.shapeType
 
+                if len(speckleLayer.features) == 0: return None
+
                 #layerBase.renderer = layerRenderer
                 #layerBase.applicationId = selectedLayer.id()
 
@@ -160,7 +164,184 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
         return rasterLayerToNative(layer, streamBranch, project)
     return None
 
-def cadLayerToNative(layerContentList:Base, layerName: str, streamBranch: str, project: ArcGISProject) :
+def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, project: ArcGISProject) :
+    print("01______BIM layer to native")
+    print(layerName)
+    geom_meshes = []
+    layer_meshes = None
+    #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
+    for geom in layerContentList:
+        #print(geom)
+        if geom.displayMesh and isinstance(geom.displayMesh, Mesh): 
+            geom_meshes.append(geom)
+
+    if len(geom_meshes)>0: layer_meshes = bimVectorLayerToNative(geom_meshes, layerName, "Mesh", streamBranch, project)
+
+    return True
+
+
+def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
+    # no support for mltipatches, maybe in 3.1: https://community.esri.com/t5/arcgis-pro-ideas/better-support-for-multipatches-in-arcpy/idi-p/953614/page/2#comments
+    print("02_________BIM vector layer to native_____")
+    #get Project CRS, use it by default for the new received layer
+    vl = None
+    layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+    layerName = layerName + "_" + geomType
+    #if not "__Structural_Foundations_Mesh" in layerName: return None
+    
+    sr = arcpy.SpatialReference(project.activeMap.spatialReference.name)
+    active_map = project.activeMap
+    path = project.filePath.replace("aprx","gdb") #
+    path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\BIM_layers_speckle\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
+    print(path_bim)
+    if not os.path.exists(path_bim): os.makedirs(path_bim)
+    print(path)
+
+    if sr.type == "Geographic": 
+        arcpy.AddMessage(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly")
+
+    #CREATE A GROUP "received blabla" with sublayers
+    layerGroup = None
+    newGroupName = f'{streamBranch}'
+    #print(newGroupName)
+    for l in active_map.listLayers():
+        if l.longName == newGroupName: layerGroup = l; break 
+    
+    #find ID of the layer with a matching name in the "latest" group 
+    newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
+    print(newName)
+
+    all_layer_names = []
+    layerExists = 0
+    for l in project.activeMap.listLayers(): 
+        if l.longName.startswith(newGroupName + "\\"):
+            all_layer_names.append(l.longName)
+    #print(all_layer_names)
+
+    longName = streamBranch + "\\" + newName 
+    if longName in all_layer_names: 
+        for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
+            if (longName + "_" + letter) not in all_layer_names: newName += "_"+letter; layerExists +=1; break 
+
+    # particularly if the layer comes from ArcGIS
+    if "mesh" in geomType.lower(): geomType = "Multipatch"
+
+    #print("Create feature class (cad): ")
+    # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
+    class_name = ("f_class_" + newName)
+    #f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
+
+
+    shp = meshToNative(geomList, path_bim + newName)
+    print("____ meshes saved___")
+    print(shp)
+    #print(path)
+    #print(class_name)
+    validated_class_path = validate_path(class_name)
+    print(validated_class_path)
+    validated_class_name = validated_class_path.split("\\")[len(validated_class_path.split("\\"))-1]
+    print(validated_class_name)
+    f_class = arcpy.conversion.FeatureClassToFeatureClass(shp, path, validated_class_name)
+    # , spatial_reference = sr
+    #arcpy.management.Project(in_dataset, f_class, sr, in_coor_system=sr)
+
+    print(f_class)
+    #print(geomList)
+
+    # get and set Layer attribute fields
+    # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
+    newFields = getLayerAttributes(geomList)
+    
+    fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid", "displayMesh"]
+    matrix = []
+    all_keys = []
+    all_key_types = []
+    max_len = 52
+
+    print("___ after layer attributes: ___________")
+    print(newFields.items())
+    #try:
+    for key, value in newFields.items(): 
+        existingFields = [fl.name for fl in arcpy.ListFields(validated_class_name)]
+        #print(existingFields)
+        if key not in existingFields  and key.lower() not in fields_to_ignore: # exclude geometry and default existing fields
+            #print(key)
+            # signs that should not be used as field names and table names: https://support.esri.com/en/technical-article/000005588
+            key = key.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_") 
+            if key[0] in ['0','1','2','3','4','5','6','7','8','9']: key = "_"+key
+            if len(key)>max_len: key = key[:max_len]
+            #print(all_keys)
+            if key in all_keys:
+                for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
+                    if len(key)<max_len and (key+letter) not in all_keys: key+=letter; break 
+                    if len(key) == max_len and (key[:9] + letter) not in all_keys: key=key[:9] + letter; break 
+            if key not in all_keys: 
+                all_keys.append(key)
+                all_key_types.append(value)
+                #print(all_keys)
+                matrix.append([key, value, key, 255])
+    print(all_keys)
+    print(len(all_keys))
+    if len(matrix)>0: AddFields(str(f_class), matrix)
+    
+    fets = []
+    print("_________BIM FeatureS To Native___________")
+    for f in geomList[:]: 
+        new_feat = bimFeatureToNative(f, newFields, sr, path_bim)
+        if new_feat != "" and new_feat != None: 
+            fets.append(new_feat)
+    print(len(fets))
+        
+    
+    if len(fets) == 0: return None
+    count = 0
+    rowValues = []
+    for i, feat in enumerate(fets):
+
+        row = []
+        heads = []
+        for key in all_keys:
+            try:
+                row.append(feat[key])
+                heads.append(key)
+            except Exception as e: 
+                row.append(None)
+                heads.append(key)
+
+        rowValues.append(row)
+        count += 1
+    
+    with arcpy.da.UpdateCursor(f_class, heads) as cur:
+        # For each row, evaluate the WELL_YIELD value (index position 
+        # of 0), and update WELL_CLASS (index position of 1)
+        shp_num = 0
+        try:
+            for rowShape in cur: 
+                for i,r in enumerate(rowShape):
+                    rowShape[i] = rowValues[shp_num][i]
+                    if isinstance(rowValues[shp_num][i], str): rowShape[i] = rowValues[shp_num][i][:255]
+
+                cur.updateRow(rowShape)
+                shp_num += 1
+        except Exception as e: 
+            print(e)
+            print(i)
+            print(shp_num)
+            print(len(rowValues))
+            print(rowValues[i-1])
+            print(len(rowValues[i-1]))
+    del cur 
+    
+    print("create layer:")
+    vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+
+    active_map.addLayerToGroup(layerGroup, vl)
+    print("created2")
+    #os.remove(path_bim)
+
+    return True #last one
+
+def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, project: ArcGISProject) :
     print("01______Cad vector layer to native")
     print(layerName)
     geom_points = []
@@ -231,7 +412,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
     class_name = ("f_class_" + newName)
     f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
-    #print(f_class)
+    print(f_class)
     #print(geomList)
 
     # get and set Layer attribute fields
@@ -269,7 +450,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         if new_feat != "" and new_feat != None: 
             fets.append(new_feat)
     #print("features created")
-    #print(fets)
+    print(len(fets))
     
     if len(fets) == 0: return None
     count = 0
@@ -287,19 +468,16 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 row.append(value)
         rowValues.append(row)
         count += 1
-    #print(heads)
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     for row in rowValues: 
-        #print(tuple(heads))
-        #print(tuple(row))
         cur.insertRow(tuple(row))
     del cur 
-    #print(f_class)
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
     #active_map.addLayer(new_layer)
     active_map.addLayerToGroup(layerGroup, vl)
+    print("Layer created")
 
     return vl
 

@@ -14,7 +14,7 @@ from speckle.converter.layers.utils import (findTransformation, getVariantFromVa
                                             traverseDictByKey, hsv_to_rgb)
 
 from speckle.converter.geometry.point import pointToSpeckle
-from speckle.converter.geometry.mesh import rasterToMesh
+from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
 
 import numpy as np
 import colorsys
@@ -27,10 +27,19 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
     layer_sr = data.spatialReference # if sr.type == "Projected":
     geomType = data.shapeType #Polygon, Point, Polyline, Multipoint, MultiPatch
     featureType = data.featureType # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
-
+    print(geomType)
+    print(hasattr(data, "isRevit")) 
+    print(hasattr(data, "isIFC")) 
+    print(hasattr(data, "bimLevels")) 
+    print(hasattr(data, "hasSpatialIndex")) 
+    if geomType == "MultiPatch" or hasattr(data, "isRevit") or hasattr(data, "isIFC") or hasattr(data, "bimLevels"): 
+        print(f"Layer {selectedLayer.name} has unsupported data type")
+        arcpy.AddWarning(f"Layer {selectedLayer.name} has unsupported data type")
+        return None 
     #print(layer_sr.name)
     #print(projectCRS.name)
     f_shape = findTransformation(f_shape, geomType, layer_sr, projectCRS, selectedLayer)
+    if f_shape is None: return None
 
     ######################################### Convert geometry ##########################################
     try:
@@ -82,9 +91,26 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
             if variant == "LONG": feat.update({key: None})
             if variant == "SHORT": feat.update({key: None})
     return feat
+             
+def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, path: str):
+    #print("04_________BIM Feature To Native____________")
+
+    feat = {}
+    try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
+    except:  speckle_geom = feature # for created in other software
+
+    feat.update({"arcGisGeomFromSpeckle": ""})
+
+    try: 
+        if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
+    except: pass
+    feat_updated = updateFeat(feat, fields, feature)
+
+    return feat_updated
+                
 
 def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
-    print("04_________CAD Feature To Native____________")
+    #print("04_________CAD Feature To Native____________")
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
     except:  speckle_geom = feature # for created in other software
@@ -94,43 +120,73 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
         else: arcGisGeom = convertToNative(speckle_geom[0], sr) 
     else:
         arcGisGeom = convertToNative(speckle_geom, sr)
-    print(feat)
+        
     if arcGisGeom is not None:
         feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
     else: return None
-    print(feat)
+    
     try: 
         if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
     except: pass
-    print(feat)
-    #### setting attributes to feature
-    for key, variant in fields.items(): 
-        #value = feature[key]
-        #print()
-        if key == "Speckle_ID": 
-            value = str(feature["id"])
-            feat[key] = value 
-        else:
-            try: value = feature[key]
-            except:
-                rootName = key.split("_")[0]
-                newF, newVals = traverseDict({}, {}, rootName, feature[rootName][0])
-                for i, (k,v) in enumerate(newVals.items()):
-                    if k == key: value = v; break
-        # for all values: 
-        if variant == "TEXT": value = str(value) 
 
-        if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
-            feat.update({key: value})   
-        else: 
-            if variant == "TEXT": feat.update({key: None})
-            if variant == "FLOAT": feat.update({key: None})
-            if variant == "LONG": feat.update({key: None})
-            if variant == "SHORT": feat.update({key: None})
-            
-    print(feat) 
-    return feat
+    #### setting attributes to feature
+    feat_updated = updateFeat(feat, fields, feature)
+    return feat_updated
+
+def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
     
+    for key, variant in fields.items(): 
+        try:
+            if key == "Speckle_ID": 
+                value = str(feature["id"])
+                if key != "parameters": print(value)
+                feat[key] = value 
+
+                if variant == "TEXT": value = str(value) 
+                if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+
+            else:
+                try: 
+                    value = feature[key] 
+                    if variant == "TEXT": value = str(value) 
+                    if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                    elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+
+                except:
+                    value = None
+                    rootName = key.split("_")[0]
+                    #try: # if the root category exists
+                    # if its'a list 
+                    if isinstance(feature[rootName], list):
+                        for i in range(len(feature[rootName])):
+                            try:
+                                newF, newVals = traverseDict({}, {}, rootName + "_" + str(i), feature[rootName][i])
+                                for i, (key,value) in enumerate(newVals.items()):
+                                    for k, (x,y) in enumerate(newF.items()):
+                                        if key == x: variant = y; break
+                                    if variant == "TEXT": value = str(value) 
+                                    if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                                    elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+                            except Exception as e: print(e)
+                    #except: # if not a list
+                    else:
+                        try:
+                            newF, newVals = traverseDict({}, {}, rootName, feature[rootName])
+                            for i, (key,value) in enumerate(newVals.items()):
+                                for k, (x,y) in enumerate(newF.items()):
+                                    if key == x: variant = y; break
+                                #print(variant)
+                                if variant == "TEXT": value = str(value) 
+                                if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+                                elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+                        except Exception as e: feat.update({key: None})
+        except Exception as e: 
+            feat.update({key: None})
+    feat_sorted = {k: v for k, v in sorted(feat.items(), key=lambda item: item[0])}
+    #print("_________________end of updating a feature_________________________")
+    return feat_sorted
+
 def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialReference, project: ArcGISProject) -> Base:
     print("_________ Raster feature to speckle______") 
     # https://pro.arcgis.com/en/pro-app/latest/arcpy/classes/raster-object.htm 
@@ -181,6 +237,8 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         reprojectedPt = rasterOriginPoint
         if my_raster.spatialReference.name != projectCRS.name: 
             reprojectedPt = findTransformation(reprojectedPt, "Point", my_raster.spatialReference, projectCRS, selectedLayer)
+            if reprojectedPt is None: 
+                reprojectedPt = rasterOriginPoint
         geom = pointToSpeckle(reprojectedPt.getPart(), None, None)
         if (geom != None):
             b['displayValue'] = [geom]
