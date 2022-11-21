@@ -43,11 +43,7 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geo
         for att in attrsToRemove:
             try: dynamicProps.remove(att)
             except: pass
-
         dynamicProps.sort()
-        #print(dynamicProps)
-        #print(feature.get_dynamic_member_names())
-        #print(feature.get_typed_member_names())
 
         # add field names and variands 
         for name in dynamicProps:
@@ -58,12 +54,9 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geo
             if not variant: variant = None #LongLong #4 
 
             # go thought the dictionary object
-            #print("go thought the dictionary object")
             if value and isinstance(value, list) and isinstance(value[0], dict) :
                 all_props.remove(name) # remove generic dict name
                 newF, newVals = traverseDict( {}, {}, name, value[0])
-                #print(newF)
-                #print(newF.items())
                 for i, (k,v) in enumerate(newF.items()):
                     fields.update({k: v}) 
                     if k not in all_props: all_props.append(k)
@@ -78,7 +71,6 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geo
                 # replace if new one is NOT LongLong or IS String
                 if oldVariant != "TEXT" and variant == "TEXT": 
                     fields.update({name: variant}) 
-        #print(all_props)
 
     # replace all empty ones wit String
     for name in all_props:
@@ -88,8 +80,8 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] =['geo
     return fields
 
 def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
-    #print("__Traverse Dict")
-    #print(val)
+    print("______05___Traverse Dict")
+    print(val)
     try: val = val[0]
     except: pass
     if isinstance(val, dict):
@@ -98,9 +90,11 @@ def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
             traverseDict( newF, newVals, nam+"_"+k, v)
         #print("end-if")
     else: 
-        #print("else")
+        print("else")
         var = getVariantFromValue(val)
-        #print(var)
+        #print(val)
+        print(type(val))
+        if isinstance(val, List): print(type(val[0]))
         if not var: var = None #LongLong #4 
         else: 
             #print("double else")

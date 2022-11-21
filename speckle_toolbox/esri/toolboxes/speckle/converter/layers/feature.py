@@ -94,7 +94,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
              
 def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, path: str):
     print("04_________BIM Feature To Native____________")
-    print(feature)
+
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
     except:  speckle_geom = feature # for created in other software
@@ -104,43 +104,24 @@ def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, 
     try: 
         if "Speckle_ID" not in fields.keys() and feature["id"]: feat.update("Speckle_ID", "TEXT")
     except: pass
-    print(feat)
-    print(feature.get_dynamic_member_names())
-    #for it in feature.get_dynamic_member_names():
-    #    print(it)
-    #    print(feature[it])
-    #### setting attributes to feature
-    print("___get key/variant___")
+
     for key, variant in fields.items(): 
-        #value = feature[key]
-        #print(key)
-        #print(variant)
         if key == "Speckle_ID": 
-            #print("line 114")
-            #print(key)
             value = str(feature["id"])
             if key != "parameters": print(value)
             feat[key] = value 
         else:
-            try: value = feature[key]#; print("__trying")
+            try: value = feature[key] 
             except:
-                #print("__except")
                 value = None
                 rootName = key.split("_")[0]
-                #print("__except_" + rootName)
                 try: # if the root category exists
                     newF, newVals = traverseDict({}, {}, rootName, feature[rootName])
-                    #print(newVals)
                     for i, (k,v) in enumerate(newVals.items()):
                         if k == key: value = v; break
                 except: pass 
-        # for all values: 
-        #print(value)
+
         if variant == "TEXT": value = str(value) 
-        
-        #print(key)
-        #print(variant)
-        #print("_______________________________")
         if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
             feat.update({key: value})   
         else: 
@@ -148,9 +129,7 @@ def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, 
             if variant == "FLOAT": feat.update({key: None})
             if variant == "LONG": feat.update({key: None})
             if variant == "SHORT": feat.update({key: None})
-            
-    print(feat) 
-    #print(fields.items())
+
     return feat
                 
 

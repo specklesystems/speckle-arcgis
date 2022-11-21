@@ -281,7 +281,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 matrix.append([key, value, key, 255])
                 #print(matrix)
     if len(matrix)>0: AddFields(str(f_class), matrix)
-    print(matrix)
+    #print(matrix)
     fets = []
     for f in geomList[:]: 
         #print(f)
@@ -306,7 +306,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 row.append(value)
         rowValues.append(row)
         count += 1
-    print(heads)
+    #print(heads)
     #cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     #for row in rowValues: 
     #    print(tuple(heads))
@@ -328,8 +328,8 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                     #    rowShape[i] = 1
                     #elif all_key_types[i] == "LONG" and rowValues[shp_num][i] == False: 
                     #    rowShape[i] = 0
-                print(rowShape)
-                print(all_key_types)
+                #print(rowShape)
+                #print(all_key_types)
                 cur.updateRow(rowShape)
                 shp_num += 1
         except Exception as e: print(e)
