@@ -257,7 +257,7 @@ class Speckle:
 
         msg = arcpy.Parameter(
             displayName="Message",
-            name="message",
+            name="msg",
             datatype="GPString",
             parameterType="Optional",
             direction="Input",
@@ -777,9 +777,11 @@ class Speckle:
                 
             traverseObject(commitObj, callback, check)
       
-        except SpeckleException as e:
-            print("Receive failed")
+        except (SpeckleException, GraphQLException) as e:
+            print("Receive failed: " + str(e))
+            arcpy.AddError("Receive failed: " + str(e))
             return
+        
         print("received")
         #self.updateParameters(parameters, True)
         #self.refresh(parameters)
