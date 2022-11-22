@@ -391,11 +391,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     layerName = layerName + "_" + geomType
     print(layerName)
     
-    print(project)
-    print(project.activeMap)
-    print(project.activeMap.spatialReference.name)
     sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
-    #arcpy.SpatialReference.exportToString()
     active_map = project.activeMap
     path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
     
