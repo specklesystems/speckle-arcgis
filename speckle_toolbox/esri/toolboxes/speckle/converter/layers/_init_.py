@@ -189,7 +189,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     layerName = layerName + "_" + geomType
     #if not "__Structural_Foundations_Mesh" in layerName: return None
     
-    sr = arcpy.SpatialReference(project.activeMap.spatialReference.name)
+    sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
     active_map = project.activeMap
     path = project.filePath.replace("aprx","gdb") #
     path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\BIM_layers_speckle\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
@@ -368,7 +368,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
     layerName = layerName + "_" + geomType
     
-    sr = arcpy.SpatialReference(project.activeMap.spatialReference.name)
+    sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
     active_map = project.activeMap
     path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
     

@@ -382,7 +382,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
             pt3 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMax-(v+1)*rasterResXY[1]), my_raster.spatialReference, has_z = True)
             pt4 = arcpy.PointGeometry(arcpy.Point(extent.XMin+(h+1)*rasterResXY[0], extent.YMax-v*rasterResXY[1]), my_raster.spatialReference, has_z = True)
             # first, get point coordinates with correct position and resolution, then reproject each:
-            if my_raster.spatialReference.name != projectCRS.name:
+            if my_raster.spatialReference.exportToString() != projectCRS.exportToString():
                 pt1 = findTransformation(pt1, "Point", my_raster.spatialReference, projectCRS, selectedLayer)
                 pt2 = findTransformation(pt2, "Point", my_raster.spatialReference, projectCRS, selectedLayer)
                 pt3 = findTransformation(pt3, "Point", my_raster.spatialReference, projectCRS, selectedLayer)
