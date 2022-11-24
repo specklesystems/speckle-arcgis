@@ -398,12 +398,12 @@ class Speckle:
                 for p in parameters:
                     if p.name == "lat" and p.valueAsText is not None:
                         # add value from the UI to saved lat
-                        lat = p.valueAsText[:].replace(",","").replace(" ","").replace(";","").replace("-","").replace("_","")
+                        lat = p.valueAsText[:].replace(",","").replace(" ","").replace(";","").replace("_","")
                         try: lat = float(lat)
                         except: lat = 0; p.value = "0.0"
                     if p.name == "lon" and p.valueAsText is not None:
                         # add value from the UI to saved lat
-                        lon = p.valueAsText[:].replace(",","").replace(" ","").replace(";","").replace("-","").replace("_","")
+                        lon = p.valueAsText[:].replace(",","").replace(" ","").replace(";","").replace("_","")
                         try: lon = float(lon)
                         except: lon = 0; p.value = "0.0"
                     coords = [lat, lon]

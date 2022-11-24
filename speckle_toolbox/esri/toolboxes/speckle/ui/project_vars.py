@@ -253,15 +253,21 @@ class toolboxInputsClass:
         newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(self.lon) + " lat_0=" + str(self.lat) + " +x_0=0 +y_0=0 +k_0=1"
         newCrs = osr.SpatialReference()
         newCrs.ImportFromProj4(newCrsString)
-        print(newCrs.ExportToWkt())
+        newCrs.MorphToESRI() # converts the WKT to an ESRI-compatible format
+        
 
         validate = True if len(newCrs.ExportToWkt())>10 else False
 
         if validate: 
             newProjSR = arcpy.SpatialReference()
             newProjSR.loadFromString(newCrs.ExportToWkt())
+
+            #source = osr.SpatialReference() 
+            #source.ImportFromWkt(self.project.activeMap.spatialReference.exportToString())
+            #transform = osr.CoordinateTransformation(source, newCrs)
+
             self.project.activeMap.spatialReference =  newProjSR
-            arcpy.AddWarning("Custom project CRS successfully applied")
+            arcpy.AddMessage("Custom project CRS successfully applied")
         else:
             arcpy.AddWarning("Custom CRS could not be created")
 
