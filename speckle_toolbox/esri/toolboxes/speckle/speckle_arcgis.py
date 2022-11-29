@@ -144,7 +144,11 @@ class Speckle:
             category=cat1
             )
         streamsDefalut.filter.type = 'ValueList'
-        streamsDefalut.filter.list = [ (st.name + " - " + st.id) for st in self.speckleInputs.streams_default ]
+        if isinstance(self.speckleInputs.streams_default, SpeckleException):
+            arcpy.AddError("Speckle account not accessible")
+            streamsDefalut.filter.list = []
+        else:
+            streamsDefalut.filter.list = [ (st.name + " - " + st.id) for st in self.speckleInputs.streams_default ]
 
         addDefStreams = arcpy.Parameter(
             displayName="Add",
