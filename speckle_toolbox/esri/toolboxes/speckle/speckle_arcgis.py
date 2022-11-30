@@ -696,6 +696,8 @@ class Speckle:
 
             # Clear 'latest' group
             streamBranch = streamId + "_" + self.toolboxInputs.active_branch.name + "_" + str(commit.id)
+            streamBranch = streamBranch.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+    
             newGroupName = f'{streamBranch}'
             
             groupExists = 0
@@ -754,6 +756,8 @@ class Speckle:
                     except: pass
 
             def loopVal(value: Any, name: str): # "name" is the parent object/property/layer name
+                if name.endswith('/displayValue'): return 
+                
                 if isinstance(value, Base): 
                     try: # dont go through parts of Speckle Geometry object
                         print("objects to loop through: " + value.speckle_type)
@@ -773,7 +777,7 @@ class Speckle:
                             if pl is not None: print("Layer group created: " + pl.name())
                             break
                         
-                        if item.speckle_type and "Revit" in item.speckle_type and item.speckle_type.startswith("Objects.BuiltElements."): 
+                        if item.speckle_type and item.speckle_type.startswith("Objects.BuiltElements."): #  and "Revit" in item.speckle_type
 
                             msh_bool = bimLayerToNative(value, name, streamBranch, self.speckleInputs.project)
                             #if msh is not None: print("Layer group created: " + msh.name())
