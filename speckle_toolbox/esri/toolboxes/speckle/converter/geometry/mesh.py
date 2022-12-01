@@ -16,12 +16,28 @@ def meshToNative(meshes: List[Mesh], path: str):
     w.field('speckleTyp', 'C')
 
     shapes = []
-    for mesh_full in meshes:
-        #print(mesh_full)
-        #print(mesh_full.get_dynamic_member_names())
-        mesh = mesh_full.displayMesh
-        #print(mesh)
-        w = fill_mesh_parts(w, mesh)
+    for geom in meshes:
+        
+        try: 
+            if geom.displayValue and isinstance(geom.displayValue, Mesh): 
+                mesh = geom.displayValue
+                w = fill_mesh_parts(w, mesh)
+            elif geom.displayValue and isinstance(geom.displayValue, List): 
+                for part in geom.displayValue:
+                    if isinstance(part, Mesh): 
+                        mesh = part
+                        w = fill_mesh_parts(w, mesh)
+        except: 
+            try: 
+                if geom.displayMesh and isinstance(geom.displayMesh, Mesh): 
+                    mesh = geom.displayMesh
+                    w = fill_mesh_parts(w, mesh)
+                elif geom.displayMesh and isinstance(geom.displayMesh, List): 
+                    for part in geom.displayMesh:
+                        if isinstance(part, Mesh): 
+                            mesh = part
+                            w = fill_mesh_parts(w, mesh)
+            except: pass
     w.close()
     return path
 
@@ -33,7 +49,7 @@ def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh):
     count = 0 # sequence of vertex (not of flat coord list) 
     try:
         #print(len(mesh.faces))
-        if len(mesh.faces) % 4 == 0 and mesh.faces[0] == 0:
+        if len(mesh.faces) % 4 == 0 and (mesh.faces[0] == 0 or mesh.faces[0] == 3):
             for f in mesh.faces:
                 try:
                     if mesh.faces[count] == 0 or mesh.faces[count] == 3: # only handle triangles

@@ -133,6 +133,14 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     feat_updated = updateFeat(feat, fields, feature)
     return feat_updated
 
+def addFeatVariant(key, variant, value, f):
+    
+    feat = f
+    if variant == "TEXT": value = str(value) 
+    if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
+    elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+    return feat 
+
 def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
     
     for key, variant in fields.items(): 
@@ -142,17 +150,11 @@ def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
                 if key != "parameters": print(value)
                 feat[key] = value 
 
-                if variant == "TEXT": value = str(value) 
-                if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
-                elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
-
+                feat = addFeatVariant(key, variant, value, feat)
             else:
                 try: 
                     value = feature[key] 
-                    if variant == "TEXT": value = str(value) 
-                    if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
-                    elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
-
+                    feat = addFeatVariant(key, variant, value, feat)
                 except:
                     value = None
                     rootName = key.split("_")[0]
@@ -165,9 +167,7 @@ def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
                                 for i, (key,value) in enumerate(newVals.items()):
                                     for k, (x,y) in enumerate(newF.items()):
                                         if key == x: variant = y; break
-                                    if variant == "TEXT": value = str(value) 
-                                    if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
-                                    elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+                                    feat = addFeatVariant(key, variant, value, feat)
                             except Exception as e: print(e)
                     #except: # if not a list
                     else:
@@ -176,10 +176,7 @@ def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
                             for i, (key,value) in enumerate(newVals.items()):
                                 for k, (x,y) in enumerate(newF.items()):
                                     if key == x: variant = y; break
-                                #print(variant)
-                                if variant == "TEXT": value = str(value) 
-                                if variant == getVariantFromValue(value) and value != "NULL" and value != "None": feat.update({key: value})   
-                                elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
+                                feat = addFeatVariant(key, variant, value, feat)
                         except Exception as e: feat.update({key: None})
         except Exception as e: 
             feat.update({key: None})
