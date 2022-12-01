@@ -187,19 +187,18 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     # no support for mltipatches, maybe in 3.1: https://community.esri.com/t5/arcgis-pro-ideas/better-support-for-multipatches-in-arcpy/idi-p/953614/page/2#comments
     print("02_________BIM vector layer to native_____")
     #get Project CRS, use it by default for the new received layer
-    try:
-        vl = None
-        layerName = layerName + "_" + geomType
-        layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
-        #if not "__Structural_Foundations_Mesh" in layerName: return None
-        
-        sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
-        active_map = project.activeMap
-        
-        path = project.filePath.replace("aprx","gdb") #
-        path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\BIM_layers_speckle\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
-        print(path_bim)
-    except Exception as e: print(e) 
+    
+    vl = None
+    layerName = layerName + "_" + geomType
+    layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+    #if not "__Structural_Foundations_Mesh" in layerName: return None
+    
+    sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
+    active_map = project.activeMap
+    
+    path = project.filePath.replace("aprx","gdb") #
+    path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\BIM_layers_speckle\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
+    print(path_bim)
     
     if not os.path.exists(path_bim): os.makedirs(path_bim)
     print(path)
