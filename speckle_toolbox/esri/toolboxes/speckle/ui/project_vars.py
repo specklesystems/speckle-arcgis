@@ -101,7 +101,7 @@ class speckleInputsClass:
                 streamExists = 0
                 index = 0
                 try:
-                    print(url)
+                    #print(url)
                     sw = StreamWrapper(url)
                     stream = self.tryGetStream(sw)
 
@@ -140,6 +140,7 @@ class toolboxInputsClass:
     lat: float = 0.0
     lon: float = 0.0
     active_stream: Optional[Stream] = None
+    active_stream_wrapper: Optional[StreamWrapper] = None
     active_branch: Optional[Branch] = None
     active_commit = None
     selected_layers: List[Any] = []
@@ -253,7 +254,7 @@ class toolboxInputsClass:
         newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(self.lon) + " lat_0=" + str(self.lat) + " +x_0=0 +y_0=0 +k_0=1"
         newCrs = osr.SpatialReference()
         newCrs.ImportFromProj4(newCrsString)
-        print(newCrs.ExportToWkt())
+        #print(newCrs.ExportToWkt())
 
         validate = True if len(newCrs.ExportToWkt())>10 else False
 
