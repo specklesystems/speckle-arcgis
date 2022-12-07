@@ -23,6 +23,7 @@ from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndN
 import numpy as np
 
 from speckle.converter.layers.utils import findTransformation
+from speckle.converter.layers.symbologyTemplates import vectorRendererToNative
 
 
 def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
@@ -554,7 +555,7 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         new_feat = featureToNative(f, newFields, geomType, sr)
         if new_feat != "" and new_feat!= None: fets.append(new_feat)
     
-    print(fets)
+    #print(fets)
     if len(fets) == 0: return None
     count = 0
     rowValues = []
@@ -575,8 +576,8 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         count += 1
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     for row in rowValues: 
-        print(tuple(heads))
-        print(tuple(row))
+        #print(tuple(heads))
+        #print(tuple(row))
         cur.insertRow(tuple(row))
     del cur 
 
@@ -584,7 +585,12 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
     #active_map.addLayer(new_layer)
-    active_map.addLayerToGroup(layerGroup, vl)
+    #print(layerGroup)
+    #print(vl)
+    vectorRendererToNative(project, active_map, layerGroup, layer, vl, f_class, heads)
+    vl2 = MakeFeatureLayer(str(f_class), newName + '_').getOutput(0)
+    active_map.addLayerToGroup(layerGroup, vl2)
+
     r'''
     # rename back the layer if was renamed due to existing duplicate
     if layerExists:  

@@ -67,7 +67,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
     except:  speckle_geom = feature # for created in other software
-    print(speckle_geom)
+    #print(speckle_geom)
     if isinstance(speckle_geom, list):
         if len(speckle_geom)>1 or geomType == "Multipoint": arcGisGeom = convertToNativeMulti(speckle_geom, sr)
         else: arcGisGeom = convertToNative(speckle_geom[0], sr)

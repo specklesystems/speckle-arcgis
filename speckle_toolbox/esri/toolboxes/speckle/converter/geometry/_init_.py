@@ -126,7 +126,7 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
             except: pass # if Line
 
         pts = [pointToCoord(pt) for pt in pointsSpeckle]
-        print(pts)
+        #print(pts)
 
         outer_arr = [arcpy.Point(*coords) for coords in pts]
         outer_arr.append(outer_arr[0])

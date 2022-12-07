@@ -1,5 +1,8 @@
+
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import arcpy
+import json
+import os
 
 from speckle.converter.layers.CRS import CRS
 from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
@@ -10,14 +13,68 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 
 from specklepy.objects import Base
 
+##################################################### get example layers from the project #######
 project = ArcGISProject('CURRENT')
 active_map = project.activeMap
 all_layers = []
+
+layerPolygon = None
+layerPolyline = None
+layerPoint = None
+layerMultiPoint = None
 #get layer of interest
 for layer in active_map.listLayers(): 
-   if layer.isFeatureLayer or layer.isRasterLayer: all_layers.append(layer)
-   if layer.name == "ExteriorShell": break
+   if layer.isFeatureLayer or layer.isRasterLayer: 
+        all_layers.append(layer)
+        data = arcpy.Describe(layer.dataSource)
+        if layer.isFeatureLayer:
+            geomType = data.shapeType
+            if geomType == "Polygon" and layerPolyline is None: layerPolygon = layer 
+            if geomType == "Polyline" and layerPolyline is None: layerPolyline = layer 
+            if geomType == "Point" and layerPoint is None: layerPoint = layer 
+            if geomType == "Multipoint" and layerMultiPoint is None: layerMultiPoint = layer 
 
+################## reset symbology if needed:
+sym = layerPolygon.symbology
+print(sym.renderer.type)
+sym.updateRenderer('UniqueValueRenderer')
+layerPolygon.symbology = sym
+print(sym.updateRenderer('UniqueValueRenderer'))
+print(layerPolygon.symbology.renderer.type)
+# SimpleRenderer, GraduatedColorsRenderer, GraduatedSymbolsRenderer, UnclassedColorsRenderer, UniqueValueRenderer 
+
+######################################### change symbology ################################# 
+
+from speckle.converter.layers.symbologyTemplates import get_polygon_simpleRenderer 
+from arcpy._mp import ArcGISProject
+
+aprx = ArcGISProject('CURRENT')
+root_path = "\\".join(aprx.filePath.split("\\")[:-1])
+
+path_style = root_path + '\\layer_speckle_symbology.lyrx'
+path_style2 = root_path + '\\layer_speckle_symbology2.lyrx'
+#arcpy.management.SaveToLayerFile(layerPolygon, path_style, False)
+print(layerPolygon.dataSource)
+arcpy.management.ApplySymbologyFromLayer(
+                        in_layer=layerPolygon.dataSource, 
+                        in_symbology_layer=path_style2, 
+                        update_symbology='UPDATE')
+
+
+
+f = open(path_style, "r")
+renderer = json.loads(f.read())
+
+renderer["layerDefinitions"][0]["renderer"] = get_polygon_simpleRenderer(1,2,150)
+f = open(path_style2, "w")
+f.write(json.dumps(renderer, indent=4))
+f.close()
+arcpy.management.ApplySymbologyFromLayer(str(layerPolygon), path_style2)
+os.remove(path_style)
+os.remove(path_style2)
+
+###########################################################################
+layer = all_layers[0] 
 if isinstance(layer, arcLayer): 
 
     projectCRS = project.activeMap.spatialReference

@@ -456,7 +456,7 @@ def specklePolycurveToPoints(poly: Polycurve) -> List[Point]:
     print("_____Speckle Polycurve to points____")
     points = []
     for segm in poly.segments:
-        print(segm)
+        #print(segm)
         pts = []
         if isinstance(segm, Arc) or isinstance(segm, Circle): # or isinstance(segm, Curve):
             print("Arc or Curve")
