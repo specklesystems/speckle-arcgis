@@ -29,7 +29,7 @@ for layer in active_map.listLayers():
         data = arcpy.Describe(layer.dataSource)
         if layer.isFeatureLayer:
             geomType = data.shapeType
-            if geomType == "Polygon" and layerPolyline is None: layerPolygon = layer 
+            if geomType == "Polygon" and layerPolygon is None: layerPolygon = layer 
             if geomType == "Polyline" and layerPolyline is None: layerPolyline = layer 
             if geomType == "Point" and layerPoint is None: layerPoint = layer 
             if geomType == "Multipoint" and layerMultiPoint is None: layerMultiPoint = layer 
@@ -44,6 +44,21 @@ print(layerPolygon.symbology.renderer.type)
 # SimpleRenderer, GraduatedColorsRenderer, GraduatedSymbolsRenderer, UnclassedColorsRenderer, UniqueValueRenderer 
 
 ######################################### change symbology ################################# 
+
+for k, grp in enumerate(sym.renderer.groups):
+    for itm in grp.items:
+        print(itm)
+        print(itm.values)
+        print(itm.symbol.color)
+        transVal = itm.values[0][0] #Grab the first "percent" value in the list of potential values
+        print(transVal)
+        for i in range(len(cats)):
+            label = cats[i]['value'] 
+            print(label)
+            if label is None or label=="": label = "<Null>"
+            print(label)
+
+
 
 from speckle.converter.layers.symbologyTemplates import get_polygon_simpleRenderer 
 from arcpy._mp import ArcGISProject

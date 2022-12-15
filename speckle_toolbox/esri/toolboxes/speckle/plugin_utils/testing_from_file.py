@@ -42,16 +42,25 @@ for layer in active_map.listLayers():
         break
 
 print(layerPolygon.dataSource)
+r'''
+source = str(layerPolygon.dataSource).split('\\')
 
-arcpy.ApplySymbologyFromLayer_management(
-                        in_layer=layerPolygon.dataSource, 
+layerPolygon = arcpy.ApplySymbologyFromLayer_management(
+                        in_layer= str(layerPolygon.dataSource), 
                         in_symbology_layer=path_style2, 
-                        update_symbology='UPDATE')
-
+                        update_symbology='UPDATE')[0]
+'''
 #vl2 = MakeFeatureLayer(layerPolygon.dataSource, 'someName').getOutput(0)
-active_map.addLayer(arcpy.mp.LayerFile(path_style2))
+#active_map.addLayer(arcpy.mp.LayerFile(path_style2))
 
 ################## reset symbology if needed:
+
+sym = layerPolygon.symbology
+print(sym.renderer.type)
+sym.updateRenderer('UniqueValueRenderer')
+print(sym.renderer.type)
+layerPolygon.symbology = sym
+print(sym.renderer.type)
 r'''
 sym = layerPolygon.symbology
 print(sym.renderer.type)

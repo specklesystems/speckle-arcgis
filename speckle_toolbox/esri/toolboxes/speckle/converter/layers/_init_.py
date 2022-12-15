@@ -584,12 +584,17 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
-    #active_map.addLayer(new_layer)
-    #print(layerGroup)
-    #print(vl)
-    vectorRendererToNative(project, active_map, layerGroup, layer, vl, f_class, heads)
-    vl2 = MakeFeatureLayer(str(f_class), newName + '_').getOutput(0)
-    active_map.addLayerToGroup(layerGroup, vl2)
+    
+    active_map.addLayerToGroup(layerGroup, vl)
+    vl2 = None
+    print(newName)
+    for l in project.activeMap.listLayers(): 
+        #print(l.longName)
+        if l.longName == layerGroup.longName + "\\" + newName:
+            vl2 = l 
+    path_lyr = vectorRendererToNative(project, active_map, layerGroup, layer, vl2, f_class, heads)
+    #if path_lyr is not None: 
+    #    active_map.removeLayer(path_lyr)    
 
     r'''
     # rename back the layer if was renamed due to existing duplicate
@@ -713,16 +718,24 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     #mergedRaster.setProperty("spatialReference", crsRaster)
 
     full_path = validate_path(path + "\\" + newName) #solved file saving issue 
+    print("RASTER FULL PATH")
+    print(full_path)
     if os.path.exists(full_path):
+        print(full_path)
         for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
+            print(full_path + letter)
             if os.path.exists(full_path + letter): pass
             else: full_path += letter; break 
-
+    print("RASTER new PATH")
     print(full_path)
     #mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
     #mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
     
-    arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+    try: 
+        arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+    except: # if already exists
+        full_path += "_"
+        arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
     print(path + "\\" + newName)
     arcpy.management.DefineProjection(full_path, srRaster)
 
