@@ -22,11 +22,13 @@ layerPolygon = None
 layerPolyline = None
 layerPoint = None
 layerMultiPoint = None
+layerRaster = None
 #get layer of interest
 for layer in active_map.listLayers(): 
    if layer.isFeatureLayer or layer.isRasterLayer: 
         all_layers.append(layer)
         data = arcpy.Describe(layer.dataSource)
+        if layer.isRasterLayer and layerRaster is None: layerRaster = layer 
         if layer.isFeatureLayer:
             geomType = data.shapeType
             if geomType == "Polygon" and layerPolygon is None: layerPolygon = layer 
@@ -301,12 +303,12 @@ feature_class = result[0]
 
 ################################# reading shapefile - works ####################
 
-fc = r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\BIM_layers_speckle\00f70159b9104180f622cca87f5dd2cb.shp'
+fc = r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\Layers_Speckle\BIM_layers_speckle\00f70159b9104180f622cca87f5dd2cb.shp'
 rows = arcpy.da.SearchCursor(fc, 'Shape@')
 for r in rows:
         if r is not None: shape = r
 print(shape)
-cl = arcpy.conversion.FeatureClassToFeatureClass(r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\BIM_layers_speckle\16d73b756a_main_2f8cfa8644\__Floors_Mesh\00c7696966e4cfda2bd8c03860a414a6', r'C:\Users\katri\Documents\ArcGIS\tests', 'copyclass')
+cl = arcpy.conversion.FeatureClassToFeatureClass(r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\Layers_Speckle\BIM_layers_speckle\16d73b756a_main_2f8cfa8644\__Floors_Mesh\00c7696966e4cfda2bd8c03860a414a6', r'C:\Users\katri\Documents\ArcGIS\tests', 'copyclass')
 
 ##################################### update rows in feature class - working #############
 with arcpy.da.UpdateCursor('f_class_2f8cfa8644___Structural_Framing_Mesh', 'name') as cursor:

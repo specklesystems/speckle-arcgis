@@ -768,7 +768,8 @@ class Speckle:
                 if isinstance(value, List):
                     for item in value:
                         loopVal(item, name)
-                        #print(item)
+                        
+                        print(item)
                         pt = None
                         if item.speckle_type and item.speckle_type.startswith("Objects.Geometry."): 
 
@@ -777,8 +778,8 @@ class Speckle:
                             if pl is not None: print("Layer group created: " + pl.name())
                             break
                         
-                        if item.speckle_type and item.speckle_type.startswith("Objects.BuiltElements."): #  and "Revit" in item.speckle_type
-
+                        if item.speckle_type and (item.speckle_type.startswith("Objects.BuiltElements.") or item.speckle_type.startswith("Objects.Structural.Geometry")): #  and "Revit" in item.speckle_type
+                            print("__receiving structures__")
                             msh_bool = bimLayerToNative(value, name, streamBranch, self.speckleInputs.project)
                             #if msh is not None: print("Layer group created: " + msh.name())
                             break

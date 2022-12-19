@@ -19,7 +19,6 @@ def jsonFromLayerStyle(layerArcgis, path_style):
     os.remove(path_style)
     return layerStyle
 
-
 def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layerSpeckle: Union[Layer, VectorLayer], layerArcgis, f_class, existingAttrs: List) -> Union[None, dict[str, Any]] :
     print("___________APPLY VECTOR RENDERER______________")
     print(layerArcgis)
@@ -165,3 +164,172 @@ def check_rgb(r:int, g:int, b:int) -> tuple[int, int, int]:
     if not isinstance(g, int) or g<0 or g>255: r=g=b=0
     if not isinstance(b, int) or b<0 or b>255: r=g=b=0
     return r,g,b 
+
+
+
+def rasterRendererToNative(project: ArcGISProject, active_map, layerGroup,  layer: RasterLayer, arcLayer, rasterPathsToMerge, newName):
+    print("_____rasterRenderer ToNative______")
+    renderer = layer.renderer
+    rendererNew = None
+    print(renderer)
+
+    feat = layer.features[0]
+    print(feat)
+
+    bandNames = feat["Band names"]
+    print(bandNames)
+
+    sym = arcLayer.symbology
+    symJson = None
+    path_style = ""
+    path_style2 = ""
+
+    print(sym)
+
+    if renderer and renderer['type']:
+        
+        if not hasattr(arcLayer.symbology, 'colorizer'): 
+            # multiband raster, CIMRasterRGBColorizer 
+            # arcpy doesnt support multiband raster symbology: https://community.esri.com/t5/arcgis-api-for-python-questions/why-does-arcpy-mp-arcgis-pro-2-6-mosaic-dataset/td-p/1016312 
+            root_path = "\\".join(project.filePath.split("\\")[:-1])
+            if not os.path.exists(root_path + '\\Layers_Speckle\\rasters_Speckle'): os.makedirs(root_path + '\\Layers_Speckle\\rasters_Speckle')
+            path_style = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + newName + '_old.lyrx'
+            path_style2 = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + newName + '_new.lyrx'
+            symJson = jsonFromLayerStyle(arcLayer, path_style)
+
+        if renderer['type']  == 'singlebandgray':
+            print("Singleband grey")
+            band_index = renderer['properties']['band']-1
+            if symJson is None:
+                sym.updateColorizer('RasterStretchColorizer')
+                sym.colorizer.band = band_index
+                arcLayer.symbology = sym
+            else: 
+                temp = arcpy.management.MakeRasterLayer(rasterPathsToMerge[band_index], newName + "_temp").getOutput(0)
+                active_map.addLayerToGroup(layerGroup, temp)
+                temp_layer = None
+                for l in active_map.listLayers(): 
+                    if l.longName == layerGroup.longName + "\\" + newName + "_temp":
+                        print(l.longName)
+                        temp_layer = l 
+                        break
+
+                sym = temp_layer.symbology
+                sym.updateColorizer('RasterStretchColorizer')
+                sym.colorizer.band = band_index
+                arcLayer.symbology = sym
+
+                active_map.removeLayer(temp_layer) 
+                
+
+        elif renderer['type']  == 'multibandcolor':
+            print("Multiband")
+            if symJson is None: 
+                sym.updateColorizer('RasterStretchColorizer')
+                arcLayer.symbology = sym 
+            else:
+                
+                redSt =  copy.deepcopy(symJson["layerDefinitions"][0]["colorizer"]["stretchStatsRed"])
+                greenSt =  copy.deepcopy(symJson["layerDefinitions"][0]["colorizer"]["stretchStatsGreen"])
+                blueSt =  copy.deepcopy(symJson["layerDefinitions"][0]["colorizer"]["stretchStatsBlue"])
+
+                redBand = renderer['properties']['redBand']
+                greenBand = renderer['properties']['greenBand']
+                blueBand = renderer['properties']['blueBand']
+                try: symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"] = greenBand-1
+                except: symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"] = 0
+
+                try: symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"] = redBand-1
+                except: symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"] = 0
+                
+                try: symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] = blueBand-1
+                except: symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] = 0
+                
+                print(symJson)
+                f = open(path_style2, "w")
+                f.write(json.dumps(symJson, indent=2))
+                f.close()
+
+                active_map.removeLayer(arcLayer) 
+                lyrFile = arcpy.mp.LayerFile(path_style2)
+                active_map.addLayerToGroup(layerGroup, lyrFile )
+                
+                os.remove(path_style2) 
+
+        elif renderer['type']  == 'paletted':
+            print("Paletted")
+            band_index = renderer['properties']['band']-1
+
+            if symJson is None:
+                for br in sym.colorizer.groups:
+                    print(br.heading) #"Value"
+                    # go through all values classified 
+                    for k, itm in enumerate(br.items):
+                        if k< len(renderer['properties']['classes']):
+                            #go through saved renderer classes
+                            for n, cl in enumerate(renderer['properties']['classes']):
+                                if k == n:
+                                    r,g,b = get_r_g_b(cl['color']) 
+                                    itm.color = {'RGB': [r,g,b, 100]}
+                                    itm.label = cl['label']
+                                    itm.values = cl['value']
+                        else: pass
+                arcLayer.symbology = sym 
+        else: 
+            sym.updateColorizer('RasterStretchColorizer')
+            arcLayer.symbology = sym
+    return arcLayer
+    
+
+def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer):
+    print("_____rasterRenderer To Speckle______")
+    if arcLayer.isRasterLayer: 
+        try: 
+            rType = arcLayer.symbology.colorizer.type # 'singleSymbol','categorizedSymbol','graduatedSymbol',
+            if rType =='RasterStretchColorizer':  rType = 'singlebandgray'
+            elif rType =='RasterUniqueValueColorizer':  rType = 'paletted' # only for 1-band raster 
+            else: rType = 'singlebandgray'
+        except: 
+            rType = "multibandcolor"
+            root_path = "\\".join(project.filePath.split("\\")[:-1])
+            if not os.path.exists(root_path + '\\Layers_Speckle\\rasters_Speckle'): os.makedirs(root_path + '\\Layers_Speckle\\rasters_Speckle')
+            path_style = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + arcLayer.name + '_temp.lyrx'
+            #path_style2 = root_path + '\\' + newName + '_new.lyrx'
+            symJson = jsonFromLayerStyle(arcLayer, path_style)
+
+        layerRenderer: dict[str, Any] = {}
+        layerRenderer['type'] = rType
+        print(rType)
+
+        if rType == "singlebandgray":  
+            try: band = arcLayer.symbology.colorizer.band - 1
+            except: band = 0 
+            layerRenderer.update({'properties': {'max':'','min':'','band':band,'contrast':''}}) 
+        elif rType == "multibandcolor":  
+            redBand = symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"]
+            greenBand = symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"]
+            blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] 
+
+            layerRenderer['properties'].update({'redContrast':'','redMin':'','redMax':''})
+            layerRenderer['properties'].update({'greenContrast':'','greenMin':'','greenMax':''})
+            layerRenderer['properties'].update({'blueContrast':'','blueMin':'','blueMax':''})
+        elif rType == "paletted":  
+            band = 0 
+            rendererClasses = arcLayer.symbology.colorizer.groups
+            classes = []
+            sourceRamp = {}
+
+            for i, cl in enumerate(rendererClasses):
+                if cl.heading == 'Value':
+                    for k, itm in enumerate(cl.items):
+                        value = itm.values
+                        label = itm.label 
+                        try: 
+                            r,g,b = itm.color['RGB']
+                            sColor = (r<<16) + (g<<8) + b
+                            classes.append({'color':sColor,'value':value,'label':label})
+                        except: pass 
+            layerRenderer.update({'properties': {'classes':classes,'ramp':sourceRamp,'band':band}})
+
+    return layerRenderer 
+

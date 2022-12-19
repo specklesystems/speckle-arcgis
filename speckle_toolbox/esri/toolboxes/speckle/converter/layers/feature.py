@@ -19,6 +19,8 @@ from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
 import numpy as np
 import colorsys
 
+from speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
+
 
 def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialReference, project: ArcGISProject, selectedLayer: arcLayer):
     print("___________Feature to Speckle____________")
@@ -319,8 +321,11 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
 
         print(colorizer) # <arcpy._colorizer.RasterStretchColorizer object at 0x000001780497FBC8>
         print(colorizer.type) # RasterStretchColorizer 
+    else: 
+        # RGB colorizer
+        pass
     rendererType = ""
-    if hasattr(selectedLayer.symbology, 'renderer'): rendererType = selectedLayer.symbology.renderer.type #e.g. SimpleRenderer
+    #if hasattr(selectedLayer.symbology, 'renderer'): rendererType = selectedLayer.symbology.renderer.type #e.g. SimpleRenderer
     # custom color ramp {"type": "algorithmic", "fromColor": [115, 76, 0, 255],"toColor": [255, 25, 86, 255], "algorithm": "esriHSVAlgorithm"}.
     # custom color map {'values': [0, 1, 2, 3, 4, 5], 'colors': ['#000000', '#DCFFDF', '#B8FFBE', '#85FF90', '#50FF60','#00AB10']}
 
@@ -438,34 +443,80 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                 print(colorizer.groups)
             '''
             #else:  
-            if colorizer:   
-                try: bandIndex = int(colorizer.band)
-                except: pass            
-                try:
-                    if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
+            if colorizer: # only 1 band 
+                try: bandIndex = int(colorizer.band) # if stretched 
+                except: pass     
+                if colorizer.type =='RasterUniqueValueColorizer': 
+                    # REDO !!!!!!!!!!!!
+                    try:
+                        if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
+                            # REMAP band values to (0,255) range
+                            valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                            colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
+                            if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                            color =  (colorVal<<16) + (colorVal<<8) + colorVal
+                    except: # if no Min Max labels:
                         # REMAP band values to (0,255) range
-                        valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                        colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
-                        if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                        valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                        colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
                         color =  (colorVal<<16) + (colorVal<<8) + colorVal
-                except: # if no Min Max labels:
-                    # REMAP band values to (0,255) range
-                    valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                    colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
-                    color =  (colorVal<<16) + (colorVal<<8) + colorVal
-            else:
+
+                else:
+                    try:
+                        if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
+                            # REMAP band values to (0,255) range
+                            valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                            colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
+                            if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                            color =  (colorVal<<16) + (colorVal<<8) + colorVal
+                    except: # if no Min Max labels:
+                        # REMAP band values to (0,255) range
+                        valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                        colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
+                        color =  (colorVal<<16) + (colorVal<<8) + colorVal
+            else: # rgb
                 # REMAP band values to (0,255) range
-                rbVals = my_raster.getRasterBands(rasterBandNames[0])
-                try:
+                root_path = "\\".join(project.filePath.split("\\")[:-1])
+                if not os.path.exists(root_path + '\\Layers_Speckle\\rasters_Speckle'): os.makedirs(root_path + '\\Layers_Speckle\\rasters_Speckle')
+                path_style = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + selectedLayer.name + '_temp.lyrx'
+                symJson = jsonFromLayerStyle(selectedLayer, path_style)
+
+                # read from Json
+                try: greenBand = symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"]
+                except: greenBand = None
+                try: blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] 
+                except: blueBand = None
+                
+                try: redBand = symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"]
+                except: 
+                    if blueBand!=0 and greenBand!=0: redBand= 0
+                    else: redBand = None
+
+                try: 
+                    rbVals = my_raster.getRasterBands(rasterBandNames[redBand])
                     rbvalMin = rbVals.minimum
                     rbvalMax = rbVals.maximum
-                except:
-                    rbvalMin = min(rbVals)
-                    rbvalMax = max(rbVals)
+                    valRange = float(rbvalMax) - float(rbvalMin)
+                    colorRVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(rbvalMin)) / valRange * 255 )
+                except: colorRVal = 0
+                try: 
+                    gbVals = my_raster.getRasterBands(rasterBandNames[greenBand])
+                    gbvalMin = gbVals.minimum
+                    gbvalMax = gbVals.maximum
+                    valRange = float(gbvalMax) - float(gbvalMin)
+                    colorGVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(gbvalMin)) / valRange * 255 )
+                except: colorGVal = 0
+                try: 
+                    bbVals = my_raster.getRasterBands(rasterBandNames[blueBand])
+                    bbvalMin = bbVals.minimum
+                    bbvalMax = bbVals.maximum
+                    valRange = float(bbvalMax) - float(bbvalMin)
+                    colorBVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(bbvalMin)) / valRange * 255 )
+                except: colorBVal = 0
 
-                valRange = float(rbvalMax) - float(rbvalMin) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(rbvalMin)) / valRange * 255 )
-                color =  (colorVal<<16) + (colorVal<<8) + colorVal
+                #valRange = float(rbvalMax) - float(rbvalMin) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                #colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(rbvalMin)) / valRange * 255 )
+                color =  (colorRVal<<16) + (colorGVal<<8) + colorBVal
 
             colors.extend([color,color,color,color])
             count += 4
