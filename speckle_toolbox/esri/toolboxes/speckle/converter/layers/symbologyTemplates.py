@@ -300,19 +300,61 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer):
         layerRenderer: dict[str, Any] = {}
         layerRenderer['type'] = rType
         print(rType)
+        my_raster = arcpy.Raster(arcLayer.dataSource)  
+        rasterBandNames = my_raster.bandNames
 
         if rType == "singlebandgray":  
-            try: band = arcLayer.symbology.colorizer.band - 1
+            try: band = arcLayer.symbology.colorizer.band 
             except: band = 0 
-            layerRenderer.update({'properties': {'max':'','min':'','band':band,'contrast':''}}) 
-        elif rType == "multibandcolor":  
-            redBand = symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"]
-            greenBand = symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"]
-            blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] 
+            try: 
+                bVals = my_raster.getRasterBands(rasterBandNames[band])
+                bvalMin = bVals.minimum
+                bvalMax = bVals.maximum
+            except: 
+                bvalMin = 0
+                bvalMax = 0
+            layerRenderer.update({'properties': {'max':0,'min':0,'band':band+1,'contrast':0}}) 
 
-            layerRenderer['properties'].update({'redContrast':'','redMin':'','redMax':''})
-            layerRenderer['properties'].update({'greenContrast':'','greenMin':'','greenMax':''})
-            layerRenderer['properties'].update({'blueContrast':'','blueMin':'','blueMax':''})
+        elif rType == "multibandcolor":
+
+            try: greenBand = symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"] +1
+            except: greenBand = None
+            try: blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] +1
+            except: blueBand = None
+            try: redBand = symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"] +1
+            except: 
+                print(greenBand)
+                print(blueBand)
+                if blueBand!=1 and greenBand!=1: redBand= 1
+                else: redBand = None
+            print(redBand)
+
+            try: 
+                rbVals = my_raster.getRasterBands(rasterBandNames[redBand-1])
+                rbvalMin = rbVals.minimum
+                rbvalMax = rbVals.maximum
+            except: 
+                rbvalMin = 0
+                rbvalMax = 0
+            try: 
+                gbVals = my_raster.getRasterBands(rasterBandNames[greenBand-1])
+                gbvalMin = gbVals.minimum
+                gbvalMax = gbVals.maximum
+            except: 
+                gbvalMin = 0
+                gbvalMax = 0
+            try: 
+                bbVals = my_raster.getRasterBands(rasterBandNames[blueBand-1])
+                bbvalMin = bbVals.minimum
+                bbvalMax = bbVals.maximum
+            except: 
+                bbvalMin = 0
+                bbvalMax = 0
+
+            layerRenderer.update({'properties': {'greenBand':greenBand,'blueBand':blueBand,'redBand':redBand}})
+            layerRenderer['properties'].update({'redContrast':0,'redMin':0,'redMax':0})
+            layerRenderer['properties'].update({'greenContrast':0,'greenMin':0,'greenMax':0})
+            layerRenderer['properties'].update({'blueContrast':0,'blueMin':0,'blueMax':0})
         elif rType == "paletted":  
             band = 0 
             rendererClasses = arcLayer.symbology.colorizer.groups
@@ -322,14 +364,14 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer):
             for i, cl in enumerate(rendererClasses):
                 if cl.heading == 'Value':
                     for k, itm in enumerate(cl.items):
-                        value = itm.values
+                        value = itm.values[0]
                         label = itm.label 
                         try: 
-                            r,g,b = itm.color['RGB']
+                            r,g,b = itm.color['RGB'][0], itm.color['RGB'][1], itm.color['RGB'][2]
                             sColor = (r<<16) + (g<<8) + b
                             classes.append({'color':sColor,'value':value,'label':label})
                         except: pass 
-            layerRenderer.update({'properties': {'classes':classes,'ramp':sourceRamp,'band':band}})
+            layerRenderer.update({'properties': {'classes':classes,'ramp':sourceRamp,'band':band+1}})
 
     return layerRenderer 
 
