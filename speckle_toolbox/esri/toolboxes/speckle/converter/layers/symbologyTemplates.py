@@ -373,5 +373,6 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer):
                         except: pass 
             layerRenderer.update({'properties': {'classes':classes,'ramp':sourceRamp,'band':band+1}})
 
-    return layerRenderer 
+        return layerRenderer 
+    else: return None
 

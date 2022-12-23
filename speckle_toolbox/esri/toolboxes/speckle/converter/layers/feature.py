@@ -190,20 +190,6 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
     print("_________ Raster feature to speckle______") 
     # https://pro.arcgis.com/en/pro-app/latest/arcpy/classes/raster-object.htm 
 
-    r'''
-    # Save layer file to read symbology 
-    # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/save-to-layer-file.htm
-    layerFile = project.homeFolder + "\\" + selectedLayer.name.split(".")[0] 
-    arcpy.management.SaveToLayerFile(selectedLayer.name, layerFile, "ABSOLUTE")
-
-    # read the file and then delete
-    f = open(layerFile + ".lyrx", "r")
-    layerFileContent = json.loads(f.read())
-    print(layerFileContent)
-    f.close()
-    os.remove(layerFile + ".lyrx")
-    '''
-
     # get Raster object of entire raster dataset 
     my_raster = arcpy.Raster(selectedLayer.dataSource)
     print(my_raster.mdinfo) # None
@@ -289,6 +275,8 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
             else: rasterBandNoDataVal.append(rb.noDataValue)
 
         except: rasterBandNoDataVal.append(rb.noDataValue)
+        if rasterBandNoDataVal[len(rasterBandNoDataVal)-1] is None: 
+            rasterBandNoDataVal[len(rasterBandNoDataVal)-1] = 'None'
 
         
         rasterBandVals.append(bandValsFlat)
