@@ -17,8 +17,10 @@ from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle,
 import math
 from panda3d.core import Triangulator
 
+from speckle.converter.layers.symbologyTemplates import featureColorfromNativeRenderer
 
-def multiPolygonToSpeckle(geom, feature, layer, multiType: bool):
+
+def multiPolygonToSpeckle(geom, feature, index: str, layer, multiType: bool):
 
     print("___MultiPolygon to Speckle____")
     polygon = []
@@ -42,15 +44,15 @@ def multiPolygonToSpeckle(geom, feature, layer, multiType: bool):
                 arrInnerRings[len(arrInnerRings)-1].append(ptn)
 
         full_arr = [arrBoundary] + arrInnerRings
-        print(full_arr)
+        #print(full_arr)
         poly = arcpy.Polygon(arcpy.Array(full_arr), arcpy.Describe(layer.dataSource).SpatialReference, has_z = True)
-        print(poly) #<geoprocessing describe geometry object object at 0x000002B2D3E338D0> 
-        polygon.append(polygonToSpeckle(poly, feature, layer, poly.isMultipart))
+        #print(poly) #<geoprocessing describe geometry object object at 0x000002B2D3E338D0> 
+        polygon.append(polygonToSpeckle(poly, feature, index, layer, poly.isMultipart))
 
     return polygon
 
 
-def polygonToSpeckle(geom, feature, layer, multiType: bool):
+def polygonToSpeckle(geom, feature, index: int, layer, multiType: bool):
     """Converts a Polygon to Speckle"""
     #try: 
     print("___Polygon to Speckle____")
@@ -202,7 +204,7 @@ def polygonToSpeckle(geom, feature, layer, multiType: bool):
             ran = range(0, total_vertices)
         
         #print(polygon)
-        col = (100<<16) + (100<<8) + 100 #featureColorfromNativeRenderer(feature, layer)
+        col = featureColorfromNativeRenderer(index, layer)
         colors = [col for i in ran] # apply same color for all vertices
         mesh = rasterToMesh(vertices, faces, colors)
         polygon.displayValue = mesh 
@@ -228,7 +230,7 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
         except: pass # if Line
 
     pts = [pointToCoord(pt) for pt in pointsSpeckle]
-    print(pts)
+    #print(pts)
 
     outer_arr = [arcpy.Point(*coords) for coords in pts]
     outer_arr.append(outer_arr[0])

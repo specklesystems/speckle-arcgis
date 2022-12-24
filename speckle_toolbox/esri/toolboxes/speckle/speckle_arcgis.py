@@ -83,8 +83,8 @@ class Toolbox:
         # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm#except: print("something happened")
 
 class Speckle:
-    def __init__(self):
-        #print("________________reset_______________")   
+    def __init__(self):  
+        print("__________________INIT SPECKLE TOOL_________")
         self.label       = "Speckle"
         self.description = "Allows you to send and receive your layers " + \
                            "to/from other software using Speckle server." 
@@ -92,39 +92,28 @@ class Speckle:
         self.toRefresh = False
         self.speckleInputs = None
         self.toolboxInputs = None
-        #print("ping_Speckle1")
-        
-        #print(speckleInputsClass.instances)
+
         total = len(speckleInputsClass.instances)
-        #print(total)
+        print(total)
         for i in range(total):
-            #print(i)
-            #print(speckleInputsClass.instances[total-i-1])
             if speckleInputsClass.instances[total-i-1] is not None: 
                 try: 
-                    #print(speckleInputsClass.instances[total-i-1].streams_default)
-                    y = speckleInputsClass.instances[total-i-1].streams_default # in case not initialized properly 
+                    y = speckleInputsClass.instances[total-i-1].streams_default 
+                    #if not isinstance(speckleInputsClass.instances[total-i-1].streams_default, SpeckleException): # also will throw exception in case not initialized properly 
                     self.speckleInputs = speckleInputsClass.instances[total-i-1] # take latest (first in reverted list)
-                    #print("FOUND INSTANCE")
                     break
                 except: pass
-        #print(self.speckleInputs)
-        if self.speckleInputs is None: self.speckleInputs = speckleInputsClass()
+        if self.speckleInputs is None or isinstance(self.speckleInputs.streams_default, SpeckleException): self.speckleInputs = speckleInputsClass()
+        #print(self.speckleInputs.streams_default)
+        print(len(speckleInputsClass.instances))
 
-
-        #print(toolboxInputsClass.instances)
-        #print("TOTAL = ...................") 
         total = len(toolboxInputsClass.instances)
-        #print(total)
+
         for i in range(total):
             if toolboxInputsClass.instances[total-i-1] is not None: 
                 self.toolboxInputs = toolboxInputsClass.instances[total-i-1] # take latest (first in reverted list)
-                #print("FOUND INSTANCE")
                 break
-        #print(self.toolboxInputs)
         if self.toolboxInputs is None: self.toolboxInputs = toolboxInputsClass()
-        
-        #print("ping_Speckle2")
 
     def getParameterInfo(self):
         #data types: https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/defining-parameter-data-types-in-a-python-toolbox.htm
@@ -422,9 +411,11 @@ class Speckle:
                     #print("SAVED STREAMS - selection")
                     selected_stream_name = par.valueAsText[:]
                     self.toolboxInputs.active_stream = None
+                    self.toolboxInputs.active_stream_wrapper = None
                     for st in self.speckleInputs.saved_streams:
                         if st[1].name == selected_stream_name.split(" - ")[0]: 
                             self.toolboxInputs.active_stream = st[1]
+                            self.toolboxInputs.active_stream_wrapper = st[0]
                             break
 
                     # edit branches: globals and UI 
@@ -540,7 +531,12 @@ class Speckle:
             
             if par.name == "lat": par.value = str(self.toolboxInputs.get_survey_point()[0])
             if par.name == "lon": par.value = str(self.toolboxInputs.get_survey_point()[1])
-            if par.name == "streamsDefalut": par.filter.list = [ (st.name + " - " + st.id) for st in self.speckleInputs.streams_default ]
+            if par.name == "streamsDefalut": 
+                if isinstance(self.speckleInputs.streams_default, SpeckleException):
+                    arcpy.AddError("Speckle account not accessible")
+                    par.filter.list = []
+                else:
+                    par.filter.list = [ (st.name + " - " + st.id) for st in self.speckleInputs.streams_default ]
             if par.name == "savedStreams": 
                 #print("par.name")
                 saved_streams = self.speckleInputs.getProjectStreams()
@@ -588,7 +584,8 @@ class Speckle:
             return
 
         streamId = self.toolboxInputs.active_stream.id #stream_id
-        client = self.speckleInputs.speckle_client # ?
+        client = self.toolboxInputs.active_stream_wrapper.get_client()
+        #client = self.speckleInputs.speckle_client # ?
         
         # Get the stream wrapper
         #streamWrapper = StreamWrapper(None)
@@ -646,7 +643,8 @@ class Speckle:
 
         try: 
             streamId = self.toolboxInputs.active_stream.id #stream_id
-            client = self.speckleInputs.speckle_client # 
+            client = self.toolboxInputs.active_stream_wrapper.get_client()
+            #client = self.speckleInputs.speckle_client # 
         except SpeckleWarning as warning: 
             arcpy.AddWarning(str(warning.args[0]))
 
@@ -678,11 +676,13 @@ class Speckle:
         except: 
             arcpy.AddError("Make sure your account has access to the chosen stream")
             return
-
         try:
             #print(commit)
             objId = commit.referencedObject
             commitDetailed = client.commit.get(streamId, commit.id)
+            if isinstance(commitDetailed, GraphQLException): 
+                arcpy.AddError("Access error")
+                return
             app = commitDetailed.sourceApplication
             if objId is None:
                 return
@@ -768,7 +768,8 @@ class Speckle:
                 if isinstance(value, List):
                     for item in value:
                         loopVal(item, name)
-                        #print(item)
+                        
+                        print(item)
                         pt = None
                         if item.speckle_type and item.speckle_type.startswith("Objects.Geometry."): 
 
@@ -777,8 +778,8 @@ class Speckle:
                             if pl is not None: print("Layer group created: " + pl.name())
                             break
                         
-                        if item.speckle_type and item.speckle_type.startswith("Objects.BuiltElements."): #  and "Revit" in item.speckle_type
-
+                        if item.speckle_type and (item.speckle_type.startswith("Objects.BuiltElements.") or item.speckle_type.startswith("Objects.Structural.Geometry")): #  and "Revit" in item.speckle_type
+                            print("__receiving structures__")
                             msh_bool = bimLayerToNative(value, name, streamBranch, self.speckleInputs.project)
                             #if msh is not None: print("Layer group created: " + msh.name())
                             break

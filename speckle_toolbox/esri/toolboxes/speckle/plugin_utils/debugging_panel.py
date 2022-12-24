@@ -1,5 +1,8 @@
+
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import arcpy
+import json
+import os
 
 from speckle.converter.layers.CRS import CRS
 from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
@@ -10,14 +13,85 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 
 from specklepy.objects import Base
 
+##################################################### get example layers from the project #######
 project = ArcGISProject('CURRENT')
 active_map = project.activeMap
 all_layers = []
+
+layerPolygon = None
+layerPolyline = None
+layerPoint = None
+layerMultiPoint = None
+layerRaster = None
 #get layer of interest
 for layer in active_map.listLayers(): 
-   if layer.isFeatureLayer or layer.isRasterLayer: all_layers.append(layer)
-   if layer.name == "ExteriorShell": break
+   if layer.isFeatureLayer or layer.isRasterLayer: 
+        all_layers.append(layer)
+        data = arcpy.Describe(layer.dataSource)
+        if layer.isRasterLayer and layerRaster is None: layerRaster = layer 
+        if layer.isFeatureLayer:
+            geomType = data.shapeType
+            if geomType == "Polygon" and layerPolygon is None: layerPolygon = layer 
+            if geomType == "Polyline" and layerPolyline is None: layerPolyline = layer 
+            if geomType == "Point" and layerPoint is None: layerPoint = layer 
+            if geomType == "Multipoint" and layerMultiPoint is None: layerMultiPoint = layer 
 
+################## reset symbology if needed:
+sym = layerPolygon.symbology
+print(sym.renderer.type)
+sym.updateRenderer('UniqueValueRenderer')
+layerPolygon.symbology = sym
+print(sym.updateRenderer('UniqueValueRenderer'))
+print(layerPolygon.symbology.renderer.type)
+# SimpleRenderer, GraduatedColorsRenderer, GraduatedSymbolsRenderer, UnclassedColorsRenderer, UniqueValueRenderer 
+
+######################################### change symbology ################################# 
+
+for k, grp in enumerate(sym.renderer.groups):
+    for itm in grp.items:
+        print(itm)
+        print(itm.values)
+        print(itm.symbol.color)
+        transVal = itm.values[0][0] #Grab the first "percent" value in the list of potential values
+        print(transVal)
+        for i in range(len(cats)):
+            label = cats[i]['value'] 
+            print(label)
+            if label is None or label=="": label = "<Null>"
+            print(label)
+
+
+
+from speckle.converter.layers.symbologyTemplates import get_polygon_simpleRenderer 
+from arcpy._mp import ArcGISProject
+
+aprx = ArcGISProject('CURRENT')
+root_path = "\\".join(aprx.filePath.split("\\")[:-1])
+
+path_style = root_path + '\\layer_speckle_symbology.lyrx'
+path_style2 = root_path + '\\layer_speckle_symbology2.lyrx'
+#arcpy.management.SaveToLayerFile(layerPolygon, path_style, False)
+print(layerPolygon.dataSource)
+arcpy.management.ApplySymbologyFromLayer(
+                        in_layer=layerPolygon.dataSource, 
+                        in_symbology_layer=path_style2, 
+                        update_symbology='UPDATE')
+
+
+
+f = open(path_style, "r")
+renderer = json.loads(f.read())
+
+renderer["layerDefinitions"][0]["renderer"] = get_polygon_simpleRenderer(1,2,150)
+f = open(path_style2, "w")
+f.write(json.dumps(renderer, indent=4))
+f.close()
+arcpy.management.ApplySymbologyFromLayer(str(layerPolygon), path_style2)
+os.remove(path_style)
+os.remove(path_style2)
+
+###########################################################################
+layer = all_layers[0] 
 if isinstance(layer, arcLayer): 
 
     projectCRS = project.activeMap.spatialReference
@@ -229,12 +303,12 @@ feature_class = result[0]
 
 ################################# reading shapefile - works ####################
 
-fc = r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\BIM_layers_speckle\00f70159b9104180f622cca87f5dd2cb.shp'
+fc = r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\Layers_Speckle\BIM_layers_speckle\00f70159b9104180f622cca87f5dd2cb.shp'
 rows = arcpy.da.SearchCursor(fc, 'Shape@')
 for r in rows:
         if r is not None: shape = r
 print(shape)
-cl = arcpy.conversion.FeatureClassToFeatureClass(r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\BIM_layers_speckle\16d73b756a_main_2f8cfa8644\__Floors_Mesh\00c7696966e4cfda2bd8c03860a414a6', r'C:\Users\katri\Documents\ArcGIS\tests', 'copyclass')
+cl = arcpy.conversion.FeatureClassToFeatureClass(r'C:\Users\katri\Documents\ArcGIS\Projects\MyProject\Layers_Speckle\BIM_layers_speckle\16d73b756a_main_2f8cfa8644\__Floors_Mesh\00c7696966e4cfda2bd8c03860a414a6', r'C:\Users\katri\Documents\ArcGIS\tests', 'copyclass')
 
 ##################################### update rows in feature class - working #############
 with arcpy.da.UpdateCursor('f_class_2f8cfa8644___Structural_Framing_Mesh', 'name') as cursor:

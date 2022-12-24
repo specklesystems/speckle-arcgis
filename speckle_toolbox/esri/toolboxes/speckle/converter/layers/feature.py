@@ -19,8 +19,10 @@ from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
 import numpy as np
 import colorsys
 
+from speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
 
-def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialReference, project: ArcGISProject, selectedLayer: arcLayer):
+
+def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arcpy.SpatialReference, project: ArcGISProject, selectedLayer: arcLayer):
     print("___________Feature to Speckle____________")
     b = Base(units = "m")
     data = arcpy.Describe(selectedLayer.dataSource)
@@ -43,7 +45,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
 
     ######################################### Convert geometry ##########################################
     try:
-        geom = convertToSpeckle(f_shape, selectedLayer, geomType, featureType) 
+        geom = convertToSpeckle(f_shape, index, selectedLayer, geomType, featureType) 
         if geom is not None: print(geom); b["geometry"] = geom 
     except Exception as error:
         print("Error converting geometry: " + str(error))
@@ -67,7 +69,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
     except:  speckle_geom = feature # for created in other software
-    print(speckle_geom)
+    #print(speckle_geom)
     if isinstance(speckle_geom, list):
         if len(speckle_geom)>1 or geomType == "Multipoint": arcGisGeom = convertToNativeMulti(speckle_geom, sr)
         else: arcGisGeom = convertToNative(speckle_geom[0], sr)
@@ -188,20 +190,6 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
     print("_________ Raster feature to speckle______") 
     # https://pro.arcgis.com/en/pro-app/latest/arcpy/classes/raster-object.htm 
 
-    r'''
-    # Save layer file to read symbology 
-    # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/save-to-layer-file.htm
-    layerFile = project.homeFolder + "\\" + selectedLayer.name.split(".")[0] 
-    arcpy.management.SaveToLayerFile(selectedLayer.name, layerFile, "ABSOLUTE")
-
-    # read the file and then delete
-    f = open(layerFile + ".lyrx", "r")
-    layerFileContent = json.loads(f.read())
-    print(layerFileContent)
-    f.close()
-    os.remove(layerFile + ".lyrx")
-    '''
-
     # get Raster object of entire raster dataset 
     my_raster = arcpy.Raster(selectedLayer.dataSource)
     print(my_raster.mdinfo) # None
@@ -287,6 +275,8 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
             else: rasterBandNoDataVal.append(rb.noDataValue)
 
         except: rasterBandNoDataVal.append(rb.noDataValue)
+        if rasterBandNoDataVal[len(rasterBandNoDataVal)-1] is None: 
+            rasterBandNoDataVal[len(rasterBandNoDataVal)-1] = 'None'
 
         
         rasterBandVals.append(bandValsFlat)
@@ -310,7 +300,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
     colors = []
     count = 0
     
-    print(my_raster.variables)
+    #print(my_raster.variables)
     print(selectedLayer.symbology) #None
     colorizer = None
     #renderer = selectedLayer.symbology.renderer
@@ -319,8 +309,58 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
 
         print(colorizer) # <arcpy._colorizer.RasterStretchColorizer object at 0x000001780497FBC8>
         print(colorizer.type) # RasterStretchColorizer 
+    else: 
+        #RGB colorizer 
+        root_path = "\\".join(project.filePath.split("\\")[:-1])
+        if not os.path.exists(root_path + '\\Layers_Speckle\\rasters_Speckle'): os.makedirs(root_path + '\\Layers_Speckle\\rasters_Speckle')
+        path_style = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + selectedLayer.name + '_temp.lyrx'
+        symJson = jsonFromLayerStyle(selectedLayer, path_style)
+
+        # read from Json
+        print(symJson["layerDefinitions"][0]["colorizer"])
+        try: greenBand = symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"]
+        except: greenBand = None
+        try: blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] 
+        except: blueBand = None
+        
+        try: redBand = symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"]
+        except: 
+            if blueBand!=0 and greenBand!=0: redBand= 0
+            else: redBand = None
+        print("bands")
+        print(redBand)
+        print(greenBand)
+        print(blueBand)
+        try: 
+            rbVals = rasterBandVals[redBand] #my_raster.getRasterBands(rasterBandNames[redBand])
+            rbvalMin = min(rbVals)
+            rbvalMax = max(rbVals)
+            rvalRange = float(rbvalMax) - float(rbvalMin)
+            print(rbvalMin)
+            print(rbvalMax)
+            print(rvalRange)
+        except Exception as e: print(e); rvalRange = None
+        try: 
+            gbVals = rasterBandVals[greenBand]
+            gbvalMin = min(gbVals)
+            gbvalMax = max(gbVals)
+            gvalRange = float(gbvalMax) - float(gbvalMin)
+            print(gbvalMin)
+            print(gbvalMax)
+            print(gvalRange)
+        except: gvalRange = None
+        try: 
+            bbVals = rasterBandVals[blueBand]
+            bbvalMin = min(bbVals)
+            bbvalMax = max(bbVals)
+            bvalRange = float(bbvalMax) - float(bbvalMin)
+            print(bbvalMin)
+            print(bbvalMax)
+            print(bvalRange)
+        except: bvalRange = None
+
     rendererType = ""
-    if hasattr(selectedLayer.symbology, 'renderer'): rendererType = selectedLayer.symbology.renderer.type #e.g. SimpleRenderer
+    #if hasattr(selectedLayer.symbology, 'renderer'): rendererType = selectedLayer.symbology.renderer.type #e.g. SimpleRenderer
     # custom color ramp {"type": "algorithmic", "fromColor": [115, 76, 0, 255],"toColor": [255, 25, 86, 255], "algorithm": "esriHSVAlgorithm"}.
     # custom color map {'values': [0, 1, 2, 3, 4, 5], 'colors': ['#000000', '#DCFFDF', '#B8FFBE', '#85FF90', '#50FF60','#00AB10']}
 
@@ -438,34 +478,71 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                 print(colorizer.groups)
             '''
             #else:  
-            if colorizer:   
-                try: bandIndex = int(colorizer.band)
-                except: pass            
-                try:
-                    if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
-                        # REMAP band values to (0,255) range
-                        valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                        colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
-                        if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
-                        color =  (colorVal<<16) + (colorVal<<8) + colorVal
-                except: # if no Min Max labels:
-                    # REMAP band values to (0,255) range
-                    valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                    colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
-                    color =  (colorVal<<16) + (colorVal<<8) + colorVal
-            else:
-                # REMAP band values to (0,255) range
-                rbVals = my_raster.getRasterBands(rasterBandNames[0])
-                try:
-                    rbvalMin = rbVals.minimum
-                    rbvalMax = rbVals.maximum
-                except:
-                    rbvalMin = min(rbVals)
-                    rbvalMax = max(rbVals)
+            if hasattr(selectedLayer.symbology, 'colorizer'): # only 1 band 
+                try: bandIndex = int(colorizer.band) # if stretched 
+                except: pass     
+                if colorizer.type =='RasterUniqueValueColorizer': 
+                    # REDO !!!!!!!!!!!!
+                    colorRVal = colorGVal = colorBVal = 0 
+                    try:
+                        for br in colorizer.groups:
+                            print(br.heading) #"Value"
+                            # go through all values classified 
+                            if br.heading != 'Value': print(int('x')) #call exception
+                            for k, itm in enumerate(br.items):
+                                print(itm.values)
+                                if itm.values[0] == rasterBandVals[bandIndex][int(count/4)]:
+                                    print(itm.values[0])
+                                    colorRVal, colorGVal, colorBVal = itm.color['RGB'][0], itm.color['RGB'][1], itm.color['RGB'][2]
+                                    break
+                                # if string covering float
+                                try: 
+                                    if float(itm.values[0]) == float(rasterBandVals[bandIndex][int(count/4)]):
+                                        print(itm.values[0])
+                                        colorRVal, colorGVal, colorBVal = itm.color['RGB'][0], itm.color['RGB'][1], itm.color['RGB'][2]
+                                        break
+                                except Exception as e: print(e); pass
 
-                valRange = float(rbvalMax) - float(rbvalMin) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(rbvalMin)) / valRange * 255 )
-                color =  (colorVal<<16) + (colorVal<<8) + colorVal
+
+                    except Exception as e: # if no Min Max labels:
+                        # REMAP band values to (0,255) range
+                        print(e)
+                        valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                        colorRVal = colorGVal = colorBVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
+                    
+                    print("__pixel color_")
+                    print(colorRVal)
+                    print(colorGVal)
+                    print(colorBVal)
+                    color =  (colorRVal<<16) + (colorGVal<<8) + colorBVal
+
+                else:
+                    try:
+                        if rasterBandVals[bandIndex][int(count/4)] >= float(colorizer.minLabel) and rasterBandVals[bandIndex][int(count/4)] <= float(colorizer.maxLabel) : #rasterBandMinVal[bandIndex]: 
+                            # REMAP band values to (0,255) range
+                            valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                            colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
+                            if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                            color =  (colorVal<<16) + (colorVal<<8) + colorVal
+                    except: # if no Min Max labels:
+                        # REMAP band values to (0,255) range
+                        valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
+                        colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
+                        color =  (colorVal<<16) + (colorVal<<8) + colorVal
+            else: # rgb
+                # REMAP band values to (0,255) range
+                if rvalRange is not None and redBand is not None: colorRVal = int( (rasterBandVals[redBand][int(count/4)] - float(rbvalMin)) / rvalRange * 255 )
+                else: colorRVal = 0
+                if gvalRange is not None and greenBand is not None: colorGVal = int( (rasterBandVals[greenBand][int(count/4)] - float(gbvalMin)) / gvalRange * 255 )
+                else: colorGVal = 0
+                if bvalRange is not None and blueBand is not None: colorBVal = int( (rasterBandVals[blueBand][int(count/4)] - float(bbvalMin)) / bvalRange * 255 )
+                else: colorBVal = 0
+                print("__pixel color_")
+                print(colorRVal)
+                print(colorGVal)
+                print(colorBVal)
+
+                color =  (colorRVal<<16) + (colorGVal<<8) + colorBVal
 
             colors.extend([color,color,color,color])
             count += 4

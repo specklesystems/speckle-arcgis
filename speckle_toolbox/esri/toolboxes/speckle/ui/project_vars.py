@@ -101,7 +101,7 @@ class speckleInputsClass:
                 streamExists = 0
                 index = 0
                 try:
-                    print(url)
+                    #print(url)
                     sw = StreamWrapper(url)
                     stream = self.tryGetStream(sw)
 
@@ -140,6 +140,7 @@ class toolboxInputsClass:
     lat: float = 0.0
     lon: float = 0.0
     active_stream: Optional[Stream] = None
+    active_stream_wrapper: Optional[StreamWrapper] = None
     active_branch: Optional[Branch] = None
     active_commit = None
     selected_layers: List[Any] = []
