@@ -41,7 +41,6 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
             #if layerToSend.isFeatureLayer: 
             newBaseLayer = layerToSpeckle(layerToSend, project)
             if newBaseLayer is not None: 
-                newBaseLayer.renderer = rendererToSpeckle(project, project.activeMap, layerToSend)
                 result.append(newBaseLayer)
             #elif layerToSend.isRasterLayer: pass
             print(result)
@@ -77,6 +76,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
         speckleLayer.type="VectorLayer"
         speckleLayer.name = layerName
         speckleLayer.crs = speckleReprojectedCrs
+        speckleLayer.renderer = rendererToSpeckle(project, project.activeMap, layer, None)
         #speckleLayer.datum = datum
 
 
@@ -117,7 +117,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                             #print(feat)
 
 
-                        b = featureToSpeckle(fieldnames, row_attr, feat, projectCRS, project, layer)
+                        b = featureToSpeckle(fieldnames, row_attr, i, feat, projectCRS, project, layer)
                         if b is not None: layerObjs.append(b)
                         
                     print("____End of Feature # " + str(i+1))
@@ -150,6 +150,8 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
         speckleLayer.type="RasterLayer"
         #speckleLayer.geomType="Raster"
         speckleLayer.features = layerObjs
+        
+        speckleLayer.renderer = rendererToSpeckle(project, project.activeMap, layer, b)
         
         #speckleLayer.renderer = layerRenderer
         #speckleLayer.applicationId = selectedLayer.id()
@@ -326,22 +328,28 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         # For each row, evaluate the WELL_YIELD value (index position 
         # of 0), and update WELL_CLASS (index position of 1)
         shp_num = 0
+        print(heads)
         try:
             for rowShape in cur: 
                 print(rowShape)
                 for i,r in enumerate(rowShape):
+                    print(heads[i])
+                    print(matrix[i])
                     rowShape[i] = rowValues[shp_num][i]
-                    if isinstance(rowValues[shp_num][i], str): rowShape[i] = rowValues[shp_num][i][:255]
-
+                    if isinstance(rowValues[shp_num][i], str): # cut if string is too long
+                        rowShape[i] = rowValues[shp_num][i][:255]
+                    print(rowShape[i])
+                print(rowShape)
                 cur.updateRow(rowShape)
                 shp_num += 1
+                print(shp_num)
         except Exception as e: 
             print("Layer attribute error: " + e)
-            print(i)
+            #print(i)
             print(shp_num)
             print(len(rowValues))
-            print(rowValues[i])
-            print(len(rowValues[i]))
+            #print(rowValues[i])
+            #print(len(rowValues[i]))
             arcpy.AddWarning("Layer attribute error: " + e)
     del cur 
     
