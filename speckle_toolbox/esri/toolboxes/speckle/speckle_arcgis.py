@@ -104,7 +104,7 @@ class Speckle:
                     break
                 except: pass
         if self.speckleInputs is None or isinstance(self.speckleInputs.streams_default, SpeckleException): self.speckleInputs = speckleInputsClass()
-        print(self.speckleInputs.streams_default)
+        #print(self.speckleInputs.streams_default)
         print(len(speckleInputsClass.instances))
 
         total = len(toolboxInputsClass.instances)

@@ -22,7 +22,7 @@ import colorsys
 from speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
 
 
-def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialReference, project: ArcGISProject, selectedLayer: arcLayer):
+def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arcpy.SpatialReference, project: ArcGISProject, selectedLayer: arcLayer):
     print("___________Feature to Speckle____________")
     b = Base(units = "m")
     data = arcpy.Describe(selectedLayer.dataSource)
@@ -45,7 +45,7 @@ def featureToSpeckle(fieldnames, attr_list, f_shape, projectCRS: arcpy.SpatialRe
 
     ######################################### Convert geometry ##########################################
     try:
-        geom = convertToSpeckle(f_shape, selectedLayer, geomType, featureType) 
+        geom = convertToSpeckle(f_shape, index, selectedLayer, geomType, featureType) 
         if geom is not None: print(geom); b["geometry"] = geom 
     except Exception as error:
         print("Error converting geometry: " + str(error))
@@ -300,7 +300,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
     colors = []
     count = 0
     
-    print(my_raster.variables)
+    #print(my_raster.variables)
     print(selectedLayer.symbology) #None
     colorizer = None
     #renderer = selectedLayer.symbology.renderer
@@ -317,6 +317,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         symJson = jsonFromLayerStyle(selectedLayer, path_style)
 
         # read from Json
+        print(symJson["layerDefinitions"][0]["colorizer"])
         try: greenBand = symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"]
         except: greenBand = None
         try: blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] 
@@ -331,27 +332,27 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         print(greenBand)
         print(blueBand)
         try: 
-            rbVals = my_raster.getRasterBands(rasterBandNames[redBand])
-            rbvalMin = rbVals.minimum
-            rbvalMax = rbVals.maximum
+            rbVals = rasterBandVals[redBand] #my_raster.getRasterBands(rasterBandNames[redBand])
+            rbvalMin = min(rbVals)
+            rbvalMax = max(rbVals)
             rvalRange = float(rbvalMax) - float(rbvalMin)
             print(rbvalMin)
             print(rbvalMax)
             print(rvalRange)
-        except: rvalRange = None
+        except Exception as e: print(e); rvalRange = None
         try: 
-            gbVals = my_raster.getRasterBands(rasterBandNames[greenBand])
-            gbvalMin = gbVals.minimum
-            gbvalMax = gbVals.maximum
+            gbVals = rasterBandVals[greenBand]
+            gbvalMin = min(gbVals)
+            gbvalMax = max(gbVals)
             gvalRange = float(gbvalMax) - float(gbvalMin)
             print(gbvalMin)
             print(gbvalMax)
             print(gvalRange)
         except: gvalRange = None
         try: 
-            bbVals = my_raster.getRasterBands(rasterBandNames[blueBand])
-            bbvalMin = bbVals.minimum
-            bbvalMax = bbVals.maximum
+            bbVals = rasterBandVals[blueBand]
+            bbvalMin = min(bbVals)
+            bbvalMax = max(bbVals)
             bvalRange = float(bbvalMax) - float(bbvalMin)
             print(bbvalMin)
             print(bbvalMax)
@@ -530,9 +531,6 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                         color =  (colorVal<<16) + (colorVal<<8) + colorVal
             else: # rgb
                 # REMAP band values to (0,255) range
-                #valRange = float(rbvalMax) - float(rbvalMin) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                #colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(rbvalMin)) / valRange * 255 )
-                
                 if rvalRange is not None and redBand is not None: colorRVal = int( (rasterBandVals[redBand][int(count/4)] - float(rbvalMin)) / rvalRange * 255 )
                 else: colorRVal = 0
                 if gvalRange is not None and greenBand is not None: colorGVal = int( (rasterBandVals[greenBand][int(count/4)] - float(gbvalMin)) / gvalRange * 255 )

@@ -12,7 +12,7 @@ from speckle.converter.geometry.polyline import speckleArcCircleToPoints, speckl
 from speckle.converter.geometry.mesh import meshToNative
 import numpy as np
 
-def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:
+def convertToSpeckle(feature, index: str, layer, geomType, featureType) -> Union[Base, Sequence[Base], None]:
     """Converts the provided layer feature to Speckle objects"""
     print("___convertToSpeckle____________")
     geom = feature
@@ -39,8 +39,8 @@ def convertToSpeckle(feature, layer, geomType, featureType) -> Union[Base, Seque
         if geom.partCount > 1: return multiPolylineToSpeckle(geom, feature, layer, geomMultiType)
         else: return polylineToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Polygon":
-        if geom.partCount > 1: return multiPolygonToSpeckle(geom, feature, layer, geomMultiType)
-        else: return polygonToSpeckle(geom, feature, layer, geomMultiType)
+        if geom.partCount > 1: return multiPolygonToSpeckle(geom, feature, index, layer, geomMultiType)
+        else: return polygonToSpeckle(geom, feature, index, layer, geomMultiType)
     elif geomType == "Multipoint":
         return multiPointToSpeckle(geom, feature, layer, geomMultiType)
     else:
