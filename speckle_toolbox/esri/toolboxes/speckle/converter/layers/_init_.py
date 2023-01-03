@@ -328,23 +328,26 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         # For each row, evaluate the WELL_YIELD value (index position 
         # of 0), and update WELL_CLASS (index position of 1)
         shp_num = 0
-        print(heads)
+        #print(heads)
         try:
             for rowShape in cur: 
-                print(rowShape)
+                #print(rowShape)
                 for i,r in enumerate(rowShape):
-                    print(heads[i])
-                    print(matrix[i])
+                    #print(heads[i])
+                    #print(matrix[i])
                     rowShape[i] = rowValues[shp_num][i]
+                    #print(type(rowShape[i]))
+                    if matrix[i][1] == 'TEXT' and rowShape[i] is not None: rowShape[i] = str(rowValues[shp_num][i]) 
+                    #print(type(rowShape[i]))
                     if isinstance(rowValues[shp_num][i], str): # cut if string is too long
                         rowShape[i] = rowValues[shp_num][i][:255]
-                    print(rowShape[i])
-                print(rowShape)
+                    #print(rowShape[i])
+                #print(rowShape)
                 cur.updateRow(rowShape)
                 shp_num += 1
-                print(shp_num)
+                #print(shp_num)
         except Exception as e: 
-            print("Layer attribute error: " + e)
+            print("Layer attribute error: " + str(e))
             #print(i)
             print(shp_num)
             print(len(rowValues))
