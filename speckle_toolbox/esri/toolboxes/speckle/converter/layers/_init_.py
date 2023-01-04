@@ -4,13 +4,27 @@ Contains all Layer related classes and methods.
 import os
 from typing import Any, List, Tuple, Union
 
-from regex import D
-from speckle.converter.layers.CRS import CRS
-from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+#from regex import D
+
+try:
+    from speckle.converter.layers.CRS import CRS
+    from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+
+    from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle.converter.layers.utils import findTransformation
+    from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
+
 from specklepy.objects import Base
 from specklepy.objects.geometry import Mesh
-from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
 
 import arcgisscripting
 import pandas as pd
@@ -19,10 +33,8 @@ from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
                               AddFields, AlterField, DefineProjection )
 
-from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
 import numpy as np
 
-from speckle.converter.layers.utils import findTransformation
 
 
 def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:

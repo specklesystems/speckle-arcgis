@@ -11,9 +11,19 @@ from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from arcpy import metadata as md
 
 from specklepy.api.models import Branch, Stream, Streams
-from speckle.converter.layers.Layer import Layer, RasterLayer
-
-from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
+try:
+    from speckle.converter.layers.Layer import Layer, RasterLayer
+    from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
+    from speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
+    from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+    from speckle.converter.layers.Layer import VectorLayer
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, RasterLayer
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
+    from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import VectorLayer
+    
 from arcgis.features import FeatureLayer
 import os
 import os.path
@@ -32,10 +42,6 @@ from specklepy.logging.exceptions import (
 from specklepy.api.wrapper import StreamWrapper
 from specklepy.objects import Base
 from specklepy.logging import metrics
-
-from speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
-from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
-from speckle.converter.layers.Layer import VectorLayer
 
 #'''
 

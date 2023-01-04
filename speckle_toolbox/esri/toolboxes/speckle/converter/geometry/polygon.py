@@ -5,14 +5,25 @@ from arcpy.arcobjects.arcobjects import SpatialReference
 
 from specklepy.objects import Base
 from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, Line
-from speckle.converter.geometry.mesh import rasterToMesh
-from speckle.converter.geometry.point import pointToCoord, pointToNative
-from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
-                                                circleToSpeckle, 
-                                                speckleArcCircleToPoints, 
-                                                curveToSpeckle, 
-                                                specklePolycurveToPoints
-                                                )
+
+try:
+    from speckle.converter.geometry.mesh import rasterToMesh
+    from speckle.converter.geometry.point import pointToCoord, pointToNative
+    from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
+                                                    circleToSpeckle, 
+                                                    speckleArcCircleToPoints, 
+                                                    curveToSpeckle, 
+                                                    specklePolycurveToPoints
+                                                    )
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
+                                                    circleToSpeckle, 
+                                                    speckleArcCircleToPoints, 
+                                                    curveToSpeckle, 
+                                                    specklePolycurveToPoints
+                                                    )
 
 import math
 from panda3d.core import Triangulator
