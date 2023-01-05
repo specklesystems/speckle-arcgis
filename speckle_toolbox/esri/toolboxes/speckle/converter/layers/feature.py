@@ -153,6 +153,8 @@ def addFeatVariant(key, variant, value, f):
             feat.update({key: value}) 
         elif variant == "LONG" and isinstance(value, float): # if object has been modified 
             feat.update({key: int(value)}) 
+        elif variant == "FLOAT" and isinstance(value, int): # if object has been modified 
+            feat.update({key: float(value)}) 
         else: feat.update({key: None}) 
     elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
     return feat 
