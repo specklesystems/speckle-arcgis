@@ -1,7 +1,10 @@
 from typing import List, Optional
 from specklepy.objects.base import Base
 
-from speckle.converter.layers.CRS import CRS
+try: 
+    from speckle.converter.layers.CRS import CRS
+except:
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
 
 
 

@@ -4,8 +4,12 @@ import arcpy
 import json
 import os
 
-from speckle.converter.layers.CRS import CRS
-from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+try: 
+    from speckle.converter.layers.CRS import CRS
+    from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
 
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,

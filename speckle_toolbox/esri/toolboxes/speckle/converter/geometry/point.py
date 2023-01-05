@@ -3,7 +3,8 @@ from typing import List
 from specklepy.objects.geometry import Point
 import arcpy
 
-from speckle.converter.layers.utils import get_scale_factor
+try: from speckle.converter.layers.utils import get_scale_factor
+except: from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
 
 
 def multiPointToSpeckle(geom, feature, layer, multiType: bool):

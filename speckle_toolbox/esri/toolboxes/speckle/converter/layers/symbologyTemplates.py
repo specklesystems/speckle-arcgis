@@ -5,11 +5,14 @@ import os
 
 import arcpy 
 from arcpy._mp import ArcGISProject
-
-from specklepy.objects import Base
-from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
                               AddFields, AlterField, DefineProjection )
+
+from specklepy.objects import Base
+try:
+    from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
+except:
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
 
 def jsonFromLayerStyle(layerArcgis, path_style):
     # write updated renderer to file and get layerStyle variable 

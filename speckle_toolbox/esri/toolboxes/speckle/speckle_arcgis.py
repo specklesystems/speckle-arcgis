@@ -10,15 +10,26 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from arcpy import metadata as md
 
-from specklepy.api.models import Branch, Stream, Streams
-from speckle.converter.layers.Layer import Layer, RasterLayer
-
-from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
+try:
+    from speckle.converter.layers.Layer import Layer, RasterLayer
+    from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
+    from speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
+    from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+    from speckle.converter.layers.Layer import VectorLayer
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, RasterLayer
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
+    from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import VectorLayer
+    
 from arcgis.features import FeatureLayer
 import os
 import os.path
+import sys 
 
 import specklepy
+from specklepy.api.models import Branch, Stream, Streams
 from specklepy.transports.server.server import ServerTransport
 from specklepy.api.credentials import get_local_accounts
 from specklepy.api.client import SpeckleClient
@@ -32,10 +43,6 @@ from specklepy.logging.exceptions import (
 from specklepy.api.wrapper import StreamWrapper
 from specklepy.objects import Base
 from specklepy.logging import metrics
-
-from speckle.ui.project_vars import toolboxInputsClass, speckleInputsClass
-from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
-from speckle.converter.layers.Layer import VectorLayer
 
 #'''
 
@@ -78,8 +85,13 @@ class Toolbox:
         self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
-        metrics.set_host_app("ArcGIS")  
 
+        try: 
+            version = arcpy.GetInstallInfo()['Version']
+            python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
+            metrics.set_host_app("ArcGIS", ', '.join([version, python_version])) 
+        except: 
+            metrics.set_host_app("ArcGIS")
         # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm#except: print("something happened")
 
 class Speckle:
@@ -128,7 +140,6 @@ class Speckle:
             name="streamsDefalut",
             datatype="GPString",
             parameterType="Optional",
-            #category="Sending data",
             direction="Input",
             category=cat1
             )
@@ -144,7 +155,6 @@ class Speckle:
             name="addDefStreams",
             datatype="GPBoolean",
             parameterType="Optional",
-            #category="Sending data",
             direction="Input",
             category=cat1
             )
@@ -211,7 +221,6 @@ class Speckle:
             parameterType="Required",
             direction="Input",
             multiValue=False,
-            #category=cat2
             )
         savedStreams.filter.list = [f"Stream not accessible - {stream[0].stream_id}" if stream[1] is None or isinstance(stream[1], SpeckleException) else f"{stream[1].name} - {stream[1].id}" for i,stream in enumerate(self.speckleInputs.saved_streams)] 
 
@@ -229,9 +238,7 @@ class Speckle:
             name="branch",
             datatype="GPString",
             parameterType="Required",
-            #category="Sending data",
             direction="Input",
-            #category=cat2
             )
         branch.value = ""
         branch.filter.type = 'ValueList'
@@ -241,9 +248,7 @@ class Speckle:
             name="commit",
             datatype="GPString",
             parameterType="Optional",
-            #category="Sending data",
             direction="Input",
-            #category=cat2
             )
         commit.value = ""
         commit.filter.type = 'ValueList'
@@ -255,7 +260,6 @@ class Speckle:
             parameterType="Optional",
             direction="Input",
             multiValue=False,
-            #category=cat2
             )
         msg.value = ""
 
@@ -266,7 +270,6 @@ class Speckle:
             parameterType="Optional",
             direction="Input",
             multiValue=True,
-            #category=cat2
             )
         selectedLayers.filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.speckleInputs.all_layers)] #"Polyline"
 
@@ -276,13 +279,10 @@ class Speckle:
             name="action",
             datatype="GPString",
             parameterType="Required",
-            #category="Sending data",
             direction="Input",
             multiValue=False,
-            #category=cat2
             )
         action.value = "Send" 
-        #action.filter.type = 'ValueList'
         action.filter.list = ["Send", "Receive"]  
 
         refresh = arcpy.Parameter(
@@ -291,8 +291,7 @@ class Speckle:
             datatype="GPBoolean",
             parameterType="Optional",
             direction="Input"
-            )
-        #refresh.filter.type = "ValueList"   
+            ) 
         refresh.value = False 
 
         parameters = [streamsDefalut, addDefStreams, streamUrl, addUrlStreams, lat, lon, setLatLon, savedStreams, removeStream, branch, commit, selectedLayers, msg, action, refresh]
@@ -310,11 +309,11 @@ class Speckle:
             if par.name == "addDefStreams" and par.altered and par.value == True: 
                 for p in parameters:
                     if p.name == "streamsDefalut" and p.valueAsText is not None:
+
                         # add value from streamsDefault to saved streams
                         selected_stream_name = p.valueAsText[:]
-                        #print(selected_stream_name)
+
                         for stream in self.speckleInputs.streams_default:
-                            #print(stream)
                             if stream.name == selected_stream_name.split(" - ")[0]:
                                 print("_____Add from list___")
                                 wr = StreamWrapper(f"{self.speckleInputs.account.serverInfo.url}/streams/{stream.id}?u={self.speckleInputs.account.userInfo.id}")
@@ -340,7 +339,8 @@ class Speckle:
                             steamId = query
                             try: steamId = query.split("/streams/")[1].split("/")[0] 
                             except: pass
-                            # quesry stream, add to saved
+
+                            # query stream, add to saved
                             stream = self.speckleInputs.speckle_client.stream.get(steamId)
                             if isinstance(stream, Stream): 
                                 print("_____Add by URL___")
@@ -364,11 +364,9 @@ class Speckle:
                 for p in parameters:
                     if p.name == "savedStreams" and p.valueAsText is not None:
 
-                         # get value from savedStreams 
+                        # get value from savedStreams 
                         selected_stream_name = p.valueAsText[:]
-                        #print(selected_stream_name)
                         for streamTup in self.speckleInputs.saved_streams:
-                            #print(stream)
                             stream = streamTup[1]
                             if stream.name == selected_stream_name.split(" - ")[0]:
                                 print("_____Remove stream___")
@@ -394,6 +392,7 @@ class Speckle:
                         lat = p.valueAsText[:].replace(",","").replace(" ","").replace(";","").replace("_","")
                         try: lat = float(lat)
                         except: lat = 0; p.value = "0.0"
+
                     if p.name == "lon" and p.valueAsText is not None:
                         # add value from the UI to saved lat
                         lon = p.valueAsText[:].replace(",","").replace(" ","").replace(";","").replace("_","")
@@ -408,7 +407,6 @@ class Speckle:
             if par.name == "savedStreams" and par.altered:
                 # Search for the stream by name
                 if par.value is not None and "Stream not accessible" not in par.valueAsText[:]:
-                    #print("SAVED STREAMS - selection")
                     selected_stream_name = par.valueAsText[:]
                     self.toolboxInputs.active_stream = None
                     self.toolboxInputs.active_stream_wrapper = None
@@ -444,7 +442,6 @@ class Speckle:
                                 p.value = None
                                 self.toolboxInputs.active_commit = None 
                 else: par.value = None
-                #print(self.toolboxInputs.action)
 
             if par.name == "branch" and par.altered: # branches
                 if par.value is not None:
@@ -483,22 +480,13 @@ class Speckle:
                 if par.value is not None:
                     self.toolboxInputs.selected_layers = par.values
 
-                    #print("selected layers changed")
-                    #print(self.toolboxInputs.action)
-                    #print(self.toolboxInputs.selected_layers)
-
             if par.name == "msg" and par.altered and par.valueAsText is not None:
                 self.toolboxInputs.messageSpeckle = par.valueAsText
                 print(self.toolboxInputs.messageSpeckle)
 
             if par.name == "action" and par.altered:
-                #print("action changed")
-                #print(par.valueAsText)
                 if par.valueAsText == "Send": self.toolboxInputs.action = 1
                 else: self.toolboxInputs.action = 0
-
-                #print(self.toolboxInputs.action)
-                #print(self.toolboxInputs.selected_layers)
 
             if par.name == "refresh" and par.altered: # refresh btn
                 if par.value == True: 
@@ -508,9 +496,6 @@ class Speckle:
                 self.toRefresh = False
         
         print("____________________________parameters___________________________")
-        #[print(str(x.name) + " - " + str(x.valueAsText)) for x in parameters]
-        #[x.clearMessage() for x in parameters] # https://pro.arcgis.com/en/pro-app/latest/arcpy/geoprocessing_and_python/programming-a-toolvalidator-class.htm
-        #[print(x.valueAsText) for x in parameters]
         return 
     
     def refresh(self, parameters: List[Any]): 
@@ -538,9 +523,7 @@ class Speckle:
                 else:
                     par.filter.list = [ (st.name + " - " + st.id) for st in self.speckleInputs.streams_default ]
             if par.name == "savedStreams": 
-                #print("par.name")
                 saved_streams = self.speckleInputs.getProjectStreams()
-                #print(saved_streams)
                 par.filter.list = [f"Stream not accessible - {stream[0].stream_id}" if stream[1] is None or isinstance(stream[1], SpeckleException) else f"{stream[1].name} - {stream[1].id}" for i,stream in enumerate(saved_streams)] 
             if par.name == "selectedLayers": par.filter.list = [str(i) + "-" + l.longName for i,l in enumerate(self.speckleInputs.all_layers)]
         
@@ -576,8 +559,6 @@ class Speckle:
     def onSend(self, parameters: List):
 
         print("______________SEND_______________")
-
-        #if self.validateStreamBranch(parameters) == False: return
 
         if len(self.toolboxInputs.selected_layers) == 0: 
             arcpy.AddError("No layers selected for sending")

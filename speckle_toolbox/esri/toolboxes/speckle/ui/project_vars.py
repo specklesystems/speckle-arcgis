@@ -11,7 +11,6 @@ from specklepy.logging.exceptions import (
     GraphQLException,
     SpeckleException,
 )
-#from specklepy.api.credentials import StreamWrapper
 from specklepy.api.wrapper import StreamWrapper
 from osgeo import osr
 
@@ -21,19 +20,17 @@ class speckleInputsClass:
     instances = []
     accounts = get_local_accounts()
     account = None
-    streams_default: None or Streams = None 
+    streams_default: None or List[Stream] = None 
 
     project = None
     active_map = None
     saved_streams: List[Optional[Tuple[StreamWrapper, Stream]]] = []
     stream_file_path: str = ""
     all_layers: List[arcLayer] = []
-    clients = []
+    clients: List[SpeckleClient] = []
 
     for acc in accounts:
-        if acc.isDefault:
-            account = acc
-            #break
+        if acc.isDefault: account = acc
         new_client = SpeckleClient(
             acc.serverInfo.url,
             acc.serverInfo.url.startswith("https")
@@ -56,6 +53,7 @@ class speckleInputsClass:
         try:
             aprx = ArcGISProject('CURRENT')
             self.project = aprx
+            # following will fail if no project found 
             self.active_map = aprx.activeMap
             
             if self.active_map is not None and isinstance(self.active_map, Map): # if project loaded
@@ -119,23 +117,22 @@ class speckleInputsClass:
         else: return []
 
     def tryGetStream (self,sw: StreamWrapper) -> Stream:
-        #print("Try get streams")
+        if isinstance(sw, StreamWrapper):
+            steamId = sw.stream_id
+            try: steamId = sw.stream_id.split("/streams/")[1].split("/")[0] 
+            except: pass
 
-        steamId = sw.stream_id
-        try: steamId = sw.stream_id.split("/streams/")[1].split("/")[0] 
-        except: pass
-
-        client = sw.get_client()
-        stream = client.stream.get(steamId)
-        if isinstance(stream, GraphQLException):
-            raise SpeckleException(stream.errors[0]['message'])
-        return stream
-
+            client = sw.get_client()
+            stream = client.stream.get(steamId)
+            if isinstance(stream, GraphQLException):
+                raise SpeckleException(stream.errors[0]['message'])
+            return stream
+        else: 
+            raise SpeckleException('Invalid StreamWrapper provided')
 
 class toolboxInputsClass:
-    #def __init__(self):
+
     print("CREATING UI inputs first time________")
-    # self.instances.append(self)
     instances = []
     lat: float = 0.0
     lon: float = 0.0
@@ -172,10 +169,9 @@ class toolboxInputsClass:
 
     def setProjectStreams(self, wr: StreamWrapper, add = True): 
         # ERROR 032659 Error queueing metrics request: 
-        # Cannot parse  into a stream wrapper class - invalid URL provided.
         print("SET proj streams")
 
-        if os.path.exists(self.stream_file_path): 
+        if os.path.exists(self.stream_file_path) and ".gdb\\speckle_streams.txt" in self.stream_file_path: 
 
             new_content = ""
 
@@ -194,7 +190,7 @@ class toolboxInputsClass:
 
             f.write(new_content)
             f.close()
-        elif len(self.stream_file_path) >10: 
+        elif ".gdb\\speckle_streams.txt" in self.stream_file_path: 
             f = open(self.stream_file_path, "x")
             f.close()
             f = open(self.stream_file_path, "w")
@@ -206,71 +202,75 @@ class toolboxInputsClass:
         print("get survey point")
         x = y = 0
         if not content: 
-            content = self.stream_file_path
-            try: 
-                f = open(self.stream_file_path, "r")
-                content = f.read()
-                f.close()
-            except: pass
+            content = None 
+            if os.path.exists(self.stream_file_path) and ".gdb\\speckle_streams.txt" in self.stream_file_path: 
+                try: 
+                    f = open(self.stream_file_path, "r")
+                    content = f.read()
+                    f.close()
+                except: pass
         if content:
-            temp = []
             for i, coords in enumerate(content.split(",")):
                 if "speckle_sr_origin_" in coords: 
                     try:
                         x, y = [float(c) for c in coords.replace("speckle_sr_origin_","").split(";")]
                     except: pass
-        return (x, y)
+        return (x, y) 
 
     def set_survey_point(self, coords: List[float]):
         # from widget (2 strings) to local vars + update SR of the map
         print("SET survey point")
 
-        pt = "speckle_sr_origin_" + str(coords[0]) + ";" + str(coords[1]) 
-        if os.path.exists(self.stream_file_path): 
+        if len(coords) == 2: 
+            pt = "speckle_sr_origin_" + str(coords[0]) + ";" + str(coords[1]) 
+            if os.path.exists(self.stream_file_path) and ".gdb\\speckle_streams.txt" in self.stream_file_path: 
 
-            new_content = ""
-            f = open(self.stream_file_path, "r")
-            existing_content = f.read()
-            f.close()
+                new_content = ""
+                f = open(self.stream_file_path, "r")
+                existing_content = f.read()
+                f.close()
 
-            f = open(self.stream_file_path, "w")
-            if pt in existing_content: 
-                new_content = existing_content.replace( pt , "")
-            else: 
-                new_content = existing_content 
+                f = open(self.stream_file_path, "w")
+                if pt in existing_content: 
+                    new_content = existing_content.replace( pt , "")
+                else: 
+                    new_content = existing_content 
+                
+                new_content += pt + "," # add point
+                f.write(new_content)
+                f.close()
+            elif ".gdb\\speckle_streams.txt" in self.stream_file_path: 
+                f = open(self.stream_file_path, "x")
+                f.close()
+                f = open(self.stream_file_path, "w")
+                f.write(pt + ",")
+                f.close()
             
-            new_content += pt + "," # add point
-            f.write(new_content)
-            f.close()
-        elif len(self.stream_file_path) >10: 
-            f = open(self.stream_file_path, "x")
-            f.close()
-            f = open(self.stream_file_path, "w")
-            f.write(pt + ",")
-            f.close()
+            # save to project; crearte SR
+            self.lat, self.lon = coords[0], coords[1]
+            newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(self.lon) + " lat_0=" + str(self.lat) + " +x_0=0 +y_0=0 +k_0=1"
+            newCrs = osr.SpatialReference()
+            newCrs.ImportFromProj4(newCrsString)
+            newCrs.MorphToESRI() # converts the WKT to an ESRI-compatible format
+            
+
+            validate = True if len(newCrs.ExportToWkt())>10 else False
+
+            if validate: 
+                newProjSR = arcpy.SpatialReference()
+                newProjSR.loadFromString(newCrs.ExportToWkt())
+
+                #source = osr.SpatialReference() 
+                #source.ImportFromWkt(self.project.activeMap.spatialReference.exportToString())
+                #transform = osr.CoordinateTransformation(source, newCrs)
+
+                self.project.activeMap.spatialReference =  newProjSR
+                arcpy.AddMessage("Custom project CRS successfully applied")
+            else:
+                arcpy.AddWarning("Custom CRS could not be created")
         
-        # save to project; crearte SR
-        self.lat, self.lon = coords[0], coords[1]
-        newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(self.lon) + " lat_0=" + str(self.lat) + " +x_0=0 +y_0=0 +k_0=1"
-        newCrs = osr.SpatialReference()
-        newCrs.ImportFromProj4(newCrsString)
-        newCrs.MorphToESRI() # converts the WKT to an ESRI-compatible format
-        
-
-        validate = True if len(newCrs.ExportToWkt())>10 else False
-
-        if validate: 
-            newProjSR = arcpy.SpatialReference()
-            newProjSR.loadFromString(newCrs.ExportToWkt())
-
-            #source = osr.SpatialReference() 
-            #source.ImportFromWkt(self.project.activeMap.spatialReference.exportToString())
-            #transform = osr.CoordinateTransformation(source, newCrs)
-
-            self.project.activeMap.spatialReference =  newProjSR
-            arcpy.AddMessage("Custom project CRS successfully applied")
         else:
-            arcpy.AddWarning("Custom CRS could not be created")
+            arcpy.AddWarning("Custom CRS could not be created: not enough coordinates provided")
 
         return True
 

@@ -5,7 +5,8 @@ from specklepy.objects.geometry import Mesh
 
 import shapefile
 from shapefile import TRIANGLE_STRIP, TRIANGLE_FAN
-from speckle.converter.layers.utils import get_scale_factor
+try: from speckle.converter.layers.utils import get_scale_factor
+except: from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
 
 def meshToNative(meshes: List[Mesh], path: str):
     """Converts a Speckle Mesh to MultiPatch"""

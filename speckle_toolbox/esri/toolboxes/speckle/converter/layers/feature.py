@@ -9,17 +9,23 @@ import arcpy
 from arcpy.management import CreateCustomGeoTransformation
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
-from speckle.converter.geometry._init_ import convertToSpeckle, convertToNative, convertToNativeMulti
-from speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
-                                            traverseDictByKey, hsv_to_rgb)
-
-from speckle.converter.geometry.point import pointToSpeckle
-from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+try: 
+    from speckle.converter.geometry._init_ import convertToSpeckle, convertToNative, convertToNativeMulti
+    from speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
+                                                traverseDictByKey, hsv_to_rgb)
+    from speckle.converter.geometry.point import pointToSpeckle
+    from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry._init_ import convertToSpeckle, convertToNative, convertToNativeMulti
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
+                                                traverseDictByKey, hsv_to_rgb)
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
 
 import numpy as np
 import colorsys
-
-from speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
 
 
 def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arcpy.SpatialReference, project: ArcGISProject, selectedLayer: arcLayer):
