@@ -10,7 +10,6 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from arcpy import metadata as md
 
-from specklepy.api.models import Branch, Stream, Streams
 try:
     from speckle.converter.layers.Layer import Layer, RasterLayer
     from speckle.converter.layers._init_ import convertSelectedLayers, layerToNative, cadLayerToNative, bimLayerToNative
@@ -30,6 +29,7 @@ import os.path
 import sys 
 
 import specklepy
+from specklepy.api.models import Branch, Stream, Streams
 from specklepy.transports.server.server import ServerTransport
 from specklepy.api.credentials import get_local_accounts
 from specklepy.api.client import SpeckleClient

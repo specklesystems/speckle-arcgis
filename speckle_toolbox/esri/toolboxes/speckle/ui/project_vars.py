@@ -11,7 +11,6 @@ from specklepy.logging.exceptions import (
     GraphQLException,
     SpeckleException,
 )
-#from specklepy.api.credentials import StreamWrapper
 from specklepy.api.wrapper import StreamWrapper
 from osgeo import osr
 
