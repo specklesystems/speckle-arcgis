@@ -341,7 +341,7 @@ def lineFrom2pt(pt1: List[float], pt2: List[float]):
 
 def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     """Converts a Speckle Polyline to QgsLineString"""
-    print("__ convert poly to native __")
+    print("__ convert polyline to native __")
 
     if isinstance(poly, Polycurve): 
         poly = specklePolycurveToPoints(poly)

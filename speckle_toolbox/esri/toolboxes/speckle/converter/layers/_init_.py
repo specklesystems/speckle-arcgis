@@ -489,8 +489,9 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         new_feat = cadFeatureToNative(f, newFields, sr)
         if new_feat != "" and new_feat != None: 
             fets.append(new_feat)
-    #print("features created")
+    print("features created")
     print(len(fets))
+    print(all_keys)
     
     if len(fets) == 0: return None
     count = 0
@@ -503,14 +504,20 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         heads = [ 'Shape@', 'OBJECTID']
 
         for key,value in feat.items(): 
+            #print(key, str(value))
             if key in all_keys and key.lower() not in fields_to_ignore: 
                 heads.append(key)
                 row.append(value)
         rowValues.append(row)
         count += 1
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
+    #print(heads)
     for row in rowValues: 
-        cur.insertRow(tuple(row))
+        try:
+            #print(row)
+            cur.insertRow(tuple(row))
+        except Exception as e:
+            print(e)
     del cur 
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 

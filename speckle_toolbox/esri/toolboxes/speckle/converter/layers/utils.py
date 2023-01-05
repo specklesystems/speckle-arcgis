@@ -15,8 +15,7 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
         (str, "TEXT"), # 10
         (float, "FLOAT"),
         (int, "LONG"),
-        (bool, "SHORT")
-        #date: "SHORT"
+        (bool, "SHORT") 
     ]
     res = None
     for p in pairs:
@@ -53,6 +52,7 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
 
             value = feature[name]
             variant = getVariantFromValue(value)
+            #if name == 'area': print(value); print(variant)
             if not variant: variant = None #LongLong #4 
 
             # go thought the dictionary object
@@ -83,13 +83,15 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
                     else: #check if the field was empty previously: 
                         oldVariant = fields[k]
                         # replace if new one is NOT Float (too large integers)
-                        if oldVariant != "FLOAT" and v == "FLOAT": 
+                        #print(oldVariant, v)
+                        if oldVariant == "LONG" and v == "FLOAT": 
                             fields.update({k: v}) 
                         # replace if new one is NOT LongLong or IS String
                         if oldVariant != "TEXT" and v == "TEXT": 
                             fields.update({k: v}) 
-                            
+                        #print(fields)
     # replace all empty ones wit String
+    all_props.append("Speckle_ID") 
     for name in all_props:
         if name not in fields.keys(): 
             fields.update({name: 'TEXT'}) 

@@ -118,7 +118,7 @@ def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, 
                 
 
 def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
-    #print("04_________CAD Feature To Native____________")
+    print("04_________CAD Feature To Native____________")
     feat = {}
     try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
     except:  speckle_geom = feature # for created in other software
@@ -139,6 +139,8 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
 
     #### setting attributes to feature
     feat_updated = updateFeat(feat, fields, feature)
+    print(feat)
+    print(fields)
     return feat_updated
 
 def addFeatVariant(key, variant, value, f):
@@ -146,8 +148,12 @@ def addFeatVariant(key, variant, value, f):
     feat = f
     if variant == "TEXT": value = str(value) 
     if value != "NULL" and value != "None":
+        #if key == 'area': print(value); print(type(value)); print(getVariantFromValue(value))
         if variant == getVariantFromValue(value) or (variant=="FLOAT" and isinstance(value, int)): 
-            feat.update({key: value})   
+            feat.update({key: value}) 
+        elif variant == "LONG" and isinstance(value, float): # if object has been modified 
+            feat.update({key: int(value)}) 
+        else: feat.update({key: None}) 
     elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
     return feat 
 
@@ -157,13 +163,14 @@ def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
         try:
             if key == "Speckle_ID": 
                 value = str(feature["id"])
-                if key != "parameters": print(value)
+                
                 feat[key] = value 
 
                 feat = addFeatVariant(key, variant, value, feat)
             else:
                 try: 
                     value = feature[key] 
+                    #if key == "area": print(feature[key]); print(type(feature[key]))
                     feat = addFeatVariant(key, variant, value, feat)
                 except:
                     value = None
