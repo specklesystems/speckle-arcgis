@@ -9,6 +9,7 @@ from typing import Any, List, Tuple, Union
 try:
     from speckle.converter.layers.CRS import CRS
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from speckle.converter.layers.symbologyTemplates import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
     from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
 
     from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
@@ -17,6 +18,7 @@ try:
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbologyTemplates import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative
@@ -35,8 +37,6 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 
 import numpy as np
 
-
-
 def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
     """Converts the current selected layers to Speckle"""
     print("________Convert Layers_________")
@@ -51,8 +51,9 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
             ds = layerToSend.dataSource #file path
             #if layerToSend.isFeatureLayer: 
             newBaseLayer = layerToSpeckle(layerToSend, project)
-            if newBaseLayer is not None: result.append(newBaseLayer)
-            elif layerToSend.isRasterLayer: pass
+            if newBaseLayer is not None: 
+                result.append(newBaseLayer)
+            #elif layerToSend.isRasterLayer: pass
             print(result)
 
     return result
@@ -86,6 +87,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
         speckleLayer.type="VectorLayer"
         speckleLayer.name = layerName
         speckleLayer.crs = speckleReprojectedCrs
+        speckleLayer.renderer = rendererToSpeckle(project, project.activeMap, layer, None)
         #speckleLayer.datum = datum
 
 
@@ -126,7 +128,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                             #print(feat)
 
 
-                        b = featureToSpeckle(fieldnames, row_attr, feat, projectCRS, project, layer)
+                        b = featureToSpeckle(fieldnames, row_attr, i, feat, projectCRS, project, layer)
                         if b is not None: layerObjs.append(b)
                         
                     print("____End of Feature # " + str(i+1))
@@ -160,6 +162,8 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
         #speckleLayer.geomType="Raster"
         speckleLayer.features = layerObjs
         
+        speckleLayer.renderer = rendererToSpeckle(project, project.activeMap, layer, b)
+        
         #speckleLayer.renderer = layerRenderer
         #speckleLayer.applicationId = selectedLayer.id()
 
@@ -183,9 +187,12 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
     layer_meshes = None
     #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
     for geom in layerContentList:
-        #print(geom)
-        if geom.displayMesh and isinstance(geom.displayMesh, Mesh): 
-            geom_meshes.append(geom)
+        try: 
+            if geom.displayMesh: geom_meshes.append(geom)
+        except:
+            try: 
+                if geom.displayValue: geom_meshes.append(geom)
+            except: pass
 
     if len(geom_meshes)>0: layer_meshes = bimVectorLayerToNative(geom_meshes, layerName, "Mesh", streamBranch, project)
 
@@ -196,19 +203,22 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     # no support for mltipatches, maybe in 3.1: https://community.esri.com/t5/arcgis-pro-ideas/better-support-for-multipatches-in-arcpy/idi-p/953614/page/2#comments
     print("02_________BIM vector layer to native_____")
     #get Project CRS, use it by default for the new received layer
+    
     vl = None
-    layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
     layerName = layerName + "_" + geomType
+    layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
     #if not "__Structural_Foundations_Mesh" in layerName: return None
     
     sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
     active_map = project.activeMap
+    
     path = project.filePath.replace("aprx","gdb") #
-    path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\BIM_layers_speckle\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
+    path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\BIM_layers_speckle\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
     print(path_bim)
+    
     if not os.path.exists(path_bim): os.makedirs(path_bim)
     print(path)
-
+    
     if sr.type == "Geographic": 
         arcpy.AddMessage(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly")
 
@@ -295,6 +305,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     print(all_keys)
     print(len(all_keys))
     if len(matrix)>0: AddFields(str(f_class), matrix)
+    print(matrix)
     
     fets = []
     print("_________BIM FeatureS To Native___________")
@@ -322,26 +333,38 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
 
         rowValues.append(row)
         count += 1
+    print(heads)
     
     with arcpy.da.UpdateCursor(f_class, heads) as cur:
         # For each row, evaluate the WELL_YIELD value (index position 
         # of 0), and update WELL_CLASS (index position of 1)
         shp_num = 0
+        #print(heads)
         try:
             for rowShape in cur: 
+                #print(rowShape)
                 for i,r in enumerate(rowShape):
+                    #print(heads[i])
+                    #print(matrix[i])
                     rowShape[i] = rowValues[shp_num][i]
-                    if isinstance(rowValues[shp_num][i], str): rowShape[i] = rowValues[shp_num][i][:255]
-
+                    #print(type(rowShape[i]))
+                    if matrix[i][1] == 'TEXT' and rowShape[i] is not None: rowShape[i] = str(rowValues[shp_num][i]) 
+                    #print(type(rowShape[i]))
+                    if isinstance(rowValues[shp_num][i], str): # cut if string is too long
+                        rowShape[i] = rowValues[shp_num][i][:255]
+                    #print(rowShape[i])
+                #print(rowShape)
                 cur.updateRow(rowShape)
                 shp_num += 1
+                #print(shp_num)
         except Exception as e: 
-            print(e)
-            print(i)
+            print("Layer attribute error: " + str(e))
+            #print(i)
             print(shp_num)
             print(len(rowValues))
-            print(rowValues[i-1])
-            print(len(rowValues[i-1]))
+            #print(rowValues[i])
+            #print(len(rowValues[i]))
+            arcpy.AddWarning("Layer attribute error: " + e)
     del cur 
     
     print("create layer:")
@@ -361,6 +384,7 @@ def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
     geom_polygones = []
     geom_meshes = []
     #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
+    print(layerContentList)
     for geom in layerContentList:
         #print(geom)
         if geom.speckle_type == "Objects.Geometry.Point": 
@@ -379,17 +403,21 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     vl = None
     layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
     layerName = layerName + "_" + geomType
+    print(layerName)
     
     sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
     active_map = project.activeMap
     path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
     
+    print(path)
+    print(streamBranch)
     if sr.type == "Geographic": 
         arcpy.AddMessage(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly")
 
     #CREATE A GROUP "received blabla" with sublayers
     layerGroup = None
     newGroupName = f'{streamBranch}'
+    print(newGroupName)
     #print(newGroupName)
     for l in active_map.listLayers():
         if l.longName == newGroupName: layerGroup = l; break 
@@ -560,7 +588,7 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         new_feat = featureToNative(f, newFields, geomType, sr)
         if new_feat != "" and new_feat!= None: fets.append(new_feat)
     
-    print(fets)
+    #print(fets)
     if len(fets) == 0: return None
     count = 0
     rowValues = []
@@ -581,16 +609,27 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         count += 1
     cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
     for row in rowValues: 
-        print(tuple(heads))
-        print(tuple(row))
+        #print(tuple(heads))
+        #print(tuple(row))
         cur.insertRow(tuple(row))
     del cur 
 
     vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
     #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
-    #active_map.addLayer(new_layer)
+    
     active_map.addLayerToGroup(layerGroup, vl)
+    vl2 = None
+    print(newName)
+    for l in project.activeMap.listLayers(): 
+        #print(l.longName)
+        if l.longName == layerGroup.longName + "\\" + newName:
+            vl2 = l 
+            break
+    path_lyr = vectorRendererToNative(project, active_map, layerGroup, layer, vl2, f_class, heads)
+    #if path_lyr is not None: 
+    #    active_map.removeLayer(path_lyr)    
+
     r'''
     # rename back the layer if was renamed due to existing duplicate
     if layerExists:  
@@ -633,6 +672,9 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     #path = '.'.join(path.split("\\")[:-1])
     rasterHasSr = False
     print(path)
+
+    path_bands = "\\".join(path.split("\\")[:-1]) + "\\Layers_Speckle\\rasters_Speckle\\" + streamBranch 
+    if not os.path.exists(path_bands): os.makedirs(path_bands)
 
     try: 
         srRasterWkt = str(layer.rasterCrs.wkt)
@@ -679,7 +721,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     for i in range(bandsCount):
         print(i)
         print(bandNames[i])
-        rasterbandPath = path + "\\" + newName + "_Band_" + str(i+1) #+ ".tif"
+        rasterbandPath = path_bands + "\\" + newName + "_Band_" + str(i+1) + ".tif"
         bandDatasets += rasterbandPath + ";"
         rasterband = np.array(bandValues[i])
         rasterband = np.reshape(rasterband,(ysize, xsize))
@@ -713,22 +755,41 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     #mergedRaster.setProperty("spatialReference", crsRaster)
 
     full_path = validate_path(path + "\\" + newName) #solved file saving issue 
+    print("RASTER FULL PATH")
+    print(full_path)
     if os.path.exists(full_path):
+        #print(full_path)
         for index, letter in enumerate('1234567890abcdefghijklmnopqrstuvwxyz'):
+            print(full_path + letter)
             if os.path.exists(full_path + letter): pass
             else: full_path += letter; break 
-
+    print("RASTER new PATH")
     print(full_path)
     #mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
     #mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
     
-    arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+    try: 
+        arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+    except: # if already exists
+        full_path += "_"
+        arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
     print(path + "\\" + newName)
     arcpy.management.DefineProjection(full_path, srRaster)
 
-    rasterLayer = arcpy.management.MakeRasterLayer(full_path, newName + "_").getOutput(0)
+    rasterLayer = arcpy.management.MakeRasterLayer(full_path, newName).getOutput(0)
     print(layerGroup)
     active_map.addLayerToGroup(layerGroup, rasterLayer)
+
+    rl2 = None
+    for l in active_map.listLayers(): 
+        if l.longName == layerGroup.longName + "\\" + newName:
+            print(l.longName)
+            rl2 = l 
+            break
+    rasterLayer = rasterRendererToNative(project, active_map, layerGroup, layer, rl2, rasterPathsToMerge, newName)
+
+    try: os.remove(path_bands)
+    except: pass
 
     r'''
     if arcpy.Exists(fileout):

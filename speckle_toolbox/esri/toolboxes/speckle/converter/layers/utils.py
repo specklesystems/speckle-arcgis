@@ -6,7 +6,7 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import os
 
-ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh'] 
+ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
     #print("_________get variant from value_______")
@@ -20,21 +20,23 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
     ]
     res = None
     for p in pairs:
-        if isinstance(value, p[0]): res = p[1]; break
-    #t = type(value)
-    
-    #try: res = pairs[t]
-    #except: pass
-    #if isinstance(value, str) and "PyQt5.QtCore.QDate(" in value: res = QVariant.Date #14
-    #elif isinstance(value, str) and "PyQt5.QtCore.QDateTime(" in value: res = QVariant.DateTime #16
+        if isinstance(value, p[0]): 
+            res = p[1]
+            try:
+                if res == "LONG" and (value>= 2147483647 or value<= -2147483647):
+                    #https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/overview/arcgis-field-data-types.htm
+                    res = "FLOAT"
+            except Exception as e: print(e)
+            break
 
     return res
 
 def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTRS_REMOVE ) -> dict[str, str]:
     print("03________ get layer attributes")
-    #print(featuresList)
-    if not isinstance(featuresList, List): features = [featuresList]
+
+    if not isinstance(featuresList, list): features = [featuresList]
     else: features = featuresList[:]
+    
     fields = {}
     all_props = []
     for feature in features: 
@@ -58,44 +60,49 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
                 #all_props.remove(name) # remove generic dict name
                 for i, val_item in enumerate(value):
                     newF, newVals = traverseDict( {}, {}, name+"_"+str(i), val_item)
+
                     for i, (k,v) in enumerate(newF.items()):
-                        fields.update({k: v}) 
                         if k not in all_props: all_props.append(k)
-                    #print(fields)
+                        if k not in fields.keys(): fields.update({k: v}) 
+                        else: #check if the field was empty previously: 
+                            oldVariant = fields[k]
+                            # replace if new one is NOT Float (too large integers)
+                            if oldVariant != "FLOAT" and v == "FLOAT": 
+                                fields.update({k: v}) 
+                            # replace if new one is NOT LongLong or IS String
+                            if oldVariant != "TEXT" and v == "TEXT": 
+                                fields.update({k: v}) 
             
             # add a field if not existing yet 
             else: # if str, Base, etc
                 newF, newVals = traverseDict( {}, {}, name, value)
+                
                 for i, (k,v) in enumerate(newF.items()):
                     if k not in all_props: all_props.append(k)
-                    
                     if k not in fields.keys(): fields.update({k: v}) #if variant is known
-                    elif k in fields.keys(): #check if the field was empty previously: 
+                    else: #check if the field was empty previously: 
                         oldVariant = fields[k]
+                        # replace if new one is NOT Float (too large integers)
+                        if oldVariant != "FLOAT" and v == "FLOAT": 
+                            fields.update({k: v}) 
                         # replace if new one is NOT LongLong or IS String
-                        if oldVariant != "TEXT" and variant == "TEXT": 
-                            fields.update({k: variant}) 
-                #print(fields)
-
+                        if oldVariant != "TEXT" and v == "TEXT": 
+                            fields.update({k: v}) 
+                            
     # replace all empty ones wit String
     for name in all_props:
         if name not in fields.keys(): 
             fields.update({name: 'TEXT'}) 
-    #print(fields)
+
     fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
     return fields_sorted
 
 def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
-    #print("______05___Traverse Dict")
-    #print(nam)
-    #print(val)
     
     if isinstance(val, dict):
-        #print("DICT")
         for i, (k,v) in enumerate(val.items()):
             newF, newVals = traverseDict( newF, newVals, nam+"_"+k, v)
     elif isinstance(val, Base):
-        #print("BASE")
         dynamicProps = val.get_dynamic_member_names()
         for att in ATTRS_REMOVE:
             try: dynamicProps.remove(att)
@@ -109,11 +116,11 @@ def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
         for i, (k,v) in enumerate(item_dict.items()):
             newF, newVals = traverseDict( newF, newVals, nam+"_"+k, v)
     else: 
-        #print("ELSE")
         var = getVariantFromValue(val)
         if var is None: 
             var = 'TEXT'
             val = str(val)
+        #print(var)
         newF.update({nam: var})
         newVals.update({nam: val})  
 
