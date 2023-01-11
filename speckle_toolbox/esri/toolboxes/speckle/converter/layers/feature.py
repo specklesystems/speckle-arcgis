@@ -88,9 +88,14 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
         return None
 
     for key, variant in fields.items(): 
+        try: value = feature[key]
+        except: 
+            if key == 'Speckle_ID': value = feature['id'] 
+            else: 
+                arcpy.AddWarning(f'Field {key} not found')
+                return None 
 
-        value = feature[key]
-        if variant == "TEXT": value = str(feature[key]) 
+        if variant == "TEXT": value = str(value) 
         if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
             feat.update({key: value})
         else: 
