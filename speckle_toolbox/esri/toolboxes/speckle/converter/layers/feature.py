@@ -93,7 +93,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
             if key == 'Speckle_ID': value = feature['id'] 
             else:
                 arcpy.AddWarning(f'Field {key} not found')
-                return 
+                return None 
 
         if variant == "TEXT": value = str(value) 
         if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
