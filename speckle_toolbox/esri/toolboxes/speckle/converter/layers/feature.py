@@ -91,7 +91,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
         try: value = feature[key]
         except: 
             if key == 'Speckle_ID': value = feature['id'] 
-            else:
+            else: 
                 arcpy.AddWarning(f'Field {key} not found')
                 return None 
 
