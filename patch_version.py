@@ -37,7 +37,7 @@ def patch_installer(tag):
         with open(fileName, "r") as file:
             lines = file.readlines()
             for i, line in enumerate(lines):
-                if "-py3-none-any.whl" in line: 
+                if "-py3-none-any.whl" in line and '.sort' not in line: 
                     p1 = line.split("-py3-none-any.whl")[0].split("-")[0]
                     p2 = f'{tag.split("-")[0]}'
                     p3 = line.split("-py3-none-any.whl")[1]
