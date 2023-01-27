@@ -206,9 +206,9 @@ def rasterRendererToNative(project: ArcGISProject, active_map, layerGroup,  laye
             # multiband raster, CIMRasterRGBColorizer 
             # arcpy doesnt support multiband raster symbology: https://community.esri.com/t5/arcgis-api-for-python-questions/why-does-arcpy-mp-arcgis-pro-2-6-mosaic-dataset/td-p/1016312 
             root_path = "\\".join(project.filePath.split("\\")[:-1])
-            if not os.path.exists(root_path + '\\Layers_Speckle\\rasters_Speckle'): os.makedirs(root_path + '\\Layers_Speckle\\rasters_Speckle')
-            path_style = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + newName + '_old.lyrx'
-            path_style2 = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + newName + '_new.lyrx'
+            if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
+            path_style = root_path + '\\Layers_Speckle\\raster_bands\\' + newName + '_old.lyrx'
+            path_style2 = root_path + '\\Layers_Speckle\\raster_bands\\' + newName + '_new.lyrx'
             symJson = jsonFromLayerStyle(arcLayer, path_style)
 
         if renderer['type']  == 'singlebandgray':
@@ -306,8 +306,8 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
         except: 
             rType = "multibandcolor"
             root_path = "\\".join(project.filePath.split("\\")[:-1])
-            if not os.path.exists(root_path + '\\Layers_Speckle\\rasters_Speckle'): os.makedirs(root_path + '\\Layers_Speckle\\rasters_Speckle')
-            path_style = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + arcLayer.name + '_temp.lyrx'
+            if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
+            path_style = root_path + '\\Layers_Speckle\\raster_bands\\' + arcLayer.name + '_temp.lyrx'
             #path_style2 = root_path + '\\' + newName + '_new.lyrx'
             symJson = jsonFromLayerStyle(arcLayer, path_style)
 

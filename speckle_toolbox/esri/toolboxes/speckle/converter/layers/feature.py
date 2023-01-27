@@ -334,8 +334,8 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
     else: 
         #RGB colorizer 
         root_path = "\\".join(project.filePath.split("\\")[:-1])
-        if not os.path.exists(root_path + '\\Layers_Speckle\\rasters_Speckle'): os.makedirs(root_path + '\\Layers_Speckle\\rasters_Speckle')
-        path_style = root_path + '\\Layers_Speckle\\rasters_Speckle\\' + selectedLayer.name + '_temp.lyrx'
+        if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
+        path_style = root_path + '\\Layers_Speckle\\raster_bands\\' + selectedLayer.name + '_temp.lyrx'
         symJson = jsonFromLayerStyle(selectedLayer, path_style)
 
         # read from Json
