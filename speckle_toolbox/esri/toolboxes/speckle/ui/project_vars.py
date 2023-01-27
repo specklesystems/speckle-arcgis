@@ -123,7 +123,7 @@ class speckleInputsClass:
             except: pass
 
             client = sw.get_client()
-            stream = client.stream.get(steamId)
+            stream = client.stream.get(id = steamId, branch_limit = 100, commit_limit = 100)
             if isinstance(stream, GraphQLException):
                 raise SpeckleException(stream.errors[0]['message'])
             return stream

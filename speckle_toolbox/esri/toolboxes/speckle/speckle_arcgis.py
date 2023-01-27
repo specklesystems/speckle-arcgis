@@ -341,7 +341,7 @@ class Speckle:
                             except: pass
 
                             # query stream, add to saved
-                            stream = self.speckleInputs.speckle_client.stream.get(steamId)
+                            stream = self.speckleInputs.speckle_client.stream.get(id = steamId, branch_limit = 100, commit_limit = 100)
                             if isinstance(stream, Stream): 
                                 print("_____Add by URL___")
                                 wr = StreamWrapper(f"{self.speckleInputs.account.serverInfo.url}/streams/{stream.id}?u={self.speckleInputs.account.userInfo.id}")
