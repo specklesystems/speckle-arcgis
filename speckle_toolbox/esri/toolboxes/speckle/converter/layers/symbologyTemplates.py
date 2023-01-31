@@ -3,6 +3,8 @@ from typing import Any, List, Union
 import copy
 import os
 
+from typing import Dict
+
 import arcpy 
 from arcpy._mp import ArcGISProject
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
@@ -33,7 +35,7 @@ def symbol_color_to_speckle(color: dict):
     except: pass 
     return newColor
 
-def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layerSpeckle: Union[Layer, VectorLayer], layerArcgis, f_class, existingAttrs: List) -> Union[None, dict[str, Any]] :
+def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layerSpeckle: Union[Layer, VectorLayer], layerArcgis, f_class, existingAttrs: List) -> Union[None, Dict[str, Any]] :
     print("___________APPLY VECTOR RENDERER______________")
     print(layerArcgis)
     print(f_class)
@@ -311,7 +313,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
             #path_style2 = root_path + '\\' + newName + '_new.lyrx'
             symJson = jsonFromLayerStyle(arcLayer, path_style)
 
-        layerRenderer: dict[str, Any] = {}
+        layerRenderer: Dict[str, Any] = {}
         layerRenderer['type'] = rType
         print(rType)
         my_raster = arcpy.Raster(arcLayer.dataSource)  
@@ -394,7 +396,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
 
         return layerRenderer 
     elif arcLayer.isFeatureLayer: 
-        layerRenderer: dict[str, Any] = {}
+        layerRenderer: Dict[str, Any] = {}
 
         sym = arcLayer.symbology
         print(sym.renderer.type)

@@ -30,7 +30,7 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
 
     return res
 
-def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTRS_REMOVE ) -> dict[str, str]:
+def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTRS_REMOVE ) -> Dict[str, str]:
     print("03________ get layer attributes")
 
     if not isinstance(featuresList, list): features = [featuresList]
