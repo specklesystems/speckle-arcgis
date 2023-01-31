@@ -39,7 +39,7 @@ jobs:
             python patch_version.py $semver
             python setup.py sdist bdist_wheel
             Copy-Item -Path "dist\speckle_toolbox-$($ver)-py3-none-any.whl" -Destination "speckle_arcgis_installer"
-        - run: 
+      - run: 
           name: Build Installer
           shell: cmd.exe
           command:
