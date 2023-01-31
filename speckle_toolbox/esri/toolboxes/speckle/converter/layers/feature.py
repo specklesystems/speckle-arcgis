@@ -164,7 +164,7 @@ def addFeatVariant(key, variant, value, f):
     elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
     return feat 
 
-def updateFeat(feat:dict, fields: dict, feature: Base) -> dict[str, Any]:
+def updateFeat(feat:dict, fields: dict, feature: Base) -> Dict[str, Any]:
     
     for key, variant in fields.items(): 
         try:
