@@ -89,7 +89,7 @@ class Toolbox:
         try: 
             version = arcpy.GetInstallInfo()['Version']
             python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
-            metrics.set_host_app("ArcGIS", ', '.join([version, python_version])) 
+            metrics.set_host_app("ArcGIS", ', '.join([f"ArcGIS {version}", python_version])) 
         except: 
             metrics.set_host_app("ArcGIS")
         # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm#except: print("something happened")
