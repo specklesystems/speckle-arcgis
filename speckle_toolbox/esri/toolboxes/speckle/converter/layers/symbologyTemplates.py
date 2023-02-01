@@ -1,5 +1,5 @@
 import json
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 import copy
 import os
 
@@ -163,7 +163,7 @@ def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layer
 
             else: return None 
 
-def get_rgb_from_speckle(rgb: int) -> tuple[int, int, int]:
+def get_rgb_from_speckle(rgb: int) -> Tuple[int, int, int]:
     r = g = b = 0
     try: 
         r = (rgb & 0xFF0000) >> 16
@@ -174,7 +174,7 @@ def get_rgb_from_speckle(rgb: int) -> tuple[int, int, int]:
     r,g,b = check_rgb(r,g,b)
     return r,g,b 
 
-def check_rgb(r:int, g:int, b:int) -> tuple[int, int, int]:
+def check_rgb(r:int, g:int, b:int) -> Tuple[int, int, int]:
 
     if not isinstance(r, int) or r<0 or r>255: r=g=b=0
     if not isinstance(g, int) or g<0 or g>255: r=g=b=0
