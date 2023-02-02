@@ -28,6 +28,12 @@ jobs:
       - attach_workspace:
           at: ./
       - run:
+          name: Create Innosetup signing cert
+          shell: powershell.exe
+          command: |
+            echo $env:PFX_B64 > "speckle-sharp-ci-tools\SignTool\AEC Systems Ltd.txt"
+            certutil -decode "speckle-sharp-ci-tools\SignTool\AEC Systems Ltd.txt" "speckle-sharp-ci-tools\SignTool\AEC Systems Ltd.pfx"
+      - run:
           name: Patch
           shell: powershell.exe
           command:
@@ -40,13 +46,17 @@ jobs:
             python patch_version.py $semver
             python setup.py sdist bdist_wheel
             Copy-Item -Path "dist\speckle_toolbox-$($ver)-py3-none-any.whl" -Destination "speckle_arcgis_installer"
-            speckle-sharp-ci-tools\InnoSetup\ISCC.exe speckle-sharp-ci-tools\arcgis.iss
-        - run:
-          name: Add whl installer to release
+      - run:
+        name: Add whl installer to release
+        shell: cmd.exe
+        command: 
+          github-release upload --user $CIRCLE_PROJECT_USERNAME --repo $CIRCLE_PROJECT_REPONAME --tag $CIRCLE_TAG --name $CIRCLE_PROJECT_REPONAME"."$CIRCLE_TAG"-build-"$CIRCLE_BUILD_NUM".zip" --file $CIRCLE_ARTIFACTS/$PROJECT_NAME-$CIRCLE_TAG.zip
+      - run: 
+          name: Build Installer
           shell: cmd.exe
-          command: 
-            github-release upload --user $CIRCLE_PROJECT_USERNAME --repo $CIRCLE_PROJECT_REPONAME --tag $CIRCLE_TAG --name $CIRCLE_PROJECT_REPONAME"."$CIRCLE_TAG"-build-"$CIRCLE_BUILD_NUM".zip" --file $CIRCLE_ARTIFACTS/$PROJECT_NAME-$CIRCLE_TAG.zip
-
+          command:
+            | # If no tag, use 0.0.0.1 and don't make any YML (for testing only!)
+            speckle-sharp-ci-tools\InnoSetup\ISCC.exe speckle-sharp-ci-tools\arcgis.iss /Sbyparam=$p
       - when:
           condition: << parameters.installer >>
           steps:
@@ -103,6 +113,7 @@ workflows: #happens with every PR to main
   build: # build the installers, but don't persist to workspace for deployment
     jobs:
       - get-ci-tools:
+          context: github-dev-bot
           filters:
             branches:
               only:
@@ -116,10 +127,12 @@ workflows: #happens with every PR to main
               only:
                 - main
                 - /ci\/.*/
+          context: innosetup
 
   deploy: # build installers and deploy
     jobs:
       - get-ci-tools:
+          context: github-dev-bot
           filters:
             tags:
               only: /.*/
@@ -137,13 +150,12 @@ workflows: #happens with every PR to main
               only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
             branches:
               ignore: /.*/
-
+          context: innosetup
       - deploy-manager2:
           slug: arcgis
           os: Win
           extension: exe
           requires:
-            - get-ci-tools
             - build-deploy-connector-win
           filters:
             tags:

@@ -1,7 +1,9 @@
 import json
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 import copy
 import os
+
+from typing import Dict
 
 import arcpy 
 from arcpy._mp import ArcGISProject
@@ -33,7 +35,7 @@ def symbol_color_to_speckle(color: dict):
     except: pass 
     return newColor
 
-def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layerSpeckle: Union[Layer, VectorLayer], layerArcgis, f_class, existingAttrs: List) -> Union[None, dict[str, Any]] :
+def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layerSpeckle: Union[Layer, VectorLayer], layerArcgis, f_class, existingAttrs: List) -> Union[None, Dict[str, Any]] :
     print("___________APPLY VECTOR RENDERER______________")
     print(layerArcgis)
     print(f_class)
@@ -161,7 +163,7 @@ def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layer
 
             else: return None 
 
-def get_rgb_from_speckle(rgb: int) -> tuple[int, int, int]:
+def get_rgb_from_speckle(rgb: int) -> Tuple[int, int, int]:
     r = g = b = 0
     try: 
         r = (rgb & 0xFF0000) >> 16
@@ -172,7 +174,7 @@ def get_rgb_from_speckle(rgb: int) -> tuple[int, int, int]:
     r,g,b = check_rgb(r,g,b)
     return r,g,b 
 
-def check_rgb(r:int, g:int, b:int) -> tuple[int, int, int]:
+def check_rgb(r:int, g:int, b:int) -> Tuple[int, int, int]:
 
     if not isinstance(r, int) or r<0 or r>255: r=g=b=0
     if not isinstance(g, int) or g<0 or g>255: r=g=b=0
@@ -311,7 +313,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
             #path_style2 = root_path + '\\' + newName + '_new.lyrx'
             symJson = jsonFromLayerStyle(arcLayer, path_style)
 
-        layerRenderer: dict[str, Any] = {}
+        layerRenderer: Dict[str, Any] = {}
         layerRenderer['type'] = rType
         print(rType)
         my_raster = arcpy.Raster(arcLayer.dataSource)  
@@ -394,7 +396,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
 
         return layerRenderer 
     elif arcLayer.isFeatureLayer: 
-        layerRenderer: dict[str, Any] = {}
+        layerRenderer: Dict[str, Any] = {}
 
         sym = arcLayer.symbology
         print(sym.renderer.type)
