@@ -127,6 +127,10 @@ class Speckle:
                 break
         if self.toolboxInputs is None: self.toolboxInputs = toolboxInputsClass()
 
+        #print(self.speckleInputs.accounts)
+        if len(self.speckleInputs.accounts) == 0:
+            arcpy.AddError("Speckle accounts not found")
+
     def getParameterInfo(self):
         #data types: https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/defining-parameter-data-types-in-a-python-toolbox.htm
         # parameter details: https://pro.arcgis.com/en/pro-app/latest/arcpy/geoprocessing_and_python/customizing-tool-behavior-in-a-python-toolbox.htm
@@ -147,9 +151,12 @@ class Speckle:
         if isinstance(self.speckleInputs.streams_default, SpeckleException):
             arcpy.AddError("Speckle account not accessible")
             streamsDefalut.filter.list = []
+        elif self.speckleInputs.streams_default is not None:
+            streamsDefalut.filter.list = [ (str(st.name) + " - " + str(st.id)) for st in self.speckleInputs.streams_default ]
         else:
-            streamsDefalut.filter.list = [ (st.name + " - " + st.id) for st in self.speckleInputs.streams_default ]
-
+            streamsDefalut.filter.list = []
+            arcpy.AddError("Error connecting to default Speckle account")
+        
         addDefStreams = arcpy.Parameter(
             displayName="Add",
             name="addDefStreams",
