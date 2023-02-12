@@ -63,6 +63,7 @@ jobs:
           at: ./speckle_arcgis_installer
       - run:
           name: "Publish Release on GitHub"
+          shell: cmd.exe
           command: |
             go get github.com/tcnksm/ghr
             VERSION=$(my-binary --version)
@@ -138,10 +139,10 @@ workflows: #happens with every PR to main
           requires:
             - build-connector-win
           filters:
-            tags:
-              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
             branches:
-              ignore: /.*/
+              only:
+                - main
+                - /ci\/.*/
           context: innosetup
 
   deploy: # build installers and deploy
