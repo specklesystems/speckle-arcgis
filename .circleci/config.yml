@@ -46,6 +46,11 @@ jobs:
             python patch_version.py $semver
             python setup.py sdist bdist_wheel
             Copy-Item -Path "dist\speckle_toolbox-$($ver)-py3-none-any.whl" -Destination "speckle_arcgis_installer"
+      - run:
+        name: Add whl installer to release
+        shell: powershell.exe
+        command: 
+          github-release upload --user $CIRCLE_PROJECT_USERNAME --repo $CIRCLE_PROJECT_REPONAME --tag $CIRCLE_TAG --name $CIRCLE_PROJECT_REPONAME"."$CIRCLE_TAG"-build-"$CIRCLE_BUILD_NUM".zip" --file $CIRCLE_ARTIFACTS/$PROJECT_NAME-$CIRCLE_TAG.zip
       - run: 
           name: Build Installer
           shell: cmd.exe
