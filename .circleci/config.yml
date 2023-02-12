@@ -168,7 +168,7 @@ workflows: #happens with every PR to main
           context: innosetup
       - publish-github-release:
           requires:
-            - build-connector-win
+            - build-deploy-connector-win
           filters:
             tags:
               only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
