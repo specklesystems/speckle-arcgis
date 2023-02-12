@@ -7,10 +7,6 @@ orbs:
   # Upload artifacts to s3
   aws-s3: circleci/aws-s3@2.0.0
 
-dependencies:
-  pre: 
-    - go get github.com/github-release/github-release
-
 jobs:
   build-connector-win: # Reusable job for basic connectors
     executor:
@@ -46,11 +42,6 @@ jobs:
             python patch_version.py $semver
             python setup.py sdist bdist_wheel
             Copy-Item -Path "dist\speckle_toolbox-$($ver)-py3-none-any.whl" -Destination "speckle_arcgis_installer"
-      - run:
-        name: Add whl installer to release
-        shell: powershell.exe
-        command: 
-          github-release upload --user $CIRCLE_PROJECT_USERNAME --repo $CIRCLE_PROJECT_REPONAME --tag $CIRCLE_TAG --name $CIRCLE_PROJECT_REPONAME"."$CIRCLE_TAG"-build-"$CIRCLE_BUILD_NUM".zip" --file $CIRCLE_ARTIFACTS/$PROJECT_NAME-$CIRCLE_TAG.zip
       - run: 
           name: Build Installer
           shell: cmd.exe
@@ -64,6 +55,21 @@ jobs:
                 root: ./
                 paths:
                   - speckle-sharp-ci-tools/Installers
+  publish-github-release:
+    docker:
+      - image: cimg/base:2021.01
+    steps:
+      - attach_workspace:
+          at: ./speckle_arcgis_installer
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            go get github.com/tcnksm/ghr
+            VERSION=$(my-binary --version)
+            $tag = if([string]::IsNullOrEmpty($env:CIRCLE_TAG)) { "0.0.0" } else { $env:CIRCLE_TAG }
+            $semver = if($tag.Contains('/')) {$tag.Split("/")[1] } else { $tag }
+            $ver = if($semver.Contains('-')) {$semver.Split("-")[0] } else { $semver }
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ./speckle_arcgis_installer/speckle_toolbox-$($ver)-py3-none-any.whl
 
   get-ci-tools: # Clones our ci tools and persists them to the workspace
     docker:
@@ -128,6 +134,15 @@ workflows: #happens with every PR to main
                 - main
                 - /ci\/.*/
           context: innosetup
+      - publish-github-release:
+          requires:
+            - build-connector-win
+          filters:
+            tags:
+              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
+            branches:
+              ignore: /.*/
+          context: innosetup
 
   deploy: # build installers and deploy
     jobs:
@@ -145,6 +160,15 @@ workflows: #happens with every PR to main
           installer: true
           requires:
             - get-ci-tools
+          filters:
+            tags:
+              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
+            branches:
+              ignore: /.*/
+          context: innosetup
+      - publish-github-release:
+          requires:
+            - build-connector-win
           filters:
             tags:
               only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
