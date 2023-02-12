@@ -213,7 +213,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     active_map = project.activeMap
     
     path = project.filePath.replace("aprx","gdb") #
-    path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\BIM_layers_speckle\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
+    path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\BIM_layers\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
     print(path_bim)
     
     if not os.path.exists(path_bim): os.makedirs(path_bim)
@@ -680,7 +680,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     rasterHasSr = False
     print(path)
 
-    path_bands = "\\".join(path.split("\\")[:-1]) + "\\Layers_Speckle\\rasters_Speckle\\" + streamBranch 
+    path_bands = "\\".join(path.split("\\")[:-1]) + "\\Layers_Speckle\\raster_bands\\" + streamBranch 
     if not os.path.exists(path_bands): os.makedirs(path_bands)
 
     try: 

@@ -89,7 +89,7 @@ class Toolbox:
         try: 
             version = arcpy.GetInstallInfo()['Version']
             python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
-            metrics.set_host_app("ArcGIS", ', '.join([version, python_version])) 
+            metrics.set_host_app("ArcGIS", ', '.join([f"ArcGIS {version}", python_version])) 
         except: 
             metrics.set_host_app("ArcGIS")
         # https://pro.arcgis.com/en/pro-app/2.8/arcpy/mapping/alphabeticallistofclasses.htm#except: print("something happened")
@@ -127,6 +127,10 @@ class Speckle:
                 break
         if self.toolboxInputs is None: self.toolboxInputs = toolboxInputsClass()
 
+        #print(self.speckleInputs.accounts)
+        if len(self.speckleInputs.accounts) == 0:
+            arcpy.AddError("Speckle accounts not found")
+
     def getParameterInfo(self):
         #data types: https://pro.arcgis.com/en/pro-app/2.8/arcpy/geoprocessing_and_python/defining-parameter-data-types-in-a-python-toolbox.htm
         # parameter details: https://pro.arcgis.com/en/pro-app/latest/arcpy/geoprocessing_and_python/customizing-tool-behavior-in-a-python-toolbox.htm
@@ -147,9 +151,12 @@ class Speckle:
         if isinstance(self.speckleInputs.streams_default, SpeckleException):
             arcpy.AddError("Speckle account not accessible")
             streamsDefalut.filter.list = []
+        elif self.speckleInputs.streams_default is not None:
+            streamsDefalut.filter.list = [ (str(st.name) + " - " + str(st.id)) for st in self.speckleInputs.streams_default ]
         else:
-            streamsDefalut.filter.list = [ (st.name + " - " + st.id) for st in self.speckleInputs.streams_default ]
-
+            streamsDefalut.filter.list = []
+            arcpy.AddError("Error connecting to default Speckle account")
+        
         addDefStreams = arcpy.Parameter(
             displayName="Add",
             name="addDefStreams",
@@ -341,7 +348,7 @@ class Speckle:
                             except: pass
 
                             # query stream, add to saved
-                            stream = self.speckleInputs.speckle_client.stream.get(steamId)
+                            stream = self.speckleInputs.speckle_client.stream.get(id = steamId, branch_limit = 100, commit_limit = 100)
                             if isinstance(stream, Stream): 
                                 print("_____Add by URL___")
                                 wr = StreamWrapper(f"{self.speckleInputs.account.serverInfo.url}/streams/{stream.id}?u={self.speckleInputs.account.userInfo.id}")

@@ -5,7 +5,7 @@ from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from specklepy.api.models import Branch, Stream, Streams
 import os.path
 
-from specklepy.api.credentials import get_local_accounts
+from specklepy.api.credentials import Account, get_local_accounts
 from specklepy.api.client import SpeckleClient
 from specklepy.logging.exceptions import (
     GraphQLException,
@@ -18,9 +18,9 @@ class speckleInputsClass:
     #def __init__(self):
     print("CREATING speckle inputs first time________")
     instances = []
-    accounts = get_local_accounts()
+    accounts: List[Account] = get_local_accounts()
     account = None
-    streams_default: None or List[Stream] = None 
+    streams_default: Optional[List[Stream]] = None
 
     project = None
     active_map = None
@@ -123,7 +123,7 @@ class speckleInputsClass:
             except: pass
 
             client = sw.get_client()
-            stream = client.stream.get(steamId)
+            stream = client.stream.get(id = steamId, branch_limit = 100, commit_limit = 100)
             if isinstance(stream, GraphQLException):
                 raise SpeckleException(stream.errors[0]['message'])
             return stream

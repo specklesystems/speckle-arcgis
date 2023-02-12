@@ -10,6 +10,13 @@ from specklepy.logging.exceptions import GraphQLException, SpeckleException
 from specklepy.api.credentials import Account
 
 import unittest   # The test framework
+# remove SetUp
+# add different scenqrios for Streqm Wrapper including wrng ones
+# tree of all options for input or class outcome
+# use dict for types chech
+# issue with untestable class init 
+# "mocking objects" for tests or "faking"
+# get functions ut of INIT 
 
 class Test_InitializingClasses(unittest.TestCase):
     def setUp(self) -> None:
@@ -17,7 +24,7 @@ class Test_InitializingClasses(unittest.TestCase):
         self.speckle_input = speckleInputsClass()
         self.toolbox = Toolbox()
         self.speckleTool = Speckle()
-        self.test_stream = "https://speckle.xyz/streams/17b0b76d13"
+        self.test_stream = "https://speckle.xyz/streams////17b0b76d13"
     
     def text_all_toolbox(self):
         self.assertTrue(isinstance(self.toolbox.tools[0], Speckle))
@@ -34,6 +41,17 @@ class Test_InitializingClasses(unittest.TestCase):
         self.assertIsNone(self.toolbox_input.project)
         self.assertEqual(self.toolbox_input.stream_file_path, "")
 
+    def test_something(self):
+        # Arrange
+        toolbox_input: toolboxInputsClass = toolboxInputsClass()
+        
+        # Act
+        toolbox_input.setProjectStreams(StreamWrapper(self.test_stream))
+
+        # Assert
+        os.path.exists(self.toolbox_input.stream_file_path)
+
+
     def test_toolbox_inputs_functions(self):
         self.toolbox_input.setProjectStreams(StreamWrapper(self.test_stream))
         if os.path.exists(self.toolbox_input.stream_file_path):
@@ -48,6 +66,7 @@ class Test_InitializingClasses(unittest.TestCase):
             existing_content = f.read()
             f.close()
             self.assertTrue(isinstance(existing_content, str))
+        self.assertIsInstance()
 
         self.assertTrue( isinstance(self.toolbox_input.get_survey_point(), tuple))
         self.assertTrue( isinstance(self.toolbox_input.get_survey_point()[0], float) or isinstance(self.toolbox_input.get_survey_point()[0], int))
