@@ -141,15 +141,6 @@ workflows: #happens with every PR to main
                 - main
                 - /ci\/.*/
           context: innosetup
-      - publish-github-release:
-          requires:
-            - build-connector-win
-          filters:
-            branches:
-              only:
-                - main
-                - /ci\/.*/
-          context: innosetup
 
   deploy: # build installers and deploy
     jobs:
@@ -167,15 +158,6 @@ workflows: #happens with every PR to main
           installer: true
           requires:
             - get-ci-tools
-          filters:
-            tags:
-              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
-            branches:
-              ignore: /.*/
-          context: innosetup
-      - publish-github-release:
-          requires:
-            - build-deploy-connector-win
           filters:
             tags:
               only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
