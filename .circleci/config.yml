@@ -64,7 +64,14 @@ jobs:
       - run:
           name: "Publish Release on GitHub"
           command: |
-            sudo pip install gh-release-install
+            mkdir -p ~/git/GitHub/canha
+            cd ~/git/GitHub/canha
+            git clone https://github.com/canha/golang-tools-install-script 
+            cd golang-tools-install-script/
+            bash goinstall.sh --64
+            source ~/.bashrc
+
+            go get github.com/tcnksm/ghr
             VERSION=$(my-binary --version)
             $tag = if([string]::IsNullOrEmpty($env:CIRCLE_TAG)) { "0.0.0" } else { $env:CIRCLE_TAG }
             $semver = if($tag.Contains('/')) {$tag.Split("/")[1] } else { $tag }
