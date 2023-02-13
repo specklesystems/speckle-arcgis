@@ -67,7 +67,8 @@ jobs:
             set -x
             go install github.com/tcnksm/ghr@v0.16.0
             VERSION="${CIRCLE_TAG:-0.0.0}"
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete "${VERSION}" "./speckle_arcgis_installer/speckle_toolbox-${VERSION}-py3-none-any.whl"
+            VERSION_SHORT=$(echo "${VERSION}" | cut -d- -f1)
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete "${VERSION}" "./speckle_arcgis_installer/speckle_toolbox-${VERSION_SHORT}-py3-none-any.whl"
 
   get-ci-tools: # Clones our ci tools and persists them to the workspace
     docker:
@@ -132,15 +133,6 @@ workflows: #happens with every PR to main
                 - main
                 - /ci\/.*/
           context: innosetup
-      - publish-github-release:
-          requires:
-            - build-connector-win
-          filters:
-            branches:
-              only:
-                - main
-                - /ci\/.*/
-          context: arcgis-github-release
 
   deploy: # build installers and deploy
     jobs:
