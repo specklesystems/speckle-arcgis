@@ -71,8 +71,6 @@ jobs:
             VERSION_SHORT=$(echo "${VERSION}" | cut -d- -f1)
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete "${VERSION}" "./speckle_arcgis_installer/speckle_toolbox-${VERSION_SHORT}-py3-none-any.whl"
 
-/home/circleci/project/speckle_arcgis_installer/speckle_toolbox-2.12.0-py3-none-any.whl
-
   get-ci-tools: # Clones our ci tools and persists them to the workspace
     docker:
       - image: cimg/base:2021.01
