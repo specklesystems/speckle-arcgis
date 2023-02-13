@@ -64,7 +64,7 @@ jobs:
       - run:
           name: "Publish Release on GitHub"
           command: |
-            go get github.com/tcnksm/ghr
+            $ go install github.com/tcnksm/ghr@latest
             VERSION=$(my-binary --version)
             $tag = if([string]::IsNullOrEmpty($env:CIRCLE_TAG)) { "0.0.0" } else { $env:CIRCLE_TAG }
             $semver = if($tag.Contains('/')) {$tag.Split("/")[1] } else { $tag }
