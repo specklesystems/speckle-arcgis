@@ -68,7 +68,7 @@ jobs:
             cd ~/git/GitHub/canha
             git clone https://github.com/canha/golang-tools-install-script 
             cd golang-tools-install-script/
-            bash goinstall.sh --64
+            bash goinstall.sh
             source ~/.bashrc
 
             go get github.com/tcnksm/ghr
