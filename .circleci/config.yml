@@ -61,13 +61,11 @@ jobs:
       - image: cimg/go:1.20.0
     steps:
       - attach_workspace:
-          at: ./speckle_arcgis_installer
+          at: ./
       - run:
           name: "Publish Release on GitHub"
           command: |
             set -x
-            ls -la ./
-            ls -la ./speckle_arcgis_installer
             go install github.com/tcnksm/ghr@v0.16.0
             VERSION="${CIRCLE_TAG:-0.0.0}"
             VERSION_SHORT=$(echo "${VERSION}" | cut -d- -f1)
