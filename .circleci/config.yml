@@ -63,7 +63,6 @@ jobs:
           at: ./speckle_arcgis_installer
       - run:
           name: "Publish Release on GitHub"
-          shell: powershell.exe
           command: |
             go get github.com/tcnksm/ghr
             VERSION=$(my-binary --version)
