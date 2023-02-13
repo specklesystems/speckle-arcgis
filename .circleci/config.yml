@@ -57,20 +57,13 @@ jobs:
                   - speckle-sharp-ci-tools/Installers
   publish-github-release:
     docker:
-      - image: cimg/base:2021.01
+      - image: cimg/go:1.20.0
     steps:
       - attach_workspace:
           at: ./speckle_arcgis_installer
       - run:
           name: "Publish Release on GitHub"
           command: |
-            mkdir -p ~/git/GitHub/canha
-            cd ~/git/GitHub/canha
-            git clone https://github.com/canha/golang-tools-install-script 
-            cd golang-tools-install-script/
-            bash goinstall.sh
-            source ~/.bashrc
-
             go get github.com/tcnksm/ghr
             VERSION=$(my-binary --version)
             $tag = if([string]::IsNullOrEmpty($env:CIRCLE_TAG)) { "0.0.0" } else { $env:CIRCLE_TAG }
@@ -141,6 +134,15 @@ workflows: #happens with every PR to main
                 - main
                 - /ci\/.*/
           context: innosetup
+      - publish-github-release:
+          requires:
+            - build-connector-win
+          filters:
+            branches:
+              only:
+                - main
+                - /ci\/.*/
+          context: innosetup
 
   deploy: # build installers and deploy
     jobs:
@@ -158,6 +160,15 @@ workflows: #happens with every PR to main
           installer: true
           requires:
             - get-ci-tools
+          filters:
+            tags:
+              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
+            branches:
+              ignore: /.*/
+          context: innosetup
+      - publish-github-release:
+          requires:
+            - build-deploy-connector-win
           filters:
             tags:
               only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
