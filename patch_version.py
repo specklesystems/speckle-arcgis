@@ -6,7 +6,7 @@ def patch_installer(tag):
     iss_file = "speckle-sharp-ci-tools/arcgis.iss"
     setup_whl_file = "setup.py"
     conda_file = "speckle_arcgis_installer/conda_clone_activate.py"
-    toolbox_install_file = "speckle_arcgis_installer/toolbox_install.py"
+    #toolbox_install_file = "speckle_arcgis_installer/toolbox_install.py"
     toolbox_manual_install_file = "speckle_arcgis_installer/toolbox_install_manual.py"
 
     #py_tag = get_specklepy_version()
@@ -48,7 +48,7 @@ def patch_installer(tag):
         file.close()
 
     whlFileRename(conda_file)
-    whlFileRename(toolbox_install_file)
+    #whlFileRename(toolbox_install_file)
     whlFileRename(toolbox_manual_install_file)
 
 
