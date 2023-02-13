@@ -65,11 +65,8 @@ jobs:
           name: "Publish Release on GitHub"
           command: |
             go install github.com/tcnksm/ghr@latest
-            VERSION=$(my-binary --version)
-            $tag = if([string]::IsNullOrEmpty($env:CIRCLE_TAG)) { "0.0.0" } else { $env:CIRCLE_TAG }
-            $semver = if($tag.Contains('/')) {$tag.Split("/")[1] } else { $tag }
-            $ver = if($semver.Contains('-')) {$semver.Split("-")[0] } else { $semver }
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ./speckle_arcgis_installer/speckle_toolbox-$($ver)-py3-none-any.whl
+            VERSION="${CIRCLE_TAG:-0.0.0}"
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} "./speckle_arcgis_installer/speckle_toolbox-${VERSION}-py3-none-any.whl"
 
   get-ci-tools: # Clones our ci tools and persists them to the workspace
     docker:
