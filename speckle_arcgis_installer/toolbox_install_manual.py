@@ -19,7 +19,7 @@ def installToolbox(newExec: str):
     mypath = os.path.dirname(__file__)
     onlyfiles = [f for f in listdir(mypath) if (isfile(join(mypath, f)) and "py3-none-any.whl" in str(f))]
     onlyfiles.sort(key = lambda x: int(x.replace("speckle_toolbox-","").replace("-py3-none-any.whl","").split(".")[1]) ) 
-    whl_file = onlyfiles[len(onlyfiles)-1]
+    whl_file = mypath + "\\" + onlyfiles[len(onlyfiles)-1]
     #whl_file = os.path.join(os.path.dirname(__file__), "speckle_toolbox-2.11.3-py3-none-any.whl" ) 
     subprocess_call([newExec, '-m','pip','install','--upgrade', '--force-reinstall', whl_file])
     return
