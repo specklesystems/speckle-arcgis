@@ -1,47 +1,35 @@
      
+import os
 import sys
-
 import threading
 from typing import List
-import arcpy
-from PyQt5.QtWidgets import (QMainWindow, QLabel, QApplication)
-from PyQt5.QtCore import Qt 
-from PyQt5 import QtGui
 
+from PyQt5.QtWidgets import (QMainWindow, QLabel, QApplication,
+    QDockWidget, QVBoxLayout, QWidget)
+from PyQt5.QtCore import Qt 
+from PyQt5 import QtGui, uic 
 from events import Events
 
-class MainWindow(QMainWindow):
-    instances = []
-    def __init__(self, *args, **kwargs):
-        print("START MAIN WINDOW")
-        super(MainWindow, self).__init__(*args, **kwargs)
-        self.setWindowTitle("Basic App")
-        label = QLabel("The label")
-        label.setAlignment(Qt.AlignCenter)
-        self.setCentralWidget(label)
-        self.instances.append(1)
-    def closeEvent(self,event):
-        print("Close event")
-        Speckle.instances.pop()
-        self.instances.pop()
-        print(len(Speckle.instances)-len(self.instances))
+try: 
+    from speckle.ui.speckle_qgis_dialog import SpeckleArcGISDialog
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleArcGISDialog
 
-def main(stop: int):
-    print("MAIN function")
-    app = QApplication(sys.argv)
-    ex = MainWindow()
-    ex.show()
-    sys.exit(app.exec_())
 
-def startThread(text: str): 
-    print("START")
-    t = threading.Thread(target=main, args=(1,))
+def startThread(sp_class): 
+    print("START THREAD")
+    t = threading.Thread(target=qtApp, args=(sp_class,))
     t.start()
     threads = threading.enumerate()
     print("__Total threads: " + str(len(threads)))
 
-events: Events = Events()
-events.on_change += startThread
+def qtApp(text: str):
+    print("MAIN function")
+
+    app = QApplication(sys.argv)
+    ex = SpeckleArcGISDialog()
+    ex.show()
+    sys.exit(app.exec_())
 
 class Toolbox:
     def __init__(self):
@@ -57,17 +45,18 @@ class Speckle:
     def __init__(self):  
         
         print("___start speckle tool_________")
-        difference = len(self.instances)-len(MainWindow.instances)
-        print(difference)
 
         self.label       = "Speckle"
         self.description = "Allows you to send and receive your layers " + \
                            "to/from other software using Speckle server." 
         
-        if difference == 0: 
-            self.instances.append(1)
-            events.on_change("some text") 
-            print("event called") 
+        self.instances.append(1)
+        print(len(self.instances))
+        print(len(SpeckleArcGISDialog.instances))
+
+        if len(SpeckleArcGISDialog.instances)==0: 
+            print("add Speckle instances + event called")
+            startThread("") 
 
     def getParameterInfo(self):
         return []
