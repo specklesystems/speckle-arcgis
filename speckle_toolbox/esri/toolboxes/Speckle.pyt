@@ -44,7 +44,7 @@ class Toolbox:
         self.tools = [Speckle]  
 
 class Speckle:
-    instances = []
+    #instances = []
     def __init__(self):  
         
         print("___start speckle tool_________")
@@ -52,25 +52,20 @@ class Speckle:
         self.label       = "Speckle"
         self.description = "Allows you to send and receive your layers " + \
                            "to/from other software using Speckle server." 
-        self.canRunInBackground = True
-        #if len(SpeckleArcGISDialog.instances)==0: 
-        #    print("add Speckle instances + event called")
-        #    startThread("") 
 
     def getParameterInfo(self):
-        cat1 = "Add Streams"
+        cat1 = "Click Run to launch Speckle Connector"
 
         param0 = arcpy.Parameter(
-            displayName="""RUN to open the tool.
-Click something.""",
+            displayName="",
             name="param0",
             datatype="GPString",
             parameterType="Optional",
             direction="Input",
-            #category=cat1
+            enabled="True",
             )
-        param0.value = ""
-        return []
+        param0.value = "Click Run to launch Speckle Connector"
+        return [param0]
 
     def isLicensed(self): #optional
         return True
@@ -79,10 +74,10 @@ Click something.""",
         return 
 
     def execute(self, parameters: List, messages): 
-        difference = len(self.instances) - len(SpeckleArcGISDialog.instances)
-        print(len(self.instances))
-        print(len(SpeckleArcGISDialog.instances))
-        if difference == 0:
-            self.instances.append(1)
-            qtApp("")
-            #startThread("")
+        #difference = len(self.instances) - len(SpeckleArcGISDialog.instances)
+        #print(len(self.instances))
+        #print(len(SpeckleArcGISDialog.instances))
+        #if difference == 0:
+        #self.instances.append(1)
+        qtApp("")
+        #startThread("")

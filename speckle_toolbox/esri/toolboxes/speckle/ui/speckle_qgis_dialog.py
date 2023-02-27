@@ -63,7 +63,7 @@ ui_class = os.path.dirname(os.path.abspath(__file__)) + "/speckle_qgis_dialog_ba
 print(os.path.dirname(__file__))
 
 class SpeckleArcGISDialog(QMainWindow):
-    instances = []
+    #instances = []
 
     closingPlugin = pyqtSignal()
     streamList: QtWidgets.QComboBox
@@ -85,11 +85,7 @@ class SpeckleArcGISDialog(QMainWindow):
         super(SpeckleArcGISDialog, self).__init__(None, QtCore.Qt.WindowStaysOnTopHint)
         uic.loadUi(ui_class, self) # Load the .ui file
         self.show() 
-        #if len(self.instances) == 0: 
-        self.instances.append(1)
-        #if len(Speckle.instances)!=1: 
-        #    print("Clear Window instances")
-        #    self.instances.clear()
+        #self.instances.append(1)
     
         self.streamBranchDropdown.setMaxCount(100)
         self.commitDropdown.setMaxCount(100)
@@ -188,8 +184,8 @@ class SpeckleArcGISDialog(QMainWindow):
         print("Close event")
         threads = threading.enumerate()
         print(f"Threads total: {str(len(threads))}: {str(threads)}")
-        #Speckle.instances.pop()
-        print(self.instances)
+
+        #print(self.instances)
         
         self.closingPlugin.emit()
         event.accept()
