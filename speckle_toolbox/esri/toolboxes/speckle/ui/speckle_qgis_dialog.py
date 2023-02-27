@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget,
     QListWidgetItem, QAction, QDockWidget, QVBoxLayout, 
     QHBoxLayout, QWidget, QLabel)
 from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal, Qt 
+from PyQt5.QtCore import pyqtSignal, Qt, QSize 
 from PyQt5 import QtGui, uic 
 
 from specklepy.api.credentials import get_local_accounts
@@ -79,10 +79,10 @@ class SpeckleArcGISDialog(QMainWindow):
 
     gridLayoutTitleBar = QtWidgets.QGridLayout
     
-    def __init__(self, parent = None):
+    def __init__(self):
         """Constructor."""
         print("START MAIN WINDOW")
-        super(SpeckleArcGISDialog, self).__init__(parent)
+        super(SpeckleArcGISDialog, self).__init__(None, QtCore.Qt.WindowStaysOnTopHint)
         uic.loadUi(ui_class, self) # Load the .ui file
         self.show() 
         #if len(self.instances) == 0: 
@@ -136,8 +136,8 @@ class SpeckleArcGISDialog(QMainWindow):
                             "text-align: left;"
                             )
         text_label.setIcon(exitActIcon)
-        text_label.setIconSize(QtCore.QSize(300, 93))
-        text_label.setMinimumSize(QtCore.QSize(100, 40))
+        text_label.setIconSize(QSize(300, 93))
+        text_label.setMinimumSize(QSize(100, 40))
         text_label.setMaximumWidth(220)
 
         version = ""
@@ -169,7 +169,8 @@ class SpeckleArcGISDialog(QMainWindow):
         connect_box.addWidget(text_label) #, alignment=Qt.AlignCenter) 
         connect_box.addWidget(version_label) 
         connect_box.setContentsMargins(0, 0, 0, 0)
-        self.gridLayoutTitleBar.addWidget(widget)
+        self.gridLayoutTitleBar.addWidget(widget) # fro QMainWindow
+        #self.setTitleBarWidget(widget) # for QDockWidget 
 
         self.sendModeButton.setStyleSheet("QPushButton {padding: 10px; border: 0px; " + f"color: rgb{str(SPECKLE_COLOR)};"+ "} QPushButton:hover { "  + "}" ) 
         self.sendModeButton.setIcon(QIcon(ICON_SEND_BLUE))
@@ -363,7 +364,7 @@ class SpeckleArcGISDialog(QMainWindow):
 
             set_project_layer_selection(plugin)
 
-        self.layersWidget.setIconSize(QtCore.QSize(20, 20))
+        self.layersWidget.setIconSize(QSize(20, 20))
         self.runBtnStatusChanged(plugin)
         
         return

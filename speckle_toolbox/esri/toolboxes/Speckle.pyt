@@ -26,7 +26,9 @@ def startThread(sp_class):
 
 def qtApp(text: str):
     print("MAIN function")
-
+    
+    threads = threading.enumerate()
+    print("__Total threads: " + str(len(threads)))
     app = QApplication(sys.argv)
     ex = SpeckleArcGISDialog()
     ex.show()
@@ -50,7 +52,7 @@ class Speckle:
         self.label       = "Speckle"
         self.description = "Allows you to send and receive your layers " + \
                            "to/from other software using Speckle server." 
-        
+        self.canRunInBackground = True
         #if len(SpeckleArcGISDialog.instances)==0: 
         #    print("add Speckle instances + event called")
         #    startThread("") 
@@ -82,4 +84,5 @@ Click something.""",
         print(len(SpeckleArcGISDialog.instances))
         if difference == 0:
             self.instances.append(1)
-            startThread("")
+            qtApp("")
+            #startThread("")
