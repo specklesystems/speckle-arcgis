@@ -7,7 +7,8 @@ from typing import List
 from PyQt5.QtWidgets import (QMainWindow, QLabel, QApplication,
     QDockWidget, QVBoxLayout, QWidget)
 from PyQt5.QtCore import Qt 
-from PyQt5 import QtGui, uic 
+from PyQt5 import QtGui, uic
+import arcpy 
 from events import Events
 
 try: 
@@ -50,15 +51,23 @@ class Speckle:
         self.description = "Allows you to send and receive your layers " + \
                            "to/from other software using Speckle server." 
         
-        self.instances.append(1)
-        print(len(self.instances))
-        print(len(SpeckleArcGISDialog.instances))
-
-        if len(SpeckleArcGISDialog.instances)==0: 
-            print("add Speckle instances + event called")
-            startThread("") 
+        #if len(SpeckleArcGISDialog.instances)==0: 
+        #    print("add Speckle instances + event called")
+        #    startThread("") 
 
     def getParameterInfo(self):
+        cat1 = "Add Streams"
+
+        param0 = arcpy.Parameter(
+            displayName="""RUN to open the tool.
+Click something.""",
+            name="param0",
+            datatype="GPString",
+            parameterType="Optional",
+            direction="Input",
+            #category=cat1
+            )
+        param0.value = ""
         return []
 
     def isLicensed(self): #optional
@@ -67,3 +76,10 @@ class Speckle:
     def updateParameters(self, parameters: List, toRefresh = False): #optional
         return 
 
+    def execute(self, parameters: List, messages): 
+        difference = len(self.instances) - len(SpeckleArcGISDialog.instances)
+        print(len(self.instances))
+        print(len(SpeckleArcGISDialog.instances))
+        if difference == 0:
+            self.instances.append(1)
+            startThread("")

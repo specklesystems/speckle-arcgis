@@ -85,8 +85,8 @@ class SpeckleArcGISDialog(QMainWindow):
         super(SpeckleArcGISDialog, self).__init__(parent)
         uic.loadUi(ui_class, self) # Load the .ui file
         self.show() 
-        if len(self.instances) == 0: 
-            self.instances.append(1)
+        #if len(self.instances) == 0: 
+        self.instances.append(1)
         #if len(Speckle.instances)!=1: 
         #    print("Clear Window instances")
         #    self.instances.clear()
@@ -188,7 +188,7 @@ class SpeckleArcGISDialog(QMainWindow):
         threads = threading.enumerate()
         print(f"Threads total: {str(len(threads))}: {str(threads)}")
         #Speckle.instances.pop()
-        self.instances.clear()
+        print(self.instances)
         
         self.closingPlugin.emit()
         event.accept()
