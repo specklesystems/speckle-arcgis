@@ -1,6 +1,6 @@
 import os
-from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
+from PyQt5 import QtWidgets, uic
+from PyQt5.QtCore import pyqtSignal
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 
@@ -16,4 +16,4 @@ class StreamListDialog(QtWidgets.QWidget):
         super(StreamListDialog, self).__init__(parent)
         uic.loadUi(ui_class, self) # Load the .ui file
         self.show()
-        
+

@@ -31,7 +31,7 @@ def qtApp(text: str):
     print("__Total threads: " + str(len(threads)))
     app = QApplication(sys.argv)
     ex = SpeckleGIS()
-    ex.show()
+    #ex.show()
     sys.exit(app.exec_())
 
 class Toolbox:

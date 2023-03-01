@@ -183,7 +183,7 @@ def setProjectReferenceSystem(self: SpeckleGIS):
 
 def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
     path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
-    
+    fields = ["project_streams","project_layer_selection", "lat_lon"]
     if 'speckle_gis' not in arcpy.ListTables():
         try: 
             table = CreateTable(path, "speckle_gis")
@@ -191,7 +191,7 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
             arcpy.management.AddField(table, "project_layer_selection", "TEXT")
             arcpy.management.AddField(table, "lat_lon", "TEXT")
 
-            cursor = arcpy.da.InsertCursor(table, ["project_streams","project_layer_selection", "lat_lon"] )
+            cursor = arcpy.da.InsertCursor(table, fields )
             cursor.insertRow(["",""])
             del cursor
          
@@ -199,12 +199,15 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
             arcpy.addWarning("Error creating a table: " + str(e))
             return None
     else: 
-        # make sure fileds and a row exist 
+        print("table already exists")
+        # make sure fileds exist 
         table = path + "\\speckle_gis" 
-        findOrCreateTableField(table, "project_streams")
-        findOrCreateTableField(table, "project_layer_selection")
-        findOrCreateTableField(table, "lat_lon")
+        findOrCreateTableField(table, fields[0])
+        findOrCreateTableField(table, fields[1])
+        findOrCreateTableField(table, fields[2])
         
+        findOrCreateRow(table, fields)
+
     return table
 
 def findOrCreateTableField(table: str, field: str):
@@ -217,19 +220,39 @@ def findOrCreateTableField(table: str, field: str):
                 break # look at the 1st row only 
         del cursor
 
-        if value is None: # if there are no rows 
-            cursor = arcpy.da.InsertCursor(table, [field])
-            cursor.insertRow([""]) 
-            del cursor
+        #if value is None: # if there are no rows 
+        #    cursor = arcpy.da.InsertCursor(table, [field])
+        #    cursor.insertRow([""]) 
+        #    del cursor
     
     except: # if field doesn't exist
         arcpy.management.AddField(table, field, "TEXT")
-        cursor = arcpy.da.InsertCursor(table, [field] )
-        cursor.insertRow(["",""])
+        #cursor = arcpy.da.InsertCursor(table, [field] )
+        #cursor.insertRow([""])
         del cursor
 
+def findOrCreateRow(table:str, fields: List[str]):
+    # check if the row exists 
+    cursor = arcpy.da.SearchCursor(table, fields)
+    k=-1
+    for k, row in enumerate(cursor): 
+        print(row)
+        break
+    del cursor
+    
+    # if no rows
+    if k == -1:
+        cursor = arcpy.da.InsertCursor(table, fields)
+        cursor.insertRow(["", "", ""]) 
+        del cursor
+    else: 
+        with arcpy.da.UpdateCursor(table, fields) as cursor:
+            for row in cursor:
+                if None in row: cursor.updateRow(["","",""])
+                break # look at the 1st row only 
+        del cursor
 
-r''''''
+r'''
 class speckleInputsClass:
     #def __init__(self):
     print("CREATING speckle inputs first time________")
@@ -489,5 +512,5 @@ class toolboxInputsClass:
             arcpy.AddWarning("Custom CRS could not be created: not enough coordinates provided")
 
         return True
-
+'''
     

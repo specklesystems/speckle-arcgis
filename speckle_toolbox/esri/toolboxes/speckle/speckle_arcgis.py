@@ -68,9 +68,10 @@ class SpeckleGIS:
     default_account: Account
     accounts: List[Account]
 
-    def __init__(self, iface):
+    def __init__(self):
         """Constructor. 
         """
+        print("Start SpeckleGIS")
         # Save reference to the QGIS interface
         self.dockwidget = None
         #self.iface = None
@@ -103,7 +104,8 @@ class SpeckleGIS:
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
-        self.pluginIsActive = False
+        self.pluginIsActive = False  
+        self.run()
 
     # noinspection PyMethodMayBeStatic
 
@@ -200,7 +202,7 @@ class SpeckleGIS:
         icon_path = "" #":/plugins/speckle_qgis/icon.png"
         self.add_action(
             icon_path,
-            text=self.tr("SpeckleQGIS"),
+            text=self.tr("SpeckleGIS"),
             callback=self.run,
             add_to_menu=False,
             add_to_toolbar=False,
@@ -230,7 +232,7 @@ class SpeckleGIS:
         
 
     def unload(self):
-        """Removes the plugin menu item and icon from QGIS GUI."""
+        """Removes the plugin menu item and icon from GIS GUI."""
         return
         #for action in self.actions:
         #    self.iface.removePluginWebMenu(self.tr("&SpeckleQGIS"), action)
@@ -300,8 +302,8 @@ class SpeckleGIS:
                 stream_id=streamId,
                 object_id=objId,
                 branch_name=branchName,
-                message="Sent objects from QGIS" if len(message) == 0 else message,
-                source_application="QGIS",
+                message="Sent objects from ArcGIS" if len(message) == 0 else message,
+                source_application="ArcGIS",
             )
             arcpy.AddMessage("Successfully sent data to stream: " + streamId)
             self.dockwidget.messageInput.setText("")
@@ -387,8 +389,8 @@ class SpeckleGIS:
             client.commit.received(
             streamId,
             commit.id,
-            source_application="QGIS",
-            message="Received commit in QGIS",
+            source_application="ArcGIS",
+            message="Received commit in ArcGIS",
             )
 
             if app != "QGIS" and app != "ArcGIS": 
@@ -441,6 +443,7 @@ class SpeckleGIS:
 
     def run(self):
         """Run method that performs all the real work"""
+        print("run plugin")
         try:
             from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
             from speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
@@ -458,8 +461,9 @@ class SpeckleGIS:
             self.pluginIsActive = True
             if self.dockwidget is None:
                 self.dockwidget = SpeckleGISDialog()
-                self.qgis_project.fileNameChanged.connect(self.reloadUI)
-                self.qgis_project.homePathChanged.connect(self.reloadUI)
+                self.dockwidget.show()
+                #self.gis_project.fileNameChanged.connect(self.reloadUI)
+                #self.gis_project.homePathChanged.connect(self.reloadUI)
 
             get_project_streams(self)
             get_survey_point(self)

@@ -195,7 +195,7 @@
         <item row="9" column="1">
          <widget class="QLineEdit" name="messageInput">
           <property name="placeholderText">
-           <string>Sent XXX objects from QGIS</string>
+           <string>Sent XXX objects from ArcGIS</string>
           </property>
          </widget>
         </item>

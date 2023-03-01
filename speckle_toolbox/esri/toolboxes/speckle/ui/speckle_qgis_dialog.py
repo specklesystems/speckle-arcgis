@@ -411,7 +411,7 @@ class SpeckleGISDialog(QMainWindow):
         if plugin.is_setup is False: self.streams_remove_button.setEnabled(plugin.is_setup) 
         self.streamBranchDropdown.setEnabled(plugin.is_setup)
         self.layerSendModeDropdown.setEnabled(plugin.is_setup)
-        self.commitDropdown.setEnabled(plugin.is_setup)
+        self.commitDropdown.setEnabled(False)
         self.show()
 
     def populateProjectStreams(self, plugin):

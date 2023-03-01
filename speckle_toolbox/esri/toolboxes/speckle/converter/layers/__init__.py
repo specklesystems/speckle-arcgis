@@ -107,7 +107,7 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
     return result
 
 def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer, RasterLayer]: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
-    """Converts a given QGIS Layer to Speckle"""
+    """Converts a given GIS Layer to Speckle"""
     print("________Convert Feature Layer_________")
 
     speckleLayer = None
