@@ -12,9 +12,9 @@ import arcpy
 from events import Events
 
 try: 
-    from speckle.ui.speckle_qgis_dialog import SpeckleArcGISDialog
+    from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleArcGISDialog
+    from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
 
 
 def startThread(sp_class): 
@@ -30,7 +30,7 @@ def qtApp(text: str):
     threads = threading.enumerate()
     print("__Total threads: " + str(len(threads)))
     app = QApplication(sys.argv)
-    ex = SpeckleArcGISDialog()
+    ex = SpeckleGISDialog()
     ex.show()
     sys.exit(app.exec_())
 
@@ -64,7 +64,7 @@ class Speckle:
             direction="Input",
             enabled="True",
             )
-        param0.value = "Click Run to launch Speckle Connector"
+        param0.value = "To launch Speckle Connector: ▷ Run " #▶ 
         return [param0]
 
     def isLicensed(self): #optional
@@ -74,10 +74,5 @@ class Speckle:
         return 
 
     def execute(self, parameters: List, messages): 
-        #difference = len(self.instances) - len(SpeckleArcGISDialog.instances)
-        #print(len(self.instances))
-        #print(len(SpeckleArcGISDialog.instances))
-        #if difference == 0:
-        #self.instances.append(1)
         qtApp("")
         #startThread("")

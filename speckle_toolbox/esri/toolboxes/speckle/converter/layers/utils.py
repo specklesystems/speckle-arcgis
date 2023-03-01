@@ -2,11 +2,47 @@ from typing import Dict, Any, List, Union
 import json 
 from specklepy.objects import Base
 import arcpy 
-
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import os
 
+try: 
+    from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+except:
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+
 ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
+
+    
+def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
+    groupExists = 0
+    print(newGroupName)
+    for l in gis_project.activeMap.listLayers(): 
+        #print(l.longName)
+        if l.longName.startswith(newGroupName + "\\"):
+            #print(l.longName)
+            gis_project.activeMap.removeLayer(l)
+            groupExists+=1
+        elif l.longName == newGroupName: 
+            groupExists+=1
+    print(newGroupName)
+    if groupExists == 0:
+        # create empty group layer file 
+        path = gis_project.filePath.replace("aprx","gdb") #"\\".join(self.toolboxInputs.project.filePath.split("\\")[:-1]) + "\\speckle_layers\\"
+        print(path)
+        try:
+            f = open(path + "\\" + newGroupName + ".lyrx", "w")
+            content = createGroupLayer().replace("TestGroupLayer", newGroupName)
+            f.write(content)
+            f.close()
+            newGroupLayer = arcpy.mp.LayerFile(path + "\\" + newGroupName + ".lyrx")
+            layerGroup = gis_project.activeMap.addLayer(newGroupLayer)[0]
+        except: # for 3.0.0
+            if gis_project.active_map is not None:
+                layerGroup = gis_project.activeMap.createGroupLayer(newGroupName)
+            else:
+                arcpy.AddWarning("The map didn't fully load, try refreshing the plugin.")
+                return
+
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
     #print("_________get variant from value_______")

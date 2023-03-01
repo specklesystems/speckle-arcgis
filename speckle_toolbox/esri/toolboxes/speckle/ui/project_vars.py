@@ -2,7 +2,8 @@
 from typing import Any, List, Optional, Tuple, Union
 import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
-from specklepy.api.models import Branch, Stream, Streams
+from arcpy.management import CreateTable
+
 import os.path
 
 from specklepy.api.credentials import Account, get_local_accounts
@@ -11,9 +12,224 @@ from specklepy.logging.exceptions import (
     GraphQLException,
     SpeckleException,
 )
-from specklepy.api.wrapper import StreamWrapper
+from specklepy.api.wrapper import StreamWrapper 
+from specklepy.api.models import Branch, Stream, Streams
 from osgeo import osr
 
+
+try: 
+    from speckle.ui.validation import tryGetStream
+    from speckle.speckle_arcgis import SpeckleGIS
+    from speckle.converter.layers import getAllProjLayers
+except: 
+    from speckle_toolbox.esri.toolboxes.speckle.ui.validation import tryGetStream
+    from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis import SpeckleGIS
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getAllProjLayers
+
+def get_project_streams(self: SpeckleGIS, content: str = None):
+    print("get proj streams")
+    
+    print("GET proj streams")
+    project = self.gis_project
+    table = findOrCreateSpeckleTable(project)
+    if table is None: return 
+
+    rows = arcpy.da.SearchCursor(table, "project_streams") 
+    saved_streams = ""
+    for x in rows:
+        saved_streams: str = x[0]
+        break
+    temp = []
+    ######### need to check whether saved streams are available (account reachable)
+    if saved_streams != "":
+        for url in saved_streams.split(","):
+            try:
+                sw = StreamWrapper(url)
+                try: 
+                    stream = tryGetStream(sw)
+                except SpeckleException as e:
+                    arcpy.AddWarning(e.message)
+                    stream = None
+                #strId = stream.id # will cause exception if invalid
+                temp.append((sw, stream))
+            except SpeckleException as e:
+                arcpy.AddWarning(e.message)
+            #except GraphQLException as e:
+            #    logger.logToUser(e.message, Qgis.Warning)
+    self.current_streams = temp
+    
+def set_project_streams(self: SpeckleGIS):
+
+    print("SET proj streams")
+    project = self.gis_project
+    table = findOrCreateSpeckleTable(project)
+    if table is None: return 
+
+    value = ",".join([stream[0].stream_url for stream in self.current_streams])
+    with arcpy.da.UpdateCursor(table, ["project_streams"]) as cursor:
+        for row in cursor: # just one row
+            cursor.updateRow([value])
+    del cursor 
+  
+def get_project_layer_selection(self: SpeckleGIS):
+
+    print("GET project layer selection")
+    project = self.gis_project
+    table = findOrCreateSpeckleTable(project)
+    if table is None: return 
+    
+    rows = arcpy.da.SearchCursor(table, "project_layer_selection") 
+    saved_layers = ""
+    for x in rows:
+        saved_layers = x[0]
+        break
+    
+    temp = []
+    proj_layers = getAllProjLayers(project)
+    ######### need to check whether saved streams are available (account reachable)
+    if saved_layers != "":
+        for layerPath in saved_layers.split(","):
+            found = 0
+            for layer in proj_layers:
+                print(layer.dataSource)
+                if layer.dataSource == layerPath:
+                    temp.append((layer.name(), layer))
+                    found += 1
+                    break
+            if found == 0: 
+                arcpy.AddWarning(f'Saved layer not found: "{layerPath}"')
+    self.current_layers = temp
+
+def set_project_layer_selection(self: SpeckleGIS):
+    print("SET project layer selection")
+    project = self.gis_project
+    value = ",".join([layer[1].dataSource for layer in self.current_layers]) 
+    print(value)
+
+    table = findOrCreateSpeckleTable(project)
+    if table is not None:
+        with arcpy.da.UpdateCursor(table, ["project_layer_selection"]) as cursor:
+            for row in cursor: # just one row
+                cursor.updateRow([value])
+        del cursor 
+
+def get_survey_point(self: SpeckleGIS, content = None):
+    print("get survey point")
+    project = self.gis_project
+    table = findOrCreateSpeckleTable(project)
+    if table is None: return 
+
+    rows = arcpy.da.SearchCursor(table, "lat_lon") 
+    points = ""
+    for x in rows:
+        points = x[0]
+        break
+
+    if points != "": 
+        vals: List[str] = points.replace(" ","").split(";")[:2]
+        self.lat, self.lon = [float(i) for i in vals]
+
+    
+def set_survey_point(self: SpeckleGIS):
+
+    # from widget (2 strings) to local vars + update SR of the map
+    print("SET survey point")
+    
+    project = self.gis_project
+    vals =[ str(self.dockwidget.surveyPointLat.text()), str(self.dockwidget.surveyPointLon.text()) ]
+
+    try: 
+        self.lat, self.lon = [float(i.replace(" ","")) for i in vals]
+        pt = str(self.lat) + ";" + str(self.lon) 
+
+        table = findOrCreateSpeckleTable(project)
+        if table is not None:
+            with arcpy.da.UpdateCursor(table, ["lat_lon"]) as cursor:
+                for row in cursor: # just one row
+                    cursor.updateRow([pt])
+            del cursor   
+        
+        setProjectReferenceSystem(self)
+        return True
+
+    except Exception as e:
+        arcpy.AddWarning("Lat, Lon values invalid: " + str(e))
+        return False 
+
+def setProjectReferenceSystem(self: SpeckleGIS):
+    
+    # save to project; create SR
+    newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(self.lon) + " lat_0=" + str(self.lat) + " +x_0=0 +y_0=0 +k_0=1"
+    newCrs = osr.SpatialReference()
+    newCrs.ImportFromProj4(newCrsString)
+    newCrs.MorphToESRI() # converts the WKT to an ESRI-compatible format
+    
+    validate = True if len(newCrs.ExportToWkt())>10 else False
+
+    if validate: 
+        newProjSR = arcpy.SpatialReference()
+        newProjSR.loadFromString(newCrs.ExportToWkt())
+
+        #source = osr.SpatialReference() 
+        #source.ImportFromWkt(self.project.activeMap.spatialReference.exportToString())
+        #transform = osr.CoordinateTransformation(source, newCrs)
+
+        self.gis_project.activeMap.spatialReference =  newProjSR
+        arcpy.AddMessage("Custom project Spatial Reference successfully applied")
+    else:
+        arcpy.AddWarning("Custom Spatial Reference could not be created")
+
+    return True
+
+def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
+    path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
+    
+    if 'speckle_gis' not in arcpy.ListTables():
+        try: 
+            table = CreateTable(path, "speckle_gis")
+            arcpy.management.AddField(table, "project_streams", "TEXT")
+            arcpy.management.AddField(table, "project_layer_selection", "TEXT")
+            arcpy.management.AddField(table, "lat_lon", "TEXT")
+
+            cursor = arcpy.da.InsertCursor(table, ["project_streams","project_layer_selection", "lat_lon"] )
+            cursor.insertRow(["",""])
+            del cursor
+         
+        except Exception as e:
+            arcpy.addWarning("Error creating a table: " + str(e))
+            return None
+    else: 
+        # make sure fileds and a row exist 
+        table = path + "\\speckle_gis" 
+        findOrCreateTableField(table, "project_streams")
+        findOrCreateTableField(table, "project_layer_selection")
+        findOrCreateTableField(table, "lat_lon")
+        
+    return table
+
+def findOrCreateTableField(table: str, field: str):
+    try: 
+        with arcpy.da.UpdateCursor(table, [field]) as cursor:
+            value = None
+            for row in cursor:
+                value = row # tuple(val,)
+                if value[0] is None: cursor.updateRow("")
+                break # look at the 1st row only 
+        del cursor
+
+        if value is None: # if there are no rows 
+            cursor = arcpy.da.InsertCursor(table, [field])
+            cursor.insertRow([""]) 
+            del cursor
+    
+    except: # if field doesn't exist
+        arcpy.management.AddField(table, field, "TEXT")
+        cursor = arcpy.da.InsertCursor(table, [field] )
+        cursor.insertRow(["",""])
+        del cursor
+
+
+r''''''
 class speckleInputsClass:
     #def __init__(self):
     print("CREATING speckle inputs first time________")

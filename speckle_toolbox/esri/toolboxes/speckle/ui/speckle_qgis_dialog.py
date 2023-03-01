@@ -62,7 +62,7 @@ ICON_RECEIVE_BLUE = os.path.dirname(os.path.abspath(__file__)) + "/cube-receive-
 ui_class = os.path.dirname(os.path.abspath(__file__)) + "/speckle_qgis_dialog_base.ui"
 print(os.path.dirname(__file__))
 
-class SpeckleArcGISDialog(QMainWindow):
+class SpeckleGISDialog(QMainWindow):
     #instances = []
 
     closingPlugin = pyqtSignal()
@@ -82,7 +82,7 @@ class SpeckleArcGISDialog(QMainWindow):
     def __init__(self):
         """Constructor."""
         print("START MAIN WINDOW")
-        super(SpeckleArcGISDialog, self).__init__(None, QtCore.Qt.WindowStaysOnTopHint)
+        super(SpeckleGISDialog, self).__init__(None, QtCore.Qt.WindowStaysOnTopHint)
         uic.loadUi(ui_class, self) # Load the .ui file
         self.show() 
         #self.instances.append(1)
