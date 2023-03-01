@@ -67,7 +67,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
         elif self.speckle_client is not None: 
             results = self.speckle_client.stream.search(query)
         elif self.speckle_client is None: 
-            arcpy.addWarning(f"Account cannot be authenticated: {self.accounts_dropdown.currentText()}") 
+            arcpy.AddWarning(f"Account cannot be authenticated: {self.accounts_dropdown.currentText()}") 
         
         self.stream_results = results
         self.populateResultsList(sw)
@@ -75,7 +75,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
     def populateResultsList(self, sw):
         self.search_results_list.clear()
         if isinstance(self.stream_results, SpeckleException): 
-            arcpy.addWarning("Some streams cannot be accessed")
+            arcpy.AddWarning("Some streams cannot be accessed")
             return 
         for stream in self.stream_results:
             host = ""
@@ -85,7 +85,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
                 host = self.speckle_client.account.serverInfo.url
             
             if isinstance(stream, SpeckleException): 
-                arcpy.addWarning("Some streams cannot be accessed")
+                arcpy.AddWarning("Some streams cannot be accessed")
             else: 
                 self.search_results_list.addItems([
                     f"{stream.name}, {stream.id} | {host}" #for stream in self.stream_results 
@@ -93,7 +93,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
 
     def onOkClicked(self):
         if isinstance(self.stream_results, SpeckleException):
-            arcpy.addWarning("Selected stream cannot be accessed")
+            arcpy.AddWarning("Selected stream cannot be accessed")
             return
         #elif index == -1 or len(self.stream_results) == 0:
         #    logger.logToUser("Select stream from \"Search Results\". No stream selected", Qgis.Warning)
@@ -109,7 +109,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
                 self.handleStreamAdd.emit(sw) #StreamWrapper(f"{acc.serverInfo.url}/streams/{stream.id}?u={acc.userInfo.id}"))
                 self.close()
             except Exception as e:
-                arcpy.addWarning("Some streams cannot be accessed: " + str(e))
+                arcpy.AddWarning("Some streams cannot be accessed: " + str(e))
                 return 
 
     def onCancelClicked(self):

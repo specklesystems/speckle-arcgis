@@ -65,7 +65,7 @@ class CreateStreamModalDialog(QtWidgets.QWidget):
             self.handleStreamCreate.emit(acc,name,description,public)
             self.close()
         except Exception as e:
-            arcpy.addError(str(e))
+            arcpy.AddError(str(e))
             return 
 
     def onCancelClicked(self):

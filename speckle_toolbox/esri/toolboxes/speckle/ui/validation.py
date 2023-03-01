@@ -19,13 +19,13 @@ def validateStream(streamWrapper: StreamWrapper) -> Union[Stream, None]:
     try: 
         stream = tryGetStream(streamWrapper)
     except SpeckleException as e:
-        arcpy.addWarning(e.message)
+        arcpy.AddWarning(e.message)
         return None
 
     if isinstance(stream, SpeckleException): return None
 
     if stream.branches is None:
-        arcpy.addWarning("Stream has no branches")
+        arcpy.AddWarning("Stream has no branches")
         return None
     return stream
 
@@ -38,21 +38,21 @@ def validateBranch(stream: Stream, branchName: str, checkCommits: bool) ->  Unio
             branch = b
             break
     if branch is None: 
-        arcpy.addWarning("Failed to find a branch")
+        arcpy.AddWarning("Failed to find a branch")
         return None
     if checkCommits == True:
         if branch.commits is None:
-            arcpy.addWarning("Failed to find a branch")
+            arcpy.AddWarning("Failed to find a branch")
             return None
         if len(branch.commits.items)==0:
-            arcpy.addWarning("Branch contains no commits")
+            arcpy.AddWarning("Branch contains no commits")
             return None
     return branch
             
 def validateCommit(branch: Branch, commitId: str) -> Union[Commit, None]:
     commit = None
     try: commitId = commitId.split(" | ")[0]
-    except: arcpy.addWarning("Commit ID is not valid")
+    except: arcpy.AddWarning("Commit ID is not valid")
 
     for i in branch.commits.items:
         if i.id == commitId:
@@ -61,15 +61,15 @@ def validateCommit(branch: Branch, commitId: str) -> Union[Commit, None]:
     if commit is None:
         try: 
             commit = branch.commits.items[0]
-            arcpy.addWarning("Failed to find a commit. Receiving Latest")
+            arcpy.AddWarning("Failed to find a commit. Receiving Latest")
         except: 
-            arcpy.addWarning("Failed to find a commit")
+            arcpy.AddWarning("Failed to find a commit")
             return None
     return commit
 
 def validateTransport(client: SpeckleClient, streamId: str) -> Union[ServerTransport, None]:
     try: transport = ServerTransport(client=client, stream_id=streamId)
     except Exception as e: 
-        arcpy.addWarning("Make sure you have sufficient permissions: " + str(e))
+        arcpy.AddWarning("Make sure you have sufficient permissions: " + str(e))
         return None
     return transport

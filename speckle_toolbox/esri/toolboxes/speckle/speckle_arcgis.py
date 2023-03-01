@@ -346,7 +346,7 @@ class SpeckleGIS:
 
     def onReceive(self):
         """Handles action when the Receive button is pressed"""
-
+        print("ON RECEIVE")
         if not self.dockwidget: return
 
         # Check if stream id/url is empty
@@ -359,6 +359,7 @@ class SpeckleGIS:
         streamId = streamWrapper.stream_id
         client = streamWrapper.get_client()
         # Ensure the stream actually exists
+        print("ON RECEIVE 2")
         try:
             stream = validateStream(streamWrapper)
             if stream == None: return
@@ -377,7 +378,7 @@ class SpeckleGIS:
 
         transport = validateTransport(client, streamId)
         if transport == None: return 
-        
+        print("ON RECEIVE 3")
         try:
             objId = commit.referencedObject
             #commitDetailed = client.commit.get(streamId, commit.id)
@@ -504,7 +505,7 @@ class SpeckleGIS:
 
         str_id = new_client.stream.create(name=str_name, description = description, is_public = is_public) 
         if isinstance(str_id, GraphQLException) or isinstance(str_id, SpeckleException):
-            arcpy.addWarning(str_id.message)
+            arcpy.AddWarning(str_id.message)
             return
         else:
             sw = StreamWrapper(account.serverInfo.url + "/streams/" + str_id)
@@ -531,7 +532,7 @@ class SpeckleGIS:
         #description = "No description provided"
         br_id = new_client.branch.create(stream_id = sw.stream_id, name = br_name, description = description) 
         if isinstance(br_id, GraphQLException):
-            arcpy.addWarning(br_id.message)
+            arcpy.AddWarning(br_id.message)
 
         self.active_stream = (sw, tryGetStream(sw))
         self.current_streams[0] = self.active_stream
@@ -559,7 +560,7 @@ class SpeckleGIS:
                     break 
                 index += 1
         except SpeckleException as e:
-            arcpy.addWarning(e.message)
+            arcpy.AddWarning(e.message)
             stream = None
         
         if streamExists == 0: 

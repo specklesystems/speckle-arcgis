@@ -44,10 +44,10 @@ def traverseValue(
 def callback(base: Base, streamBranch: str) -> bool:
     if isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer):
         if isinstance(base, Layer):
-            arcpy.addWarning(f"Class \"Layer\" will be deprecated in future updates in favour of \"VectorLayer\" or \"RasterLayer\"") 
+            arcpy.AddWarning(f"Class \"Layer\" will be deprecated in future updates in favour of \"VectorLayer\" or \"RasterLayer\"") 
         layer = layerToNative(base, streamBranch)
         if layer is not None:
-            arcpy.addMessage("Layer created: " + layer.name())
+            arcpy.AddMessage("Layer created: " + layer.name())
     else:
         loopObj(base, "", streamBranch)
     return True
@@ -95,7 +95,7 @@ def loopVal(value: Any, name: str, streamBranch: str): # "name" is the parent ob
                 break
             elif item.speckle_type and item.speckle_type != "Objects.Geometry.Mesh" and item.speckle_type != "Objects.Geometry.Brep" and item.speckle_type.startswith("Objects.Geometry."): # or item.speckle_type == 'Objects.BuiltElements.Alignment'): 
                 pt, pl = cadLayerToNative(value, name, streamBranch)
-                if pt is not None: arcpy.addMessage("Layer group created: " + str(pt.name()))
-                if pl is not None: arcpy.addMessage("Layer group created: " + str(pl.name()))
+                if pt is not None: arcpy.AddMessage("Layer group created: " + str(pt.name()))
+                if pl is not None: arcpy.AddMessage("Layer group created: " + str(pl.name()))
                 break
 

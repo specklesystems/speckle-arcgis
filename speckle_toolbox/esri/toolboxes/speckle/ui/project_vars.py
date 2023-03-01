@@ -69,6 +69,7 @@ def set_project_streams(self: SpeckleGIS):
     with arcpy.da.UpdateCursor(table, ["project_streams"]) as cursor:
         for row in cursor: # just one row
             cursor.updateRow([value])
+            break
     del cursor 
   
 def get_project_layer_selection(self: SpeckleGIS):
@@ -111,6 +112,7 @@ def set_project_layer_selection(self: SpeckleGIS):
         with arcpy.da.UpdateCursor(table, ["project_layer_selection"]) as cursor:
             for row in cursor: # just one row
                 cursor.updateRow([value])
+                break
         del cursor 
 
 def get_survey_point(self: SpeckleGIS, content = None):
@@ -147,6 +149,7 @@ def set_survey_point(self: SpeckleGIS):
             with arcpy.da.UpdateCursor(table, ["lat_lon"]) as cursor:
                 for row in cursor: # just one row
                     cursor.updateRow([pt])
+                    break
             del cursor   
         
         setProjectReferenceSystem(self)
@@ -196,7 +199,7 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
             del cursor
          
         except Exception as e:
-            arcpy.addWarning("Error creating a table: " + str(e))
+            arcpy.AddWarning("Error creating a table: " + str(e))
             return None
     else: 
         print("table already exists")

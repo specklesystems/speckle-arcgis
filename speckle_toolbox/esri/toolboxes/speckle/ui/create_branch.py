@@ -56,7 +56,7 @@ class CreateBranchModalDialog(QtWidgets.QWidget):
             self.handleBranchCreate.emit(name, description)
             self.close()
         except Exception as e:
-            arcpy.addWarning(str(e))
+            arcpy.AddWarning(str(e))
             return 
 
     def onCancelClicked(self):

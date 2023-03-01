@@ -47,7 +47,7 @@ def getAllProjLayers(project: ArcGISProject) -> List[arcLayer]:
                 layers.append(layer) #type: 'arcpy._mp.Layer'
                 path = layer.dataSource
     else: 
-        arcpy.addWarning("Cannot get Project layers, Project Active Map not loaded")
+        arcpy.AddWarning("Cannot get Project layers, Project Active Map not loaded")
         return []
     return layers 
 
