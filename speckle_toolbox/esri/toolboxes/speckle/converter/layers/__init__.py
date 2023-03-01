@@ -4,6 +4,8 @@ Contains all Layer related classes and methods.
 import os
 from typing import Any, List, Tuple, Union
 
+#from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis import SpeckleGIS
+
 #from regex import D
 
 try:
@@ -37,6 +39,52 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 
 import numpy as np
 
+def getAllProjLayers(project: ArcGISProject) -> List[arcLayer]:
+    layers = []
+    if project.activeMap is not None and isinstance(project.activeMap, Map): # if project loaded
+        for layer in project.activeMap.listLayers(): 
+            if (layer.isFeatureLayer) or layer.isRasterLayer: 
+                layers.append(layer) #type: 'arcpy._mp.Layer'
+                path = layer.dataSource
+    else: 
+        arcpy.addWarning("Cannot get Project layers, Project Active Map not loaded")
+        return []
+    return layers 
+
+
+def getLayers(plugin, bySelection = False ) -> List[arcLayer]:
+    """Gets a list of all layers in the map"""
+    print("___ get layers list ___")
+
+    # issue with getting selected layers: https://community.esri.com/t5/python-questions/determining-selected-layers-in-the-table-of/td-p/252098
+
+    self = plugin.dockwidget
+    project = plugin.gis_project
+    all_layers = getAllProjLayers(project)
+    layers = []
+    
+    if bySelection is True: # by selection 
+        layers = getAllProjLayers(project)
+    else: # from project data 
+        #all_layers_ids = [l.id() for l in project.mapLayers().values()]
+        for item in plugin.current_layers:
+            try: 
+                layerPath = item[1].dataSource
+                
+                found = 0
+                for l in all_layers:
+                    if l.dataSource == layerPath:
+                        layers.append(l)
+                        found += 1
+                        break 
+                if found == 0: 
+                    arcpy.AddWarning()(f'Saved layer not found: "{item[0]}"')
+
+            except:
+                arcpy.AddWarning()(f'Saved layer not found: "{item[0]}"')
+                continue
+    return layers 
+    
 def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
     """Converts the current selected layers to Speckle"""
     print("________Convert Layers_________")
@@ -98,7 +146,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                 
                 # write feature attributes
                 fieldnames = [field.name for field in data.fields]
-                rows_shapes = arcpy.da.SearchCursor(layer.longName, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
+                rows_shapes = arcpy.da.SearchCursor(layer.dataSource, "Shape@") # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
                 print("__ start iterating features")
                 row_shapes_list = [x for k, x in enumerate(rows_shapes)]
                 for i, features in enumerate(row_shapes_list):
@@ -112,7 +160,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
 
                     if feat is not None: 
                         print(feat)
-                        rows_attributes = arcpy.da.SearchCursor(layer.longName, fieldnames)
+                        rows_attributes = arcpy.da.SearchCursor(layer.dataSource, fieldnames)
                         row_attr = []
                         for k, attrs in enumerate(rows_attributes):
                             if i == k: row_attr = attrs; break

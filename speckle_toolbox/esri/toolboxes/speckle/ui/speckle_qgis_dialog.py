@@ -23,10 +23,16 @@ import importlib
 from specklepy.api.wrapper import StreamWrapper
 from specklepy.api.client import SpeckleClient
 
-#try:
-#    from speckle.speckle_arcgis_new import Speckle
-#except:
-#    from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis_new import Speckle
+
+
+try:
+    #from speckle.speckle_arcgis_new import Speckle
+    from speckle.converter.layers import getLayers
+    from speckle.converter.layers import getAllProjLayers
+except:
+    #from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis_new import Speckle
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getLayers
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getAllProjLayers
 
 #from ui.validation import tryGetStream
 
@@ -189,7 +195,7 @@ class SpeckleGISDialog(QMainWindow):
         
         self.closingPlugin.emit()
         event.accept()
-    r'''
+    
     def clearDropdown(self):
         #self.streamIdField.clear()
         self.streamBranchDropdown.clear()
@@ -249,6 +255,7 @@ class SpeckleGISDialog(QMainWindow):
         # enable sections only if in "saved streams" mode 
         if self.layerSendModeDropdown.currentIndex() == 1: self.layersWidget.setEnabled(True)
         if self.layerSendModeDropdown.currentIndex() == 1: self.saveLayerSelection.setEnabled(True)
+        self.commitDropdown.setEnabled(False)
         self.messageInput.setEnabled(True)
         self.layerSendModeDropdown.setEnabled(True)
 
@@ -270,6 +277,7 @@ class SpeckleGISDialog(QMainWindow):
         self.runButton.setProperty("text", " RECEIVE")
         self.runButton.setIcon(QIcon(ICON_RECEIVE))
         #self.layerSendModeChange(plugin, 1)
+        self.commitDropdown.setEnabled(True)
         self.layersWidget.setEnabled(False)
         self.messageInput.setEnabled(False)
         self.saveLayerSelection.setEnabled(False)
@@ -334,27 +342,30 @@ class SpeckleGISDialog(QMainWindow):
     def populateLayerDropdown(self, plugin, bySelection: bool = True):
         
         if not self: return
-        from ui.project_vars import set_project_layer_selection, get_project_layer_selection
+        try:   
+            from speckle.ui.project_vars import set_project_layer_selection
+        except: 
+            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import set_project_layer_selection
         
         self.layersWidget.clear()
         nameDisplay = [] 
-        project = QgsProject.instance()
+        project = plugin.gis_project 
 
         if bySelection is False: # read from project data 
-            #get_project_layer_selection(plugin)
-            all_layers_ids = [l.id() for l in project.mapLayers().values()]
+
+            all_layers_ids = [l.dataSource for l in getAllProjLayers(project)]
             for layer_tuple in plugin.current_layers:
-                if layer_tuple[1].id() in all_layers_ids: 
+                if layer_tuple[1].dataSource in all_layers_ids: 
                     listItem = self.fillLayerList(layer_tuple[1]) 
-                self.layersWidget.addItem(listItem)
+                    self.layersWidget.addItem(listItem)
 
         else: # read selected layers 
             # Fetch selected layers
-            #layerTreeRoot = project.layerTreeRoot()
+            
             plugin.current_layers = []
             layers = getLayers(plugin, bySelection) # List[QgsLayerTreeNode]
             for i, layer in enumerate(layers):
-                plugin.current_layers.append((layer.name(), layer)) 
+                plugin.current_layers.append((layer.name, layer)) 
                 listItem = self.fillLayerList(layer)
                 self.layersWidget.addItem(listItem)
 
@@ -370,26 +381,18 @@ class SpeckleGISDialog(QMainWindow):
         icon_xxl = os.path.dirname(os.path.abspath(__file__)) + "/size-xxl.png"
         listItem = QListWidgetItem(layer.name()) 
 
-        if isinstance(layer, QgsRasterLayer) and layer.width()*layer.height() > 1000000:
-                listItem.setIcon(QIcon(icon_xxl))
+        if layer.isRasterLayer: # and layer.width()*layer.height() > 1000000:
+            listItem.setIcon(QIcon(icon_xxl))
         
-        elif isinstance(layer, QgsVectorLayer) and layer.featureCount() > 20000:
-                listItem.setIcon(QIcon(icon_xxl))
+        elif layer.isFeatureLayer: # and layer.featureCount() > 20000:
+            listItem.setIcon(QIcon(icon_xxl))
 
-        else: 
-            icon = QgsIconUtils().iconForLayer(layer)
-            listItem.setIcon(icon)
-        
-        #newSize = listItem.sizeHint()
-        #height = listItem.sizeHint().height()
-        #newSize.setHeight(1)
-        #listItem.setSizeHint(newSize)
+        #else: 
+        #    icon = QgsIconUtils().iconForLayer(layer)
+        #    listItem.setIcon(icon)
         
         return listItem
         
-        return
-
-
     def populateSurveyPoint(self, plugin):
         if not self:
             return
@@ -412,8 +415,12 @@ class SpeckleGISDialog(QMainWindow):
         self.show()
 
     def populateProjectStreams(self, plugin):
+
+        try:   
+            from speckle.ui.project_vars import set_project_streams
+        except: 
+            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import set_project_streams
         
-        from ui.project_vars import set_project_streams
         if not self: return
         self.streamList.clear()
         for stream in plugin.current_streams: 
@@ -505,4 +512,3 @@ class SpeckleGISDialog(QMainWindow):
         #set_project_streams(plugin)
         self.populateProjectStreams(plugin)
 
-    '''

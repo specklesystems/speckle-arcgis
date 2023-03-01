@@ -8,14 +8,14 @@ from PyQt5.QtWidgets import (QMainWindow, QLabel, QApplication,
     QDockWidget, QVBoxLayout, QWidget)
 from PyQt5.QtCore import Qt 
 from PyQt5 import QtGui, uic
-import arcpy 
-from events import Events
+import arcpy
 
 try: 
     from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
+    from speckle.speckle_arcgis import SpeckleGIS 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-
+    from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis import SpeckleGIS 
 
 def startThread(sp_class): 
     print("START THREAD")
@@ -30,7 +30,7 @@ def qtApp(text: str):
     threads = threading.enumerate()
     print("__Total threads: " + str(len(threads)))
     app = QApplication(sys.argv)
-    ex = SpeckleGISDialog()
+    ex = SpeckleGIS()
     ex.show()
     sys.exit(app.exec_())
 

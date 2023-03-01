@@ -467,7 +467,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
             sym.updateRenderer('GraduatedColorsRenderer')
             sym.renderer.colorRamp = arcRamp
             sym.renderer.classificationField = attribute
-            rows_attributes = arcpy.da.SearchCursor(arcLayer.longName, attribute)
+            rows_attributes = arcpy.da.SearchCursor(arcLayer.dataSource, attribute)
             row_attrs = []
             row_max = -1000000000
             row_min = 1000000000
@@ -518,7 +518,7 @@ def featureColorfromNativeRenderer(index: int, arcLayer) -> int:
         color = sym.renderer.defaultSymbol.color
         categories = sym.renderer.groups
 
-        rows_attributes = arcpy.da.SearchCursor(arcLayer.longName, attribute)
+        rows_attributes = arcpy.da.SearchCursor(arcLayer.dataSource, attribute)
         row_shapes_list = [x for k, x in enumerate(rows_attributes)]
 
         color_found = 0
@@ -537,7 +537,7 @@ def featureColorfromNativeRenderer(index: int, arcLayer) -> int:
     elif sym.renderer.type == 'GraduatedColorsRenderer' or sym.renderer.type == 'GraduatedSymbolsRenderer':
         print('Graduated Colors / Sybmols Renderer')
         attribute = sym.renderer.classificationField 
-        rows_attributes = arcpy.da.SearchCursor(arcLayer.longName, attribute)
+        rows_attributes = arcpy.da.SearchCursor(arcLayer.dataSource, attribute)
         row_shapes_list = [x for k, x in enumerate(rows_attributes)]
 
         rRanges = sym.renderer.classBreaks
@@ -562,7 +562,7 @@ def featureColorfromNativeRenderer(index: int, arcLayer) -> int:
         sym.updateRenderer('GraduatedColorsRenderer')
         sym.renderer.classificationField = attribute
 
-        rows_attributes = arcpy.da.SearchCursor(arcLayer.longName, attribute)
+        rows_attributes = arcpy.da.SearchCursor(arcLayer.dataSource, attribute)
         row_shapes_list = [x for k, x in enumerate(rows_attributes)]
         row_attrs = []
         row_max = -10000000000000000000

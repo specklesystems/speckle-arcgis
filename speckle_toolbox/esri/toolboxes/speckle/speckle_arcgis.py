@@ -27,19 +27,24 @@ try:
     from speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer) 
     from speckle.converter.layers import convertSelectedLayers, getLayers
     from speckle.converter.layers.utils import findAndClearLayerGroup
+    from speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
+    from speckle.ui.add_stream_modal import AddStreamModalDialog
+    from speckle.ui.create_stream import CreateStreamModalDialog
+    from speckle.ui.create_branch import CreateBranchModalDialog
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers import convertSelectedLayers, getLayers
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findAndClearLayerGroup
+    from speckle_toolbox.esri.toolboxes.speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
+    from speckle_toolbox.esri.toolboxes.speckle.ui.add_stream_modal import AddStreamModalDialog
+    from speckle_toolbox.esri.toolboxes.speckle.ui.create_stream import CreateStreamModalDialog
+    from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
 
-from ui.add_stream_modal import AddStreamModalDialog
-from ui.create_stream import CreateStreamModalDialog
-from ui.create_branch import CreateBranchModalDialog
 
 # Import the code for the dialog
-from ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
+
 
 SPECKLE_COLOR = (59,130,246)
 SPECKLE_COLOR_LIGHT = (69,140,255)
@@ -388,8 +393,7 @@ class SpeckleGIS:
 
             if app != "QGIS" and app != "ArcGIS": 
                 if self.gis_project.activeMap.spatialReference.type == "Geographic" or self.gis_project.activeMap.spatialReference is None: #TODO test with invalid CRS
-                    arcpy.AddMessage("It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates")
-                    print("It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates")
+                    arcpy.AddMessage("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates")
             arcpy.AddMessage(f"Succesfully received {objId}")
 
             # If group exists, remove layers inside  
