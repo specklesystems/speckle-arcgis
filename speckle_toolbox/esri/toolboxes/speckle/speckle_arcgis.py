@@ -331,7 +331,7 @@ class SpeckleGIS:
             widget.setAccessibleName("commit_link")
             connect_box = QVBoxLayout(widget)
             connect_box.addWidget(commit_link_btn) #, alignment=Qt.AlignCenter) 
-            connect_box.setContentsMargins(0, 0, 0, 0)
+            connect_box.setContentsMargins(0, 0, 0, 30)
             connect_box.setAlignment(Qt.AlignBottom)  
             widget.setGeometry(0, 0, width, height)
             widget.mouseReleaseEvent = lambda event: self.closeWidget()
@@ -349,10 +349,9 @@ class SpeckleGIS:
 
     def closeWidget(self):
         # https://stackoverflow.com/questions/5899826/pyqt-how-to-remove-a-widget
-        return 
-        #self.dockwidget.layout().removeWidget(self.dockwidget.link)
+        self.dockwidget.layout().removeWidget(self.dockwidget.link)
         #sip.delete(self.dockwidget.link)
-        #self.dockwidget.link = None
+        self.dockwidget.link = None
 
     def onReceive(self):
         """Handles action when the Receive button is pressed"""
