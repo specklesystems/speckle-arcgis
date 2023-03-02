@@ -23,7 +23,7 @@ import importlib
 from specklepy.api.wrapper import StreamWrapper
 from specklepy.api.client import SpeckleClient
 
-
+import arcpy 
 
 try:
     #from speckle.speckle_arcgis_new import Speckle
@@ -388,16 +388,24 @@ class SpeckleGISDialog(QMainWindow):
     def fillLayerList(self, layer):
         print("Fill layer list")
         
-        icon_xxl = os.path.dirname(os.path.abspath(__file__)) + "/size-xxl.png"
+        ICON_XXL = os.path.dirname(os.path.abspath(__file__)) + "/size-xxl.png"
+        ICON_RASTER = os.path.dirname(os.path.abspath(__file__)) + "/legend_raster.png"
+        ICON_POLYGON = os.path.dirname(os.path.abspath(__file__)) + "/legend_polygon.png"
+        ICON_LINE = os.path.dirname(os.path.abspath(__file__)) + "/legend_line.png"
+        ICON_POINT = os.path.dirname(os.path.abspath(__file__)) + "/legend_point.png"
         listItem = QListWidgetItem(layer.name) 
         #print(listItem)
 
         if layer.isRasterLayer: # and layer.width()*layer.height() > 1000000:
-            listItem.setIcon(QIcon(icon_xxl))
+            listItem.setIcon(QIcon(ICON_RASTER))
         
         elif layer.isFeatureLayer: # and layer.featureCount() > 20000:
-            listItem.setIcon(QIcon(icon_xxl))
-
+            geomType = arcpy.Describe(layer.dataSource).shapeType
+            if geomType == "Polygon": listItem.setIcon(QIcon(ICON_POLYGON))
+            elif geomType == "Polyline": listItem.setIcon(QIcon(ICON_LINE))
+            elif geomType == "Point" or geomType == "Multipoint": listItem.setIcon(QIcon(ICON_POINT))
+            else: 
+                listItem.setIcon(QIcon(ICON_XXL))
         #else: 
         #    icon = QgsIconUtils().iconForLayer(layer)
         #    listItem.setIcon(icon)
