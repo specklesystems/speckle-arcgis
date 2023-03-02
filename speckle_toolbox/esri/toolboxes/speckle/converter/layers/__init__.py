@@ -13,6 +13,7 @@ try:
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
     from speckle.converter.layers.symbologyTemplates import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
     from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+    from speckle.plugin_utils.helpers import findOrCreatePath
 
     from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
     from speckle.converter.layers.utils import findTransformation
@@ -22,6 +23,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbologyTemplates import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
@@ -95,10 +97,11 @@ def getLayers(plugin, bySelection = False ) -> List[arcLayer]:
                 continue
     return layers 
     
-def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
+def convertSelectedLayers(layers: List[arcLayer], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
     """Converts the current selected layers to Speckle"""
     print("________Convert Layers_________")
     result = []
+    r'''
     for layer in selected_layers:
         layerToSend = None
         for c in range(len(all_layers)):
@@ -113,7 +116,10 @@ def convertSelectedLayers(all_layers: List[arcLayer], selected_layers: List[str]
                 result.append(newBaseLayer)
             #elif layerToSend.isRasterLayer: pass
             print(result)
-
+    '''
+    for i, layer in enumerate(layers):
+        result.append(layerToSpeckle(layer, project))
+    
     return result
 
 def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer, RasterLayer]: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
@@ -275,7 +281,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\BIM_layers\\" + streamBranch+ "\\" + layerName + "\\" #arcpy.env.workspace + "\\" #
     print(path_bim)
     
-    if not os.path.exists(path_bim): os.makedirs(path_bim)
+    findOrCreatePath(path_bim)
     print(path)
     
     if sr.type == "Geographic": 
@@ -740,7 +746,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     print(path)
 
     path_bands = "\\".join(path.split("\\")[:-1]) + "\\Layers_Speckle\\raster_bands\\" + streamBranch 
-    if not os.path.exists(path_bands): os.makedirs(path_bands)
+    findOrCreatePath(path_bands)
 
     try: 
         srRasterWkt = str(layer.rasterCrs.wkt)

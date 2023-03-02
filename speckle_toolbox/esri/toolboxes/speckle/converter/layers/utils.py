@@ -5,10 +5,13 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import os
 
+
 try: 
     from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+    from speckle.plugin_utils.helpers import findOrCreatePath
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
 
 ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
 
@@ -29,6 +32,7 @@ def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
     if groupExists == 0:
         # create empty group layer file "\\Layers_Speckle\\
         path = "\\".join(gis_project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\"
+        findOrCreatePath(path)
         lyr_path = path + newGroupName + ".lyrx"
         print(lyr_path)
         try:

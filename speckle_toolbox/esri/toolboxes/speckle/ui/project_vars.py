@@ -156,7 +156,7 @@ def set_project_layer_selection(self: SpeckleGIS):
         length = max(len(proj_streams), len(value))
         #print(length)
         for i in range(length): 
-            print(i)
+            #print(i)
             if i==0: 
                 cursor.insertRow([proj_streams[i], value[i] , lan_lot]) 
                 print(i)
@@ -166,7 +166,7 @@ def set_project_layer_selection(self: SpeckleGIS):
                 except: 
                     if len(proj_streams) <= i: cursor.insertRow(["", value[i] , ""]) 
                     if len(value) <= i: cursor.insertRow([proj_streams[i], "" , ""])
-            print(i)
+            #print(i)
         del cursor 
         #print(table)
 

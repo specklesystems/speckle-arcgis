@@ -31,6 +31,7 @@ try:
     from speckle.ui.add_stream_modal import AddStreamModalDialog
     from speckle.ui.create_stream import CreateStreamModalDialog
     from speckle.ui.create_branch import CreateBranchModalDialog
+    from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
@@ -41,6 +42,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.ui.add_stream_modal import AddStreamModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_stream import CreateStreamModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
+    from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
 
 
 # Import the code for the dialog
@@ -52,7 +54,7 @@ SPECKLE_COLOR_LIGHT = (69,140,255)
 class SpeckleGIS:
     """Speckle Connector Plugin for ArcGIS"""
 
-    dockwidget: Optional[QDockWidget]
+    dockwidget: Optional[SpeckleGISDialog]
     add_stream_modal: AddStreamModalDialog
     create_stream_modal: CreateStreamModalDialog
     current_streams: List[Tuple[StreamWrapper, Stream]]  #{id:(sw,st),id2:()}
@@ -245,28 +247,36 @@ class SpeckleGIS:
     def onSend(self):
         """Handles action when Send button is pressed."""
         if not self.dockwidget: return
-
-        # creating our parent base object
-        project = self.gis_project
-        projectCRS = project.crs()
-        #layerTreeRoot = project.layerTreeRoot()
-
-        bySelection = True
-        if self.dockwidget.layerSendModeDropdown.currentIndex() == 1: bySelection = False 
-        layers = getLayers(self, bySelection) # List[QgsLayerTreeNode]
+        print("On Send")
 
         # Check if stream id/url is empty
         if self.active_stream is None:
             arcpy.AddWarning("Please select a stream from the list.")
             return
+
+        self.gis_project = ArcGISProject("CURRENT")
+        if self.gis_project.activeMap is None: 
+            arcpy.AddWarning("No active Map")
+            return 
+
+        print("On Send 2")
+        # creating our parent base object
+        project = self.gis_project
+        #projectCRS = project.Sp
+        #layerTreeRoot = project.layerTreeRoot()
+
+        bySelection = True
+        if self.dockwidget.layerSendModeDropdown.currentIndex() == 1: bySelection = False 
+        layers = getLayers(self, bySelection) # List[QgsLayerTreeNode]
         
         # Check if no layers are selected
         if len(layers) == 0: #len(selectedLayerNames) == 0:
             arcpy.AddWarning("No layers selected")
             return
 
+        print("On Send 3")
         base_obj = Base(units = "m")
-        base_obj.layers = convertSelectedLayers(layers, [],[], projectCRS, project)
+        base_obj.layers = convertSelectedLayers(layers, project)
         if base_obj.layers is None:
             return 
 
@@ -353,6 +363,11 @@ class SpeckleGIS:
         if self.active_stream is None:
             arcpy.AddWarning("Please select a stream from the list.")
             return
+
+        self.gis_project = ArcGISProject("CURRENT")
+        if self.gis_project.activeMap is None: 
+            arcpy.AddWarning("No active Map")
+            return 
 
         # Get the stream wrapper
         streamWrapper = self.active_stream[0]
