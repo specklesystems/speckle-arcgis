@@ -211,12 +211,14 @@ class SpeckleGISDialog(QMainWindow):
         
 
     def run(self, plugin): 
+        print("dockwidget run")
         # Setup events on first load only!
         self.setupOnFirstLoad(plugin)
         # Connect streams section events
         self.completeStreamSection(plugin)
         # Populate the UI dropdowns
         self.populateUI(plugin) 
+        print("dockwidget run end")
 
 
     def setupOnFirstLoad(self, plugin):
@@ -322,6 +324,7 @@ class SpeckleGISDialog(QMainWindow):
             
 
     def layerSendModeChange(self, plugin, runMode = None):
+        print("Send mode changed")
 
         if self.layerSendModeDropdown.currentIndex() == 0 or runMode == 1: # by manual selection OR receive mode
             self.current_layers = []
@@ -340,9 +343,9 @@ class SpeckleGISDialog(QMainWindow):
 
 
     def populateLayerDropdown(self, plugin, bySelection: bool = True):
-        
+        print("populate layer dropdown / clicked save selection")
         if not self: return
-        try:   
+        try: 
             from speckle.ui.project_vars import set_project_layer_selection
         except: 
             from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import set_project_layer_selection
@@ -352,6 +355,9 @@ class SpeckleGISDialog(QMainWindow):
         project = plugin.gis_project 
 
         if bySelection is False: # read from project data 
+            print("populate layers from saved data")
+            #print(project)
+            #print(project.activeMap)
 
             all_layers_ids = [l.dataSource for l in getAllProjLayers(project)]
             for layer_tuple in plugin.current_layers:
@@ -361,15 +367,18 @@ class SpeckleGISDialog(QMainWindow):
 
         else: # read selected layers 
             # Fetch selected layers
+            print("populate layers from selection")
             
             plugin.current_layers = []
             layers = getLayers(plugin, bySelection) # List[QgsLayerTreeNode]
+            print(layers)
             for i, layer in enumerate(layers):
                 plugin.current_layers.append((layer.name, layer)) 
                 listItem = self.fillLayerList(layer)
                 self.layersWidget.addItem(listItem)
-
+            print("populate layers from selection 2")
             set_project_layer_selection(plugin)
+            print("populate layers from selection 3")
 
         self.layersWidget.setIconSize(QSize(20, 20))
         self.runBtnStatusChanged(plugin)
@@ -377,9 +386,11 @@ class SpeckleGISDialog(QMainWindow):
         return
 
     def fillLayerList(self, layer):
+        print("Fill layer list")
         
         icon_xxl = os.path.dirname(os.path.abspath(__file__)) + "/size-xxl.png"
-        listItem = QListWidgetItem(layer.name()) 
+        listItem = QListWidgetItem(layer.name) 
+        #print(listItem)
 
         if layer.isRasterLayer: # and layer.width()*layer.height() > 1000000:
             listItem.setIcon(QIcon(icon_xxl))

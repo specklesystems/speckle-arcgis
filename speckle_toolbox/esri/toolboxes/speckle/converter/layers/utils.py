@@ -14,6 +14,7 @@ ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderM
 
     
 def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
+    print("find And Clear LayerGroup")
     groupExists = 0
     print(newGroupName)
     for l in gis_project.activeMap.listLayers(): 
@@ -26,19 +27,23 @@ def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
             groupExists+=1
     print(newGroupName)
     if groupExists == 0:
-        # create empty group layer file 
-        path = gis_project.filePath.replace("aprx","gdb") #"\\".join(self.toolboxInputs.project.filePath.split("\\")[:-1]) + "\\speckle_layers\\"
-        print(path)
+        # create empty group layer file "\\Layers_Speckle\\
+        path = "\\".join(gis_project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\"
+        lyr_path = path + newGroupName + ".lyrx"
+        print(lyr_path)
         try:
-            f = open(path + "\\" + newGroupName + ".lyrx", "w")
+            f = open(lyr_path, "w")
             content = createGroupLayer().replace("TestGroupLayer", newGroupName)
             f.write(content)
             f.close()
-            newGroupLayer = arcpy.mp.LayerFile(path + "\\" + newGroupName + ".lyrx")
+            newGroupLayer = arcpy.mp.LayerFile(lyr_path)
             layerGroup = gis_project.activeMap.addLayer(newGroupLayer)[0]
+            print(layerGroup)
         except: # for 3.0.0
             if gis_project.active_map is not None:
+                print("try creating the group")
                 layerGroup = gis_project.activeMap.createGroupLayer(newGroupName)
+                print(layerGroup)
             else:
                 arcpy.AddWarning("The map didn't fully load, try refreshing the plugin.")
                 return

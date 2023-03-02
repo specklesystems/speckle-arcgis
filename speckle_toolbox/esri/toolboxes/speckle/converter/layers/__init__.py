@@ -40,13 +40,21 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 import numpy as np
 
 def getAllProjLayers(project: ArcGISProject) -> List[arcLayer]:
+    print("get all project layers")
+    print(project)
+    #print(project)
+    #print(project.activeMap)
     layers = []
     if project.activeMap is not None and isinstance(project.activeMap, Map): # if project loaded
+        print(type(project.activeMap))
+        #print(project.activeMap.listLayers())
         for layer in project.activeMap.listLayers(): 
             if (layer.isFeatureLayer) or layer.isRasterLayer: 
                 layers.append(layer) #type: 'arcpy._mp.Layer'
-                path = layer.dataSource
+                #print(layers)
+                #path = layer.dataSource
     else: 
+        print(type(project.activeMap))
         arcpy.AddWarning("Cannot get Project layers, Project Active Map not loaded")
         return []
     return layers 
@@ -64,7 +72,9 @@ def getLayers(plugin, bySelection = False ) -> List[arcLayer]:
     layers = []
     
     if bySelection is True: # by selection 
-        layers = getAllProjLayers(project)
+        print("get selected layers")
+        layers = all_layers
+        print("layers selected and saved") 
     else: # from project data 
         #all_layers_ids = [l.id() for l in project.mapLayers().values()]
         for item in plugin.current_layers:
@@ -217,8 +227,9 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
 
     return speckleLayer
 
-def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: str, project: ArcGISProject):
-
+def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: str) -> arcLayer:
+    print("Layer to Native")
+    project = arcpy.mp.ArcGISProject("CURRENT")
     if layer.type is None:
         # Handle this case
         return

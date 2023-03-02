@@ -54,7 +54,7 @@ class Speckle:
                            "to/from other software using Speckle server." 
 
     def getParameterInfo(self):
-        cat1 = "Click Run to launch Speckle Connector"
+        cat1 = "category 1"
 
         param0 = arcpy.Parameter(
             displayName="",
@@ -64,7 +64,7 @@ class Speckle:
             direction="Input",
             enabled="True",
             )
-        param0.value = "To launch Speckle Connector: ▷ Run " #▶ 
+        param0.value = "▷ Run to launch Speckle Connector" #▶ 
         return [param0]
 
     def isLicensed(self): #optional

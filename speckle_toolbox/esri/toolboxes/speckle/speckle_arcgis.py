@@ -403,7 +403,8 @@ class SpeckleGIS:
             newGroupName = streamId + "_" + branch.name + "_" + commit.id
             
             findAndClearLayerGroup(self.gis_project, newGroupName)
-
+            
+            print("after create group")
             if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer)
             else: check: Callable[[Base], bool] = lambda base: isinstance(base, Base)
             traverseObject(commitObj, callback, check, str(newGroupName))
@@ -455,7 +456,7 @@ class SpeckleGIS:
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         self.is_setup = self.check_for_accounts()
-            
+        
         if self.pluginIsActive:
             self.reloadUI()
         else:
@@ -465,10 +466,13 @@ class SpeckleGIS:
                 self.dockwidget.show()
                 #self.gis_project.fileNameChanged.connect(self.reloadUI)
                 #self.gis_project.homePathChanged.connect(self.reloadUI)
-
+            print("run plugin 2")
             get_project_streams(self)
+            print("run plugin 3")
             get_survey_point(self)
+            print("run plugin 4")
             get_project_layer_selection(self)
+            print("run plugin 5")
 
             self.dockwidget.run(self)
 

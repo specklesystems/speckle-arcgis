@@ -26,6 +26,8 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis import SpeckleGIS
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getAllProjLayers
 
+FIELDS = ["project_streams","project_layer_selection", "lat_lon"]
+
 def get_project_streams(self: SpeckleGIS, content: str = None):
     print("get proj streams")
     
@@ -35,14 +37,14 @@ def get_project_streams(self: SpeckleGIS, content: str = None):
     if table is None: return 
 
     rows = arcpy.da.SearchCursor(table, "project_streams") 
-    saved_streams = ""
+    saved_streams = []
     for x in rows:
-        saved_streams: str = x[0]
-        break
+        saved_streams.append(x[0])
+
     temp = []
     ######### need to check whether saved streams are available (account reachable)
-    if saved_streams != "":
-        for url in saved_streams.split(","):
+    if len(saved_streams) > 0:
+        for url in saved_streams:
             try:
                 sw = StreamWrapper(url)
                 try: 
@@ -63,38 +65,66 @@ def set_project_streams(self: SpeckleGIS):
     print("SET proj streams")
     project = self.gis_project
     table = findOrCreateSpeckleTable(project)
-    if table is None: return 
+    print("SET proj streams 2")
+    
+    value = [stream[0].stream_url for stream in self.current_streams] #",".join()
+    print(value)
 
-    value = ",".join([stream[0].stream_url for stream in self.current_streams])
-    with arcpy.da.UpdateCursor(table, ["project_streams"]) as cursor:
-        for row in cursor: # just one row
-            cursor.updateRow([value])
-            break
-    del cursor 
+    if table is not None:
+        proj_layers = []
+        lan_lot = ""
+        with arcpy.da.UpdateCursor(table, FIELDS) as cursor: 
+            for row in cursor: # just one row
+                if row[1] is not None and row[1] != "": proj_layers.append(row[1]) 
+                if row[2] is not None and row[2] != "": lan_lot = row[2] 
+                cursor.deleteRow()
+        del cursor 
+        if len(proj_layers) == 0: proj_layers.append("")
+        if len(value) == 0: value.append("")
+        #print(proj_layers)
+        #print(lan_lot)
+        
+        cursor = arcpy.da.InsertCursor(table, FIELDS ) 
+        length = max(len(proj_layers), len(value))
+        #print(length)
+        for i in range(length): 
+            #print(i)
+            if i==0: 
+                cursor.insertRow([value[i], proj_layers[i] , lan_lot]) 
+                #print(i)
+            else: 
+                try:
+                    cursor.insertRow([value[i], proj_layers[i] , ""]) 
+                except: 
+                    if len(value) <= i: cursor.insertRow(["", proj_layers[i] , ""]) 
+                    if len(proj_layers) <= i: cursor.insertRow([value[i], "" , ""])
+            #print(i)
+        del cursor 
+        #print(table) 
   
 def get_project_layer_selection(self: SpeckleGIS):
 
-    print("GET project layer selection")
+    print("GET project layer selection from the table")
     project = self.gis_project
     table = findOrCreateSpeckleTable(project)
     if table is None: return 
     
     rows = arcpy.da.SearchCursor(table, "project_layer_selection") 
-    saved_layers = ""
+    saved_layers = []
     for x in rows:
-        saved_layers = x[0]
-        break
+        saved_layers.append(x[0]) 
+
     
     temp = []
     proj_layers = getAllProjLayers(project)
     ######### need to check whether saved streams are available (account reachable)
-    if saved_layers != "":
-        for layerPath in saved_layers.split(","):
+    if len(saved_layers) > 0:
+        for layerPath in saved_layers:
             found = 0
             for layer in proj_layers:
                 print(layer.dataSource)
                 if layer.dataSource == layerPath:
-                    temp.append((layer.name(), layer))
+                    temp.append((layer.name, layer))
                     found += 1
                     break
             if found == 0: 
@@ -102,18 +132,45 @@ def get_project_layer_selection(self: SpeckleGIS):
     self.current_layers = temp
 
 def set_project_layer_selection(self: SpeckleGIS):
-    print("SET project layer selection")
+    print("SET project layer selection function")
     project = self.gis_project
-    value = ",".join([layer[1].dataSource for layer in self.current_layers]) 
+    value: List[str] = [layer[1].dataSource for layer in self.current_layers] #",".join([layer[1].dataSource for layer in self.current_layers]) 
     print(value)
 
     table = findOrCreateSpeckleTable(project)
+    #print(table)
     if table is not None:
-        with arcpy.da.UpdateCursor(table, ["project_layer_selection"]) as cursor:
+        lan_lot = ""
+        proj_streams = []
+        with arcpy.da.UpdateCursor(table, FIELDS) as cursor:
             for row in cursor: # just one row
-                cursor.updateRow([value])
-                break
+                if row[0] is not None and row[0] != "": proj_streams.append(row[0]) 
+                if row[2] is not None and row[2] != "": lan_lot = row[2]
+                cursor.deleteRow()
         del cursor 
+        if len(proj_streams) == 0: proj_streams.append("")
+        if len(value) == 0: value.append("")
+        #print(proj_streams)
+        
+        cursor = arcpy.da.InsertCursor(table, FIELDS )
+        length = max(len(proj_streams), len(value))
+        #print(length)
+        for i in range(length): 
+            print(i)
+            if i==0: 
+                cursor.insertRow([proj_streams[i], value[i] , lan_lot]) 
+                print(i)
+            else: 
+                try:
+                    cursor.insertRow([proj_streams[i], value[i] , ""]) 
+                except: 
+                    if len(proj_streams) <= i: cursor.insertRow(["", value[i] , ""]) 
+                    if len(value) <= i: cursor.insertRow([proj_streams[i], "" , ""])
+            print(i)
+        del cursor 
+        #print(table)
+
+    print("SET project layer selection 2")
 
 def get_survey_point(self: SpeckleGIS, content = None):
     print("get survey point")
@@ -156,6 +213,8 @@ def set_survey_point(self: SpeckleGIS):
         return True
 
     except Exception as e:
+        self.dockwidget.surveyPointLat.setText(str(self.lat))
+        self.dockwidget.surveyPointLon.setText(str(self.lon))
         arcpy.AddWarning("Lat, Lon values invalid: " + str(e))
         return False 
 
@@ -186,7 +245,7 @@ def setProjectReferenceSystem(self: SpeckleGIS):
 
 def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
     path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
-    fields = ["project_streams","project_layer_selection", "lat_lon"]
+    
     if 'speckle_gis' not in arcpy.ListTables():
         try: 
             table = CreateTable(path, "speckle_gis")
@@ -194,7 +253,7 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
             arcpy.management.AddField(table, "project_layer_selection", "TEXT")
             arcpy.management.AddField(table, "lat_lon", "TEXT")
 
-            cursor = arcpy.da.InsertCursor(table, fields )
+            cursor = arcpy.da.InsertCursor(table, FIELDS )
             cursor.insertRow(["",""])
             del cursor
          
@@ -202,14 +261,14 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
             arcpy.AddWarning("Error creating a table: " + str(e))
             return None
     else: 
-        print("table already exists")
+        #print("table already exists")
         # make sure fileds exist 
         table = path + "\\speckle_gis" 
-        findOrCreateTableField(table, fields[0])
-        findOrCreateTableField(table, fields[1])
-        findOrCreateTableField(table, fields[2])
+        findOrCreateTableField(table, FIELDS[0])
+        findOrCreateTableField(table, FIELDS[1])
+        findOrCreateTableField(table, FIELDS[2])
         
-        findOrCreateRow(table, fields)
+        findOrCreateRow(table, FIELDS)
 
     return table
 
@@ -239,7 +298,7 @@ def findOrCreateRow(table:str, fields: List[str]):
     cursor = arcpy.da.SearchCursor(table, fields)
     k=-1
     for k, row in enumerate(cursor): 
-        print(row)
+        #print(row)
         break
     del cursor
     
