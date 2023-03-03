@@ -9,7 +9,7 @@ from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, 
 try:
     from speckle.converter.geometry.mesh import rasterToMesh
     from speckle.converter.geometry.point import pointToCoord, pointToNative
-    from speckle.converter.layers.symbologyTemplates import featureColorfromNativeRenderer
+    from speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
                                                     circleToSpeckle, 
                                                     speckleArcCircleToPoints, 
@@ -19,7 +19,7 @@ try:
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbologyTemplates import featureColorfromNativeRenderer
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
                                                     circleToSpeckle, 
                                                     speckleArcCircleToPoints, 

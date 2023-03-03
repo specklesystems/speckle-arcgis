@@ -11,21 +11,21 @@ from typing import Any, List, Tuple, Union
 try:
     from speckle.converter.layers.CRS import CRS
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-    from speckle.converter.layers.symbologyTemplates import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
+    from speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
     from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
     from speckle.plugin_utils.helpers import findOrCreatePath
 
-    from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle.converter.geometry.mesh import rasterToMesh, meshToNative, writeMeshToShp
     from speckle.converter.layers.utils import findTransformation
     from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbologyTemplates import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative, writeMeshToShp
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
 
@@ -245,26 +245,33 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
         return rasterLayerToNative(layer, streamBranch, project)
     return None
 
-def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, project: ArcGISProject) :
+def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str) :
+    project = ArcGISProject("CURRENT")
     print("01______BIM layer to native")
     print(layerName)
     geom_meshes = []
     layer_meshes = None
     #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
     for geom in layerContentList:
-        try: 
-            if geom.displayMesh: geom_meshes.append(geom)
-        except:
+        if geom.speckle_type =='Objects.Geometry.Mesh':
+            geom_meshes.append(geom)
+        else:
             try: 
                 if geom.displayValue: geom_meshes.append(geom)
-            except: pass
+            except:
+                try: 
+                    if geom["@displayValue"]: geom_meshes.append(geom)
+                except:
+                    try: 
+                        if geom.displayMesh: geom_meshes.append(geom)
+                    except: pass
 
     if len(geom_meshes)>0: layer_meshes = bimVectorLayerToNative(geom_meshes, layerName, "Mesh", streamBranch, project)
 
     return True
 
 
-def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
+def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
     # no support for mltipatches, maybe in 3.1: https://community.esri.com/t5/arcgis-pro-ideas/better-support-for-multipatches-in-arcpy/idi-p/953614/page/2#comments
     print("02_________BIM vector layer to native_____")
     #get Project CRS, use it by default for the new received layer
@@ -319,7 +326,8 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     #f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
 
 
-    shp = meshToNative(geomList, path_bim + newName)
+    #shp = meshToNative(geomList, path_bim + newName)
+    shp = writeMeshToShp(geomList, path_bim + newName)
     print("____ meshes saved___")
     print(shp)
     #print(path)
@@ -341,6 +349,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     
     fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid", "displayMesh"]
     matrix = []
+    matrix_no_id = []
     all_keys = []
     all_key_types = []
     max_len = 52
@@ -366,20 +375,63 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 all_keys.append(key)
                 all_key_types.append(value)
                 #print(all_keys)
-                matrix.append([key, value, key, 255])
-    print(all_keys)
+                if key.lower() =="speckle_id": 
+                    matrix.append(["Speckle_ID", value, "Speckle_ID", 255])
+                else:
+                    matrix.append([key, value, key, 255])
+                    matrix_no_id.append([key, value, key, 255])
+    #print(all_keys)0.1076559°E 51.5019052°N  0.1076614°W 51.5020862°N 
     print(len(all_keys))
-    if len(matrix)>0: AddFields(str(f_class), matrix)
+    #print(matrix)
+    #print(len(matrix))
+    try:
+        if len(matrix)>0: AddFields(str(f_class), matrix_no_id)
+    except Exception as e: print(e)
     print(matrix)
     
     fets = []
+    fetIds = []
+    fetColors = []
+
     print("_________BIM FeatureS To Native___________")
     for f in geomList[:]: 
-        new_feat = bimFeatureToNative(f, newFields, sr, path_bim)
-        if new_feat != "" and new_feat != None: 
-            fets.append(new_feat)
-    print(len(fets))
-        
+        try:
+            exist_feat: None = None
+            all_feat_ids = arcpy.da.SearchCursor(f_class, "Speckle_ID")
+            #print(all_feat_ids)
+            
+            for n, shape_id in enumerate(all_feat_ids):
+                #print(shape_id[0])
+                if shape_id[0] == f.id:
+                    exist_feat = f
+                    break
+            if exist_feat is None: continue 
+
+            new_feat = bimFeatureToNative(exist_feat, newFields, sr, path_bim)
+            if new_feat is not None and new_feat != "": 
+                colorFound = 0
+                try: # get render material from any part of the mesh (list of items in displayValue)
+                    for k, item in enumerate(f.displayValue):
+                        try:
+                            fetColors.append(item.renderMaterial)  
+                            colorFound += 1
+                            break
+                        except: pass
+                except: 
+                    try:
+                        for k, item in enumerate(f["@displayValue"]):
+                            try: 
+                                fetColors.append(item.renderMaterial) 
+                                colorFound += 1
+                                break
+                            except: pass
+                    except: pass
+            
+                fets.append(new_feat)
+                fetIds.append(f.id)
+                if colorFound == 0: fetColors.append(None)
+                print(len(fets))
+        except Exception as e: print(e)
     
     if len(fets) == 0: return None
     count = 0
@@ -399,6 +451,9 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         rowValues.append(row)
         count += 1
     print(heads)
+    #print(rowValues)
+    print(matrix)
+    print(len(matrix))
     
     with arcpy.da.UpdateCursor(f_class, heads) as cur:
         # For each row, evaluate the WELL_YIELD value (index position 
@@ -407,11 +462,14 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         #print(heads)
         try:
             for rowShape in cur: 
-                #print(rowShape)
+                print(rowShape)
                 for i,r in enumerate(rowShape):
-                    #print(heads[i])
-                    #print(matrix[i])
+                    print(i)
+                    print(heads[i])
+                    print(rowShape[i])
+                    print(rowValues[shp_num])
                     rowShape[i] = rowValues[shp_num][i]
+                    print(matrix[i])
                     #print(type(rowShape[i]))
                     if matrix[i][1] == 'TEXT' and rowShape[i] is not None: rowShape[i] = str(rowValues[shp_num][i]) 
                     #print(type(rowShape[i]))
@@ -423,7 +481,7 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
                 shp_num += 1
                 #print(shp_num)
         except Exception as e: 
-            print("Layer attribute error: " + str(e))
+            print("Layer attr error: " + str(e))
             #print(i)
             print(shp_num)
             print(len(rowValues))
@@ -441,7 +499,8 @@ def bimVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
 
     return True #last one
 
-def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, project: ArcGISProject) :
+def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str) :
+    project = ArcGISProject("CURRENT")
     print("01______Cad vector layer to native")
     print(layerName)
     geom_points = []

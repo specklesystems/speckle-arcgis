@@ -13,7 +13,8 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
 
-ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
+#ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
+ATTRS_REMOVE = ['speckleTyp','speckle_id','geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
 
     
 def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
@@ -86,9 +87,10 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
     for feature in features: 
         #get object properties to add as attributes
         dynamicProps = feature.get_dynamic_member_names()
-        for att in attrsToRemove:
+        for att in ATTRS_REMOVE:
             try: dynamicProps.remove(att)
             except: pass
+            
         dynamicProps.sort()
 
         # add field names and variands 
@@ -112,8 +114,8 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
                         else: #check if the field was empty previously: 
                             oldVariant = fields[k]
                             # replace if new one is NOT Float (too large integers)
-                            if oldVariant != "FLOAT" and v == "FLOAT": 
-                                fields.update({k: v}) 
+                            #if oldVariant != "FLOAT" and v == "FLOAT": 
+                            #    fields.update({k: v}) 
                             # replace if new one is NOT LongLong or IS String
                             if oldVariant != "TEXT" and v == "TEXT": 
                                 fields.update({k: v}) 
@@ -129,8 +131,8 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
                         oldVariant = fields[k]
                         # replace if new one is NOT Float (too large integers)
                         #print(oldVariant, v)
-                        if oldVariant == "LONG" and v == "FLOAT": 
-                            fields.update({k: v}) 
+                        #if oldVariant == "LONG" and v == "FLOAT": 
+                        #    fields.update({k: v}) 
                         # replace if new one is NOT LongLong or IS String
                         if oldVariant != "TEXT" and v == "TEXT": 
                             fields.update({k: v}) 
@@ -141,8 +143,8 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
         if name not in fields.keys(): 
             fields.update({name: 'TEXT'}) 
 
-    fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
-    return fields_sorted
+    #fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
+    return fields
 
 def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
     

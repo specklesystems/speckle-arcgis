@@ -15,14 +15,14 @@ try:
                                                 traverseDictByKey, hsv_to_rgb)
     from speckle.converter.geometry.point import pointToSpeckle
     from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
-    from speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
+    from speckle.converter.layers.symbology import jsonFromLayerStyle
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry._init_ import convertToSpeckle, convertToNative, convertToNativeMulti
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
                                                 traverseDictByKey, hsv_to_rgb)
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbologyTemplates import jsonFromLayerStyle
+    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import jsonFromLayerStyle
 
 import numpy as np
 import colorsys
@@ -149,12 +149,13 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
     return feat_updated
 
 def addFeatVariant(key, variant, value, f):
-    
+    #print("Add feat variant")
     feat = f
     if variant == "TEXT": value = str(value) 
+
     if value != "NULL" and value != "None":
         #if key == 'area': print(value); print(type(value)); print(getVariantFromValue(value))
-        if variant == getVariantFromValue(value) or (variant=="FLOAT" and isinstance(value, int)): 
+        if variant == getVariantFromValue(value): # or (variant=="FLOAT" and isinstance(value, int)): 
             feat.update({key: value}) 
         elif variant == "LONG" and isinstance(value, float): # if object has been modified 
             feat.update({key: int(value)}) 
@@ -165,7 +166,7 @@ def addFeatVariant(key, variant, value, f):
     return feat 
 
 def updateFeat(feat:dict, fields: dict, feature: Base) -> Dict[str, Any]:
-    
+    print("Update feat")
     for key, variant in fields.items(): 
         try:
             if key == "Speckle_ID": 

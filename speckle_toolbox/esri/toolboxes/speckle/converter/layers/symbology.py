@@ -6,7 +6,7 @@ import os
 from typing import Dict
 
 import arcpy 
-from arcpy._mp import ArcGISProject
+from arcpy._mp import ArcGISProject, Layer as arcLayer
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
                               AddFields, AlterField, DefineProjection )
 
@@ -501,7 +501,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
     else: return None
 
 
-def featureColorfromNativeRenderer(index: int, arcLayer) -> int:
+def featureColorfromNativeRenderer(index: int, arcLayer: arcLayer) -> int:
     # case with one color for the entire layer
     #try:
     sym = arcLayer.symbology

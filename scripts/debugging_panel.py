@@ -66,7 +66,7 @@ for k, grp in enumerate(sym.renderer.groups):
 
 
 
-from speckle.converter.layers.symbologyTemplates import get_polygon_simpleRenderer 
+from speckle.converter.layers.symbology import get_polygon_simpleRenderer 
 from arcpy._mp import ArcGISProject
 
 aprx = ArcGISProject('CURRENT')

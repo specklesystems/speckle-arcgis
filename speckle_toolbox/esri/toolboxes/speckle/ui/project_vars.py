@@ -81,26 +81,20 @@ def set_project_streams(self: SpeckleGIS):
         del cursor 
         if len(proj_layers) == 0: proj_layers.append("")
         if len(value) == 0: value.append("")
-        #print(proj_layers)
-        #print(lan_lot)
         
         cursor = arcpy.da.InsertCursor(table, FIELDS ) 
         length = max(len(proj_layers), len(value))
-        #print(length)
+
         for i in range(length): 
-            #print(i)
             if i==0: 
                 cursor.insertRow([value[i], proj_layers[i] , lan_lot]) 
-                #print(i)
             else: 
                 try:
                     cursor.insertRow([value[i], proj_layers[i] , ""]) 
                 except: 
                     if len(value) <= i: cursor.insertRow(["", proj_layers[i] , ""]) 
                     if len(proj_layers) <= i: cursor.insertRow([value[i], "" , ""])
-            #print(i)
         del cursor 
-        #print(table) 
   
 def get_project_layer_selection(self: SpeckleGIS):
 

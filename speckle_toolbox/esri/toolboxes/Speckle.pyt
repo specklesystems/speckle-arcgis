@@ -57,14 +57,19 @@ class Speckle:
         cat1 = "category 1"
 
         param0 = arcpy.Parameter(
-            displayName="",
+            displayName="""▷ Run to launch Speckle Connector
+""", #▶ 
             name="param0",
             datatype="GPString",
             parameterType="Optional",
             direction="Input",
             enabled="True",
             )
-        param0.value = "▷ Run to launch Speckle Connector" #▶ 
+        param0.value = """This is an experimental version of plugin.
+
+Save your work before using!
+
+Report issues at https://speckle.community/"""
         return [param0]
 
     def isLicensed(self): #optional
