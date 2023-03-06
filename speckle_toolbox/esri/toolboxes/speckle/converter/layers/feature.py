@@ -106,12 +106,9 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
     return feat
              
 def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, path: str):
-    print("04_________BIM Feature To Native____________")
+    #print("04_________BIM Feature To Native____________")
 
     feat = {}
-    try: speckle_geom = feature["geometry"] # for created in QGIS Layer type
-    except:  speckle_geom = feature # for created in other software
-
     feat.update({"arcGisGeomFromSpeckle": ""})
 
     try: 
@@ -166,7 +163,7 @@ def addFeatVariant(key, variant, value, f):
     return feat 
 
 def updateFeat(feat:dict, fields: dict, feature: Base) -> Dict[str, Any]:
-    print("Update feat")
+    #print("Update feat")
     for key, variant in fields.items(): 
         try:
             if key == "Speckle_ID": 

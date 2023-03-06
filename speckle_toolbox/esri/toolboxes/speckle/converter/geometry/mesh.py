@@ -75,47 +75,52 @@ def writeMeshToShp(meshes: List[Mesh], path: str):
                     mesh = geom.displayValue
                     w = fill_mesh_parts(w, mesh, geom.id)
                 elif geom.displayValue and isinstance(geom.displayValue, List): 
-                    for part in geom.displayValue:
-                        if isinstance(part, Mesh): 
-                            mesh = part
-                            w = fill_mesh_parts(w, mesh, geom.id)
+                    w = fill_multi_mesh_parts(w, geom.displayValue, geom.id)
             except: 
                 try: 
                     if geom["@displayValue"] and isinstance(geom["@displayValue"], Mesh): 
                         mesh = geom["@displayValue"]
                         w = fill_mesh_parts(w, mesh, geom.id)
                     elif geom["@displayValue"] and isinstance(geom["@displayValue"], List): 
-                        for part in geom["@displayValue"]:
-                            if isinstance(part, Mesh): 
-                                mesh = part
-                                w = fill_mesh_parts(w, mesh, geom.id)
+                        w = fill_multi_mesh_parts(w, geom["@displayValue"], geom.id)
                 except:
                     try: 
                         if geom.displayMesh and isinstance(geom.displayMesh, Mesh): 
                             mesh = geom.displayMesh
                             w = fill_mesh_parts(w, mesh, geom.id)
                         elif geom.displayMesh and isinstance(geom.displayMesh, List): 
-                            for part in geom.displayMesh:
-                                if isinstance(part, Mesh): 
-                                    mesh = part
-                                    w = fill_mesh_parts(w, mesh, geom.id)
+                            w = fill_multi_mesh_parts(w, geom.displayMesh, geom.id)
                     except: pass
     w.close()
     return path
 
+
+def fill_multi_mesh_parts(w: shapefile.Writer, meshes: List[Mesh], geom_id: str):
+    
+    parts_list = []
+    types_list = []
+    for mesh in meshes:
+        if not isinstance(mesh, Mesh): continue
+        try:
+            #print(f"Fill multi-mesh parts # {geom_id}")
+            parts_list_x, types_list_x = deconstructSpeckleMesh(mesh) 
+            parts_list.extend(parts_list_x)
+            types_list.extend(types_list_x)
+        except Exception as e: pass 
+    
+    w.multipatch(parts_list, partTypes=types_list ) # one type for each part
+    w.record(geom_id)
+    return w
+
 def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str):
     
     try:
-        #if len(mesh.faces) % 4 == 0 and (mesh.faces[0] == 0 or mesh.faces[0] == 3):
+        #print(f"Fill mesh parts # {geom_id}")
         parts_list, types_list = deconstructSpeckleMesh(mesh) 
         w.multipatch(parts_list, partTypes=types_list ) # one type for each part
         w.record(geom_id)
-        #else: 
-        #    logger.logToUser("Received mesh type is not supported", Qgis.Warning)
-        #    #print("not triangulated mesh")
 
-    except Exception as e: pass #; print(e)
-    #print("mesh part written")
+    except Exception as e: pass 
     return w
 
 def deconstructSpeckleMesh(mesh: Mesh):

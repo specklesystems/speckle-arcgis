@@ -16,23 +16,23 @@ def traverseObject(
     check: Optional[Callable[[Base], bool]],
     streamBranch: str,
 ):
-    print("traverse Object")
-    print(base)
+    #print("traverse Object")
+    #print(base)
     if check and check(base):
         res = callback(base, streamBranch) if callback else False
-        print(res)
+        #print(res)
         if res:
             return
     memberNames = base.get_member_names()
     #print(base)
-    print(memberNames)
+    #print(memberNames)
     for name in memberNames:
         try:
             if ["id", "applicationId", "units", "speckle_type"].index(name):
                 continue
         except:
             pass
-        print(name)
+        #print(name)
         traverseValue(base[name], callback, check, streamBranch)
 
 def traverseValue(
@@ -41,8 +41,8 @@ def traverseValue(
     check: Optional[Callable[[Base], bool]],
     streamBranch: str,
 ):
-    print("traverse Value")
-    print(value)
+    #print("traverse Value")
+    #print(value)
     if isinstance(value, Base):
         traverseObject(value, callback, check, streamBranch)
     if isinstance(value, List):
@@ -50,12 +50,12 @@ def traverseValue(
             traverseValue(item, callback, check, streamBranch)
 
 def callback(base: Base, streamBranch: str) -> bool:
-    print("callback")
+    #print("callback")
     if isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer):
         if isinstance(base, Layer):
             arcpy.AddWarning(f"Class \"Layer\" will be deprecated in future updates in favour of \"VectorLayer\" or \"RasterLayer\"") 
         layer = layerToNative(base, streamBranch)
-        print(layer)
+        #print(layer)
         if layer is not None:
             arcpy.AddMessage("Layer created: " + layer.name)
     else:
@@ -85,7 +85,7 @@ def loopVal(value: Any, name: str, streamBranch: str): # "name" is the parent ob
         streamBranch = streamBranch.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
 
         objectListConverted = 0
-        print("loop val - List")
+        #print("loop val - List")
         for i, item in enumerate(value):
             loopVal(item, name, streamBranch)
             if item.speckle_type and item.speckle_type.startswith("IFC"): 

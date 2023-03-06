@@ -11,6 +11,8 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
                               AddFields, AlterField, DefineProjection )
 
 from specklepy.objects import Base
+from specklepy.objects.other import RenderMaterial
+
 try:
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
 except:
@@ -34,6 +36,67 @@ def symbol_color_to_speckle(color: dict):
         newColor = (r<<16) + (g<<8) + b
     except: pass 
     return newColor
+
+
+def colorFromRenderMaterial(material):
+
+    color = {'RGB': [245, 245, 245, 100]} #Objects.Other.RenderMaterial
+    if material is not None:
+        try: 
+            rgb = material.diffuse
+            r = (rgb & 0xFF0000) >> 16
+            g = (rgb & 0xFF00) >> 8
+            b = rgb & 0xFF 
+            color = {'RGB': [r, g, b, 100]}
+            #print(color)
+        except: pass
+    return color
+
+def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetColors: List[RenderMaterial], layerArcgis, f_class, existingAttrs: List) -> Union[None, Dict[str, Any]] :
+    print("___________APPLY VECTOR RENDERER______________")
+    print(layerArcgis)
+    print(f_class)
+    print(fetColors)
+
+    attribute = "Speckle_ID"
+    root_path = "\\".join(project.filePath.split("\\")[:-1])
+    #path_style = root_path + '\\' + str(f_class).split('\\')[-1] + '_old.lyrx'
+
+    data = arcpy.Describe(layerArcgis.dataSource)
+    if layerArcgis.isFeatureLayer:
+        geomType = data.shapeType
+        sym = layerArcgis.symbology
+
+        cursor = arcpy.da.SearchCursor(f_class, attribute)
+        class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
+        del cursor 
+
+        sym.updateRenderer('UniqueValueRenderer')
+        print(sym.renderer.type)
+        print(existingAttrs)
+        print(attribute)
+
+        sym.renderer.fields = [attribute]
+        for k, grp in enumerate(sym.renderer.groups):
+            for itm in grp.items:
+                transVal = itm.values[0][0] #Grab the first "percent" value in the list of potential values 
+                #print(transVal)
+                for i in range(len(class_shapes)):
+                    label = class_shapes[i]
+                    #print(label)
+                    if label is None or label=="" or str(label)=="": label = "<Null>"
+
+                    if str(transVal) == label:
+                        print("found label")
+                        material = fetColors[i]
+                        #print(material)
+                        itm.symbol.color = colorFromRenderMaterial(material) 
+                        itm.label = label
+                        break
+        layerArcgis.symbology = sym
+        #print(layerArcgis)
+        return layerArcgis 
+
 
 def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layerSpeckle: Union[Layer, VectorLayer], layerArcgis, f_class, existingAttrs: List) -> Union[None, Dict[str, Any]] :
     print("___________APPLY VECTOR RENDERER______________")
