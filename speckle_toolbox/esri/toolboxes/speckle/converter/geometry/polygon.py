@@ -31,6 +31,32 @@ import math
 from panda3d.core import Triangulator
 
 
+def polygonToSpeckleMesh(geom, feature, layer, smth):
+    return
+    polygon = Base(units = "m")
+
+    vertices = []
+    faces = [] 
+    colors = []
+    existing_vert = 0
+    for p in geom.parts():
+        boundary, voids = getPolyBoundaryVoids(p, feature, layer)
+        polyBorder = speckleBoundaryToSpecklePts(boundary)
+        voidsAsPts = []
+        for v in voids:
+            pts = speckleBoundaryToSpecklePts(v)
+            voidsAsPts.append(pts)
+        total_vert, vertices_x, faces_x, colors_x = meshPartsFromPolygon(polyBorder, voidsAsPts, existing_vert, feature, layer)
+
+        existing_vert += total_vert
+        vertices.extend(vertices_x)
+        faces.extend(faces_x)
+        colors.extend(colors_x)
+
+    mesh = constructMesh(vertices, faces, colors)
+    polygon.displayValue = [ mesh ] 
+
+    return polygon 
 
 def multiPolygonToSpeckle(geom, feature, index: str, layer, multiType: bool):
 

@@ -6,13 +6,13 @@ from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, 
 import arcpy 
 from typing import Any, List, Union, Sequence
 try:
-    from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle
+    from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
     from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
     from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
     from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
     from speckle.converter.geometry.mesh import meshToNative
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
@@ -51,6 +51,8 @@ def convertToSpeckle(feature, index: str, layer, geomType, featureType) -> Union
         else: return polygonToSpeckle(geom, feature, index, layer, geomMultiType)
     elif geomType == "Multipoint":
         return multiPointToSpeckle(geom, feature, layer, geomMultiType)
+    elif geomType == "MultiPatch":
+        return polygonToSpeckleMesh(geom, feature, layer, geomMultiType)
     else:
         arcpy.AddWarning("Unsupported or invalid geometry in layer " + layer.name)
     return None

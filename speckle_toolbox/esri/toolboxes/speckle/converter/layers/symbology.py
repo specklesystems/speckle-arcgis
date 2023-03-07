@@ -361,7 +361,7 @@ def rasterRendererToNative(project: ArcGISProject, active_map, layerGroup,  laye
     
 
 def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: Base):
-    print("_____rasterRenderer To Speckle______")
+    print("_____renderer To Speckle______")
     if arcLayer.isRasterLayer: 
         try: 
             rType = arcLayer.symbology.colorizer.type # 'singleSymbol','categorizedSymbol','graduatedSymbol',

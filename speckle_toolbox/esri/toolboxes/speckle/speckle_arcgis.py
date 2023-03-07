@@ -273,7 +273,7 @@ class SpeckleGIS:
         if len(layers) == 0: #len(selectedLayerNames) == 0:
             arcpy.AddWarning("No layers selected")
             return
-
+        print(layers)
         print("On Send 3")
         base_obj = Base(units = "m")
         base_obj.layers = convertSelectedLayers(layers, project)

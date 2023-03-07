@@ -40,7 +40,7 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
     print(hasattr(data, "isIFC")) 
     print(hasattr(data, "bimLevels")) 
     print(hasattr(data, "hasSpatialIndex")) 
-    if geomType == "MultiPatch" or hasattr(data, "isRevit") or hasattr(data, "isIFC") or hasattr(data, "bimLevels"): 
+    if hasattr(data, "isRevit") or hasattr(data, "isIFC") or hasattr(data, "bimLevels"): 
         print(f"Layer {selectedLayer.name} has unsupported data type")
         arcpy.AddWarning(f"Layer {selectedLayer.name} has unsupported data type")
         return None 
@@ -53,11 +53,12 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
     try:
         geom = convertToSpeckle(f_shape, index, selectedLayer, geomType, featureType) 
         if geom is not None: print(geom); b["geometry"] = geom 
+        else: b["geometry"] = []
     except Exception as error:
         print("Error converting geometry: " + str(error))
         print(selectedLayer)
         arcpy.AddError("Error converting geometry: " + str(error))
-    #print(geomType) 
+    print(geom) 
     #print(featureType) 
     for i, name in enumerate(fieldnames):
         corrected = name.replace("/", "_").replace(".", "-")
