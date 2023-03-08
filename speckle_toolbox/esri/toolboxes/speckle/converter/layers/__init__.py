@@ -179,7 +179,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                     #print(feat.partCount)
 
                     if feat is not None: 
-                        print(feat)
+                        print(feat) # <geoprocessing describe geometry object object at 0x0000026796C47780>
                         rows_attributes = arcpy.da.SearchCursor(layer.dataSource, fieldnames)
                         row_attr = []
                         for k, attrs in enumerate(rows_attributes):
@@ -197,7 +197,9 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
 
 
                         b = featureToSpeckle(fieldnames, row_attr, i, feat, projectCRS, project, layer)
-                        if b is not None: layerObjs.append(b)
+                        if b is not None: 
+                            layerObjs.append(b)
+                            print(b)
                         
                     print("____End of Feature # " + str(i+1))
                     

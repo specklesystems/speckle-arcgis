@@ -157,26 +157,33 @@ def constructMesh(vertices, faces, colors):
     mesh.renderMaterial = material 
     return mesh
 
-def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]], existing_vert: int, feature, layer):
-    
+def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]], existing_vert: int, index: int, layer):
+    #print("__meshPartsFromPolygon__")
     vertices = []
     total_vertices = 0
-
+    #print(layer)
+    try: sr = arcpy.Describe(layer.dataSource).spatialReference
+    except Exception as e: 
+        print(e)
+        sr = None
+    #print(sr)
     coef = 1
     maxPoints = 5000
     if len(polyBorder) >= maxPoints: coef = int(len(polyBorder)/maxPoints)
-        
+    
     if len(voidsAsPts) == 0: # only if there is a mesh with no voids and large amount of points
+        #print("mesh with no voids")
         for k, ptt in enumerate(polyBorder): #pointList:
             pt = polyBorder[k*coef]
             if k < maxPoints:
                 #if isinstance(pt, QgsPointXY):
                 #    pt = QgsPoint(pt)
+                #print(pt)
                 if isinstance(pt,Point):
-                    pt = pointToNative(pt)
-                x = pt.x()
-                y = pt.y()
-                z = 0 if math.isnan(pt.z()) else pt.z()
+                    pt = pointToNative(pt, sr).getPart()
+                x = pt.X
+                y = pt.Y
+                z = 0 if math.isnan(pt.Z) else pt.Z
                 vertices.extend([x, y, z])
                 total_vertices += 1
             else: break
@@ -186,6 +193,7 @@ def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]],
         faces.extend([i + existing_vert for i in ran])
         # else: https://docs.panda3d.org/1.10/python/reference/panda3d.core.Triangulator
     else: # if there are voids 
+        print("mesh with voids")
         # if its a large polygon with voids to be triangualted, lower the coef even more:
         maxPoints = 100
         if len(polyBorder) >= maxPoints: coef = int(len(polyBorder)/maxPoints)
@@ -233,7 +241,8 @@ def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]],
             i+=1
         ran = range(0, total_vertices)
 
-    col = (100<<16) + (100<<8) + 100 #featureColorfromNativeRenderer(feature, layer)
+    #print("color")
+    col = featureColorfromNativeRenderer(index, layer) #(100<<16) + (100<<8) + 100 
     colors = [col for i in ran] # apply same color for all vertices
 
     return total_vertices, vertices, faces, colors

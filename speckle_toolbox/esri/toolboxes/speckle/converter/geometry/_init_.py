@@ -47,12 +47,12 @@ def convertToSpeckle(feature, index: str, layer, geomType, featureType) -> Union
         if geom.partCount > 1: return multiPolylineToSpeckle(geom, feature, layer, geomMultiType)
         else: return polylineToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "Polygon":
-        if geom.partCount > 1: return multiPolygonToSpeckle(geom, feature, index, layer, geomMultiType)
-        else: return polygonToSpeckle(geom, feature, index, layer, geomMultiType)
+        if geom.partCount > 1: return multiPolygonToSpeckle(geom, index, layer, geomMultiType)
+        else: return polygonToSpeckle(geom, index, layer, geomMultiType)
     elif geomType == "Multipoint":
         return multiPointToSpeckle(geom, feature, layer, geomMultiType)
     elif geomType == "MultiPatch":
-        return polygonToSpeckleMesh(geom, feature, layer, geomMultiType)
+        return polygonToSpeckleMesh(geom, index, layer, False)
     else:
         arcpy.AddWarning("Unsupported or invalid geometry in layer " + layer.name)
     return None

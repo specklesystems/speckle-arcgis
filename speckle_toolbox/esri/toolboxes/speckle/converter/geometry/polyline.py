@@ -73,7 +73,7 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
 def polylineFromVerticesToSpeckle(vertices: List[Point], closed: bool, feature, layer) -> Polyline:
     """Converts a Polyline to Speckle"""
     
-    print("___Polyline from vertices to Speckle____")
+    #print("___Polyline from vertices to Speckle____")
     
     if isinstance(vertices, list): 
         if len(vertices) > 0 and isinstance(vertices[0], Point):
@@ -245,7 +245,7 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
                                 segmEndCoord: List = addZtoPoint(val2[0]) # [633718.26040000003,5803496.4210000001,0] 
                                 segmThrough: List = addZtoPoint(val2[1]) # [633337.7576497585, 5803431.999702678] 
 
-                                segmentLocal = arc3ptToSpeckle(segmStartCoord, segmThrough, segmEndCoord, feature, layer) 
+                                segmentLocal = arc3ptToSpeckle(segmStartCoord, segmThrough, segmEndCoord, geom, layer) 
                                 segments.append(segmentLocal)
                                 print("segmentLocal:")
                                 print(segmentLocal)

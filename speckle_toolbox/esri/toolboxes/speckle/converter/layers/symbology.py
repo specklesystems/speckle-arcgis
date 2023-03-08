@@ -87,7 +87,7 @@ def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetCo
                     if label is None or label=="" or str(label)=="": label = "<Null>"
 
                     if str(transVal) == label:
-                        print("found label")
+                        #print("found label")
                         material = fetColors[i]
                         #print(material)
                         itm.symbol.color = colorFromRenderMaterial(material) 
@@ -575,7 +575,9 @@ def featureColorfromNativeRenderer(index: int, arcLayer: arcLayer) -> int:
         color = sym.renderer.symbol.color
 
     elif sym.renderer.type == 'UniqueValueRenderer':
-        print('Unique Value Renderer')
+        #print('Unique Value Renderer')
+        #print(index)
+        #print(arcLayer)
 
         attribute = sym.renderer.fields[0]
         color = sym.renderer.defaultSymbol.color
@@ -592,8 +594,8 @@ def featureColorfromNativeRenderer(index: int, arcLayer: arcLayer) -> int:
                     if str(itm.values[0][0]) == "<Null>": itm.values[0][0] = None 
                     if k == index and ( str(attrs[0]) == str(itm.values[0][0]) or (attrs[0] is None and str(itm.values[0][0]) == "<Null>") ): 
                         color = itm.symbol.color
-                        print("symbol color: ")
-                        print(color)
+                        #print("symbol color: ")
+                        #print(color)
                         color_found = 1
                         break 
 
@@ -660,10 +662,10 @@ def featureColorfromNativeRenderer(index: int, arcLayer: arcLayer) -> int:
         print('Else')
         return (100<<16) + (100<<8) + 100
     
-    print("final color: ")
-    print(color) 
+    #print("final color: ")
+    #print(color) 
     # construct RGB color
     col = symbol_color_to_speckle(color)
-    print(col)
+    #print(col)
     return col
 
