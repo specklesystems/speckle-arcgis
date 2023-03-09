@@ -1,5 +1,10 @@
 import os
 from typing import List
+try:
+    from speckle.plugin_utils.logger import logToUser
+except:
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+
 
 def findOrCreatePath(path: str):
     if not os.path.exists(path): 
@@ -27,7 +32,7 @@ def validateNewFclassName(newName: str, prefix: str, all_layer_names: List[str])
                 #else: layerNameCreated +=1
 
         if layerNameCreated == 0:
-            print('name already exists')
+            logToUser('Feature class name already exists')
             #return fixed_name
 
     return fixed_name
