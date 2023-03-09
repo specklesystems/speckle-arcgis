@@ -214,19 +214,19 @@ class SpeckleGIS:
 
     def onClosePlugin(self):
         """Cleanup necessary items here when plugin dockwidget is closed"""
+        try:
+            # disconnects
+            if self.dockwidget:
+                try: 
+                    self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
+                    self.dockwidget.close()
+                except: pass 
 
-        
-
-        # disconnects
-        if self.dockwidget:
-            try: 
-                self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
-                self.dockwidget.close()
-            except: pass 
-
-        self.pluginIsActive = False
-        # remove this statement if dockwidget is to remain
-        # for reuse if plugin is reopened       
+            self.pluginIsActive = False
+            # remove this statement if dockwidget is to remain
+            # for reuse if plugin is reopened    
+        except Exception as e: 
+            logToUser(str(e))    
         
 
     def unload(self):
@@ -242,67 +242,72 @@ class SpeckleGIS:
 
     def onSend(self):
         """Handles action when Send button is pressed."""
-        if not self.dockwidget: return
-        print("On Send")
+        try:
+            if not self.dockwidget: return
+            print("On Send")
 
-        # Check if stream id/url is empty
-        if self.active_stream is None:
-            arcpy.AddWarning("Please select a stream from the list.")
+            # Check if stream id/url is empty
+            if self.active_stream is None:
+                logToUser("Please select a stream from the list.", 1)
+                return
+
+            self.gis_project = ArcGISProject("CURRENT")
+            if self.gis_project.activeMap is None: 
+                logToUser("No active Map", 1)
+                return 
+
+            print("On Send 2")
+            # creating our parent base object
+            project = self.gis_project
+            #projectCRS = project.Sp
+            #layerTreeRoot = project.layerTreeRoot()
+
+            bySelection = True
+            if self.dockwidget.layerSendModeDropdown.currentIndex() == 1: bySelection = False 
+            layers = getLayers(self, bySelection) # List[QgsLayerTreeNode]
+            
+            # Check if no layers are selected
+            if len(layers) == 0: #len(selectedLayerNames) == 0:
+                logToUser("No layers selected", 1)
+                return
+            print(layers)
+            print("On Send 3")
+            base_obj = Base(units = "m")
+            base_obj.layers = convertSelectedLayers(layers, project)
+            if base_obj.layers is None:
+                return 
+
+            # Reset Survey point
+            self.dockwidget.populateSurveyPoint(self)
+
+            # Get the stream wrapper
+            streamWrapper = self.active_stream[0]
+            streamName = self.active_stream[1].name
+            streamId = streamWrapper.stream_id
+            client = streamWrapper.get_client()
+
+            stream = validateStream(streamWrapper)
+            if stream == None: return
+            
+            branchName = str(self.dockwidget.streamBranchDropdown.currentText())
+            branch = validateBranch(stream, branchName, False)
+            if branch == None: return
+
+            transport = validateTransport(client, streamId)
+            if transport == None: return
+        except Exception as e: 
+            logToUser(str(e)) 
             return
-
-        self.gis_project = ArcGISProject("CURRENT")
-        if self.gis_project.activeMap is None: 
-            arcpy.AddWarning("No active Map")
-            return 
-
-        print("On Send 2")
-        # creating our parent base object
-        project = self.gis_project
-        #projectCRS = project.Sp
-        #layerTreeRoot = project.layerTreeRoot()
-
-        bySelection = True
-        if self.dockwidget.layerSendModeDropdown.currentIndex() == 1: bySelection = False 
-        layers = getLayers(self, bySelection) # List[QgsLayerTreeNode]
-        
-        # Check if no layers are selected
-        if len(layers) == 0: #len(selectedLayerNames) == 0:
-            arcpy.AddWarning("No layers selected")
-            return
-        print(layers)
-        print("On Send 3")
-        base_obj = Base(units = "m")
-        base_obj.layers = convertSelectedLayers(layers, project)
-        if base_obj.layers is None:
-            return 
-
-        # Reset Survey point
-        self.dockwidget.populateSurveyPoint(self)
-
-        # Get the stream wrapper
-        streamWrapper = self.active_stream[0]
-        streamName = self.active_stream[1].name
-        streamId = streamWrapper.stream_id
-        client = streamWrapper.get_client()
-
-        stream = validateStream(streamWrapper)
-        if stream == None: return
-        
-        branchName = str(self.dockwidget.streamBranchDropdown.currentText())
-        branch = validateBranch(stream, branchName, False)
-        if branch == None: return
-
-        transport = validateTransport(client, streamId)
-        if transport == None: return
+    
         try:
             # this serialises the block and sends it to the transport
             objId = operations.send(base=base_obj, transports=[transport])
         except SpeckleException as e:
-            arcpy.AddError("Error sending data: " + str(e.message))
+            logToUser("Error sending data: " + str(e.message))
             return
 
-        message = str(self.dockwidget.messageInput.text())
         try:
+            message = str(self.dockwidget.messageInput.text())
             # you can now create a commit on your stream with this object
             commit_id = client.commit.create(
                 stream_id=streamId,
@@ -330,46 +335,55 @@ class SpeckleGIS:
             connect_box.setContentsMargins(0, 0, 0, 30)
             connect_box.setAlignment(Qt.AlignBottom)  
             widget.setGeometry(0, 0, width, height)
-            widget.mouseReleaseEvent = lambda event: self.closeWidget()
+            widget.mouseReleaseEvent = lambda event: self.closeLinkWidget()
             self.dockwidget.link = widget 
             
             self.dockwidget.layout().addWidget(widget)
             commit_link_btn.clicked.connect(lambda: self.openLink(url))
 
         except SpeckleException as e:
-            arcpy.AddError("Error creating commit")
+            logToUser("Error creating commit:" + e.message)
     
     def openLink(self, url):
         webbrowser.open(url, new=0, autoraise=True)
-        self.closeWidget()
+        self.closeLinkWidget()
 
-    def closeWidget(self):
-        # https://stackoverflow.com/questions/5899826/pyqt-how-to-remove-a-widget
-        self.dockwidget.layout().removeWidget(self.dockwidget.link)
-        #sip.delete(self.dockwidget.link)
-        self.dockwidget.link = None
+    def closeLinkWidget(self):
+        try: 
+            # https://stackoverflow.com/questions/5899826/pyqt-how-to-remove-a-widget
+            self.dockwidget.layout().removeWidget(self.dockwidget.link)
+            #sip.delete(self.dockwidget.link)
+            self.dockwidget.link = None
+            return True
+        except Exception as e: 
+            logToUser(str(e)) 
+            return False 
 
     def onReceive(self):
         """Handles action when the Receive button is pressed"""
-        print("ON RECEIVE")
-        if not self.dockwidget: return
+        try:
+            print("ON RECEIVE")
+            if not self.dockwidget: return
 
-        # Check if stream id/url is empty
-        if self.active_stream is None:
-            arcpy.AddWarning("Please select a stream from the list.")
+            # Check if stream id/url is empty
+            if self.active_stream is None:
+                logToUser("Please select a stream from the list.", 1)
+                return
+
+            self.gis_project = ArcGISProject("CURRENT")
+            if self.gis_project.activeMap is None: 
+                logToUser("No active Map", 1)
+                return 
+
+            # Get the stream wrapper
+            streamWrapper = self.active_stream[0]
+            streamId = streamWrapper.stream_id
+            client = streamWrapper.get_client()
+            # Ensure the stream actually exists
+            print("ON RECEIVE 2")
+        except Exception as e: 
+            logToUser(str(e)) 
             return
-
-        self.gis_project = ArcGISProject("CURRENT")
-        if self.gis_project.activeMap is None: 
-            arcpy.AddWarning("No active Map")
-            return 
-
-        # Get the stream wrapper
-        streamWrapper = self.active_stream[0]
-        streamId = streamWrapper.stream_id
-        client = streamWrapper.get_client()
-        # Ensure the stream actually exists
-        print("ON RECEIVE 2")
         try:
             stream = validateStream(streamWrapper)
             if stream == None: return
@@ -382,8 +396,8 @@ class SpeckleGIS:
             commit = validateCommit(branch, commitId)
             if commit == None: return
 
-        except SpeckleException as error:
-            arcpy.AddError(str(error))
+        except SpeckleException as e:
+            logToUser(str(e.message))
             return
 
         transport = validateTransport(client, streamId)
@@ -406,7 +420,7 @@ class SpeckleGIS:
 
             if app != "QGIS" and app != "ArcGIS": 
                 if self.gis_project.activeMap.spatialReference.type == "Geographic" or self.gis_project.activeMap.spatialReference is None: #TODO test with invalid CRS
-                    arcpy.AddMessage("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates")
+                    logToUser("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates", 0)
             arcpy.AddMessage(f"Succesfully received {objId}")
 
             # If group exists, remove layers inside  
@@ -420,7 +434,7 @@ class SpeckleGIS:
             traverseObject(commitObj, callback, check, str(newGroupName))
             
         except SpeckleException as e:
-            arcpy.AddWarning("Receive failed: "+ e.message)
+            logToUser("Receive failed: "+ e.message)
             return
 
     def reloadUI(self):
@@ -429,7 +443,7 @@ class SpeckleGIS:
             from speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
         except: 
             from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
-
+        
         self.is_setup = self.check_for_accounts()
         if self.dockwidget is not None:
             self.active_stream = None
@@ -442,16 +456,20 @@ class SpeckleGIS:
     def check_for_accounts(self):
         def go_to_manager():
             webbrowser.open("https://speckle-releases.netlify.app/")
-        accounts = get_local_accounts()
-        self.accounts = accounts
-        if len(accounts) == 0:
-            arcpy.AddWarning("No accounts were found. Please remember to install the Speckle Manager and setup at least one account")
+        try:
+            accounts = get_local_accounts()
+            self.accounts = accounts
+            if len(accounts) == 0:
+                logToUser("No accounts were found. Please remember to install the Speckle Manager and setup at least one account", 1)
+                return False
+            for acc in accounts:
+                if acc.isDefault: 
+                    self.default_account = acc 
+                    break
+            return True
+        except Exception as e: 
+            logToUser(str(e)) 
             return False
-        for acc in accounts:
-            if acc.isDefault: 
-                self.default_account = acc 
-                break 
-        return True
 
     def run(self):
         """Run method that performs all the real work"""
@@ -462,33 +480,35 @@ class SpeckleGIS:
         except: 
             from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
             from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
+        try: 
+            # Create the dialog with elements (after translation) and keep reference
+            # Only create GUI ONCE in callback, so that it will only load when the plugin is started
+            self.is_setup = self.check_for_accounts()
+            
+            if self.pluginIsActive:
+                self.reloadUI()
+            else:
+                self.pluginIsActive = True
+                if self.dockwidget is None:
+                    self.dockwidget = SpeckleGISDialog()
+                    self.dockwidget.show()
+                    #self.gis_project.fileNameChanged.connect(self.reloadUI)
+                    #self.gis_project.homePathChanged.connect(self.reloadUI)
+                print("run plugin 2")
+                get_project_streams(self)
+                print("run plugin 3")
+                get_survey_point(self)
+                print("run plugin 4")
+                get_project_layer_selection(self)
+                print("run plugin 5")
 
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        self.is_setup = self.check_for_accounts()
-        
-        if self.pluginIsActive:
-            self.reloadUI()
-        else:
-            self.pluginIsActive = True
-            if self.dockwidget is None:
-                self.dockwidget = SpeckleGISDialog()
-                self.dockwidget.show()
-                #self.gis_project.fileNameChanged.connect(self.reloadUI)
-                #self.gis_project.homePathChanged.connect(self.reloadUI)
-            print("run plugin 2")
-            get_project_streams(self)
-            print("run plugin 3")
-            get_survey_point(self)
-            print("run plugin 4")
-            get_project_layer_selection(self)
-            print("run plugin 5")
+                self.dockwidget.run(self)
 
-            self.dockwidget.run(self)
-
-            # show the dockwidget
-            #self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
-            self.dockwidget.enableElements(self)
+                # show the dockwidget
+                #self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
+                self.dockwidget.enableElements(self)
+        except Exception as e: 
+            logToUser(str(e)) 
 
     def onStreamAddButtonClicked(self):
         self.add_stream_modal = AddStreamModalDialog(None)
@@ -509,22 +529,26 @@ class SpeckleGIS:
         self.create_stream_modal.show()
     
     def handleStreamCreate(self, account, str_name, description, is_public): 
-        #if len(str_name)<3 and len(str_name)!=0: 
-        #    logger.logToUser("Stream Name should be at least 3 characters", Qgis.Warning)
-        new_client = SpeckleClient(
-            account.serverInfo.url,
-            account.serverInfo.url.startswith("https")
-        )
-        new_client.authenticate_with_token(token=account.token)
+        try: 
+            #if len(str_name)<3 and len(str_name)!=0: 
+            #    logger.logToUser("Stream Name should be at least 3 characters", Qgis.Warning)
+            new_client = SpeckleClient(
+                account.serverInfo.url,
+                account.serverInfo.url.startswith("https")
+            )
+            new_client.authenticate_with_token(token=account.token)
 
-        str_id = new_client.stream.create(name=str_name, description = description, is_public = is_public) 
-        if isinstance(str_id, GraphQLException) or isinstance(str_id, SpeckleException):
-            arcpy.AddWarning(str_id.message)
-            return
-        else:
-            sw = StreamWrapper(account.serverInfo.url + "/streams/" + str_id)
-            self.handleStreamAdd(sw)
-        return 
+            str_id = new_client.stream.create(name=str_name, description = description, is_public = is_public) 
+            if isinstance(str_id, GraphQLException) or isinstance(str_id, SpeckleException):
+                logToUser(str_id.message)
+                return
+            else:
+                sw = StreamWrapper(account.serverInfo.url + "/streams/" + str_id)
+                self.handleStreamAdd(sw) 
+            return 
+        except Exception as e: 
+            logToUser(str(e))
+            return 
 
     def onBranchCreateClicked(self):
         self.create_stream_modal = CreateBranchModalDialog(None)
@@ -535,27 +559,30 @@ class SpeckleGIS:
         #if len(br_name)<3: 
         #    logger.logToUser("Branch Name should be at least 3 characters", Qgis.Warning)
         #    return 
-        br_name = br_name.lower()
-        sw: StreamWrapper = self.active_stream[0]
-        account = sw.get_account()
-        new_client = SpeckleClient(
-            account.serverInfo.url,
-            account.serverInfo.url.startswith("https")
-        )
-        new_client.authenticate_with_token(token=account.token)
-        #description = "No description provided"
-        br_id = new_client.branch.create(stream_id = sw.stream_id, name = br_name, description = description) 
-        if isinstance(br_id, GraphQLException):
-            arcpy.AddWarning(br_id.message)
+        try:
+            br_name = br_name.lower()
+            sw: StreamWrapper = self.active_stream[0]
+            account = sw.get_account()
+            new_client = SpeckleClient(
+                account.serverInfo.url,
+                account.serverInfo.url.startswith("https")
+            )
+            new_client.authenticate_with_token(token=account.token)
+            #description = "No description provided"
+            br_id = new_client.branch.create(stream_id = sw.stream_id, name = br_name, description = description) 
+            if isinstance(br_id, GraphQLException):
+                logToUser(br_id.message)
 
-        self.active_stream = (sw, tryGetStream(sw))
-        self.current_streams[0] = self.active_stream
+            self.active_stream = (sw, tryGetStream(sw))
+            self.current_streams[0] = self.active_stream
 
-        self.dockwidget.populateActiveStreamBranchDropdown(self)
-        self.dockwidget.populateActiveCommitDropdown(self)
-        self.dockwidget.streamBranchDropdown.setCurrentText(br_name) # will be ignored if branch name is not in the list 
+            self.dockwidget.populateActiveStreamBranchDropdown(self)
+            self.dockwidget.populateActiveCommitDropdown(self)
+            self.dockwidget.streamBranchDropdown.setCurrentText(br_name) # will be ignored if branch name is not in the list 
 
-        return 
+            return 
+        except Exception as e: 
+            logToUser(str(e)) 
 
     def handleStreamAdd(self, sw: StreamWrapper):
         try:
@@ -574,15 +601,19 @@ class SpeckleGIS:
                     break 
                 index += 1
         except SpeckleException as e:
-            arcpy.AddWarning(e.message)
+            logToUser(e.message, 2)
             stream = None
+        try:
+            if streamExists == 0: 
+                self.current_streams.insert(0,(sw, stream))
+            else: 
+                del self.current_streams[index]
+                self.current_streams.insert(0,(sw, stream))
+            try: self.add_stream_modal.handleStreamAdd.disconnect(self.handleStreamAdd)
+            except: pass 
+            set_project_streams(self)
+            self.dockwidget.populateProjectStreams(self)
         
-        if streamExists == 0: 
-            self.current_streams.insert(0,(sw, stream))
-        else: 
-            del self.current_streams[index]
-            self.current_streams.insert(0,(sw, stream))
-        try: self.add_stream_modal.handleStreamAdd.disconnect(self.handleStreamAdd)
-        except: pass 
-        set_project_streams(self)
-        self.dockwidget.populateProjectStreams(self)
+            return 
+        except Exception as e: 
+            logToUser(str(e)) 

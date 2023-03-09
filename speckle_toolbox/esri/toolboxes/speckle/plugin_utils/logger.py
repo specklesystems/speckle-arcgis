@@ -2,7 +2,7 @@
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtCore
 
-def logToUser(msg: str, level: int):
+def logToUser(msg: str, level: int = 2):
         # https://www.techwithtim.net/tutorials/pyqt5-tutorial/messageboxes/
         window = QMessageBox()
         #msg.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
