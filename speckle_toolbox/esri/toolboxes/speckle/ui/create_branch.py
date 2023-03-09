@@ -13,6 +13,10 @@ from specklepy.api.wrapper import StreamWrapper
 from gql import gql
 
 import arcpy 
+try:
+    from speckle.plugin_utils.logger import logToUser
+except:
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 
@@ -32,22 +36,28 @@ class CreateBranchModalDialog(QtWidgets.QWidget):
         super(CreateBranchModalDialog,self).__init__(parent,QtCore.Qt.WindowStaysOnTopHint)
         uic.loadUi(ui_class, self) # Load the .ui file
         self.show() 
+        try:
         
-        self.speckle_client = speckle_client
-        
-        self.setWindowTitle("Create New Branch")
+            self.speckle_client = speckle_client
+            
+            self.setWindowTitle("Create New Branch")
 
-        self.name_field.textChanged.connect(self.nameCheck)
-        self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False) 
-        self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.onOkClicked)
-        self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(self.onCancelClicked)
+            self.name_field.textChanged.connect(self.nameCheck)
+            self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False) 
+            self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.onOkClicked)
+            self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(self.onCancelClicked)
+        except Exception as e:
+            logToUser(e)
 
     def nameCheck(self):
-        if len(self.name_field.text()) >= 3:
-            self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True) 
-        else: 
-            self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False) 
-        return
+        try:
+            if len(self.name_field.text()) >= 3:
+                self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True) 
+            else: 
+                self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False) 
+            return
+        except Exception as e: 
+            logToUser(str(e)) 
 
     def onOkClicked(self):
         try:
@@ -56,13 +66,16 @@ class CreateBranchModalDialog(QtWidgets.QWidget):
             self.handleBranchCreate.emit(name, description)
             self.close()
         except Exception as e:
-            arcpy.AddWarning(str(e))
+            logToUser(str(e))
             return 
 
     def onCancelClicked(self):
         self.close()
 
     def onAccountSelected(self, index):
-        account = self.speckle_accounts[index]
-        self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
-        self.speckle_client.authenticate_with_token(token=account.token)
+        try:
+            account = self.speckle_accounts[index]
+            self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
+            self.speckle_client.authenticate_with_token(token=account.token)
+        except Exception as e: 
+            logToUser(str(e)) 

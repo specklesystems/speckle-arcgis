@@ -13,7 +13,7 @@ except:
 
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
-                              AddFields, AlterField, DefineProjection )
+                              AddFields, AlterField, DefineProjection, SelectLayerByAttribute, GetCount )
 
 from specklepy.objects import Base
 
@@ -39,6 +39,13 @@ for layer in active_map.listLayers():
             if geomType == "Polyline" and layerPolyline is None: layerPolyline = layer 
             if geomType == "Point" and layerPoint is None: layerPoint = layer 
             if geomType == "Multipoint" and layerMultiPoint is None: layerMultiPoint = layer 
+
+################################ select/ clear selection ###########################
+for layer in project.activeMap.listLayers(): 
+    if (layer.isFeatureLayer) or layer.isRasterLayer: 
+        arcpy.SelectLayerByAttribute_management(layer.longName,"ADD_TO_SELECTION",'"OBJECTID" = 1')
+        print(arcpy.GetCount_management(layer.longName).getOutput(0))
+        arcpy.SelectLayerByAttribute_management(layer.longName, "CLEAR_SELECTION")
 
 ################## reset symbology if needed:
 sym = layerPolygon.symbology
