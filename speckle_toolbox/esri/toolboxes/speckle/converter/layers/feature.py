@@ -10,14 +10,14 @@ from arcpy.management import CreateCustomGeoTransformation
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
 try: 
-    from speckle.converter.geometry._init_ import convertToSpeckle, convertToNative, convertToNativeMulti
+    from speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
     from speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
                                                 traverseDictByKey, hsv_to_rgb)
     from speckle.converter.geometry.point import pointToSpeckle
     from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
     from speckle.converter.layers.symbology import jsonFromLayerStyle
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry._init_ import convertToSpeckle, convertToNative, convertToNativeMulti
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
                                                 traverseDictByKey, hsv_to_rgb)
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToSpeckle

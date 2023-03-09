@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget,
     QListWidgetItem, QAction, QDockWidget, QVBoxLayout, 
     QHBoxLayout, QWidget, QLabel)
 from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal, Qt, QSize 
+from PyQt5.QtCore import pyqtSignal, Qt, QSize, QEvent 
 from PyQt5 import QtGui, uic 
 
 from specklepy.api.credentials import get_local_accounts
@@ -88,8 +88,9 @@ class SpeckleGISDialog(QMainWindow):
     def __init__(self):
         """Constructor."""
         print("START MAIN WINDOW")
-        super(SpeckleGISDialog, self).__init__(None, QtCore.Qt.WindowStaysOnTopHint)
+        super(SpeckleGISDialog, self).__init__(None)#, QtCore.Qt.WindowStaysOnTopHint)
         uic.loadUi(ui_class, self) # Load the .ui file
+        #self.installEventFilter(self)
         self.show() 
         #self.instances.append(1)
     
@@ -185,6 +186,14 @@ class SpeckleGISDialog(QMainWindow):
         self.runButton.setMaximumWidth(200)
         self.runButton.setIcon(QIcon(ICON_SEND))
 
+    #def eventFilter(self, qobject, qevent):
+    #    qtype = qevent.type()
+    #    if qtype == QEvent.FocusOut:
+    #       #disable the stay on top flag, by setting some other flag
+    #       self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
+    #       return True
+    #    return super(SpeckleGISDialog, self).eventFilter(qobject, qevent)
+    
     def closeEvent(self, event):
         import threading
         print("Close event")

@@ -32,6 +32,7 @@ try:
     from speckle.ui.create_stream import CreateStreamModalDialog
     from speckle.ui.create_branch import CreateBranchModalDialog
     from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
+    from speckle.plugin_utils.logger import logToUser
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
@@ -43,7 +44,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_stream import CreateStreamModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
 
 # Import the code for the dialog
 
@@ -225,12 +226,7 @@ class SpeckleGIS:
 
         self.pluginIsActive = False
         # remove this statement if dockwidget is to remain
-        # for reuse if plugin is reopened
-        # Commented next statement since it causes QGIS crashe
-        # when closing the docked window:
-        # self.dockwidget = None
-
-        
+        # for reuse if plugin is reopened       
         
 
     def unload(self):
