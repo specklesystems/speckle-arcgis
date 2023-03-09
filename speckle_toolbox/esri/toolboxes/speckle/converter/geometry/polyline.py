@@ -451,6 +451,9 @@ def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
             points.append(pointToCoord(pt))
         points.append(points[0])
         curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr , has_z=True)
+    
+    except Exception as e:
+        logToUser(e)
     return curve
 
 def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Polyline:

@@ -84,7 +84,20 @@ def getLayers(plugin, bySelection = False ) -> List[arcLayer]:
         
         if bySelection is True: # by selection 
             print("get selected layers")
-            layers = all_layers
+            for layer in project.activeMap.listLayers(): 
+                
+                print(layer.longName)
+                if layer.visible and ( (layer.isFeatureLayer) or layer.isRasterLayer ): 
+                    
+                    # find possible nested groups
+                    layerGroupsHidden = 0
+                    for group in project.activeMap.listLayers(): 
+                        if group.isGroupLayer and layer.longName.startswith(group.longName + "\\"): 
+                            if not group.visible: 
+                                layerGroupsHidden += 1
+                                break 
+                    if layerGroupsHidden == 0: 
+                        layers.append(layer)
             print("layers selected and saved") 
         else: # from project data 
             #all_layers_ids = [l.id() for l in project.mapLayers().values()]

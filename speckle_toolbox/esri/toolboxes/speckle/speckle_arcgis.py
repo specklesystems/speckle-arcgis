@@ -22,6 +22,7 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map
 from arcpy._mp import Layer as arcLayer
 
+
 try: 
     from speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer) 
@@ -318,47 +319,14 @@ class SpeckleGIS:
             )
             arcpy.AddMessage("Successfully sent data to stream: " + streamId)
             self.dockwidget.messageInput.setText("")
-            url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
-
-            # create a temporary floating button 
-            width = self.dockwidget.frameSize().width()
-            height = self.dockwidget.frameSize().height()
-            backgr_color = f"background-color: rgb{str(SPECKLE_COLOR)};"
-            backgr_color_light = f"background-color: rgb{str(SPECKLE_COLOR_LIGHT)};"
-            commit_link_btn = QtWidgets.QPushButton(f"👌 Data sent \n Sent to '{streamName}', view it online")
-            commit_link_btn.setStyleSheet("QPushButton {color: white;border: 0px;border-radius: 17px;padding: 20px;height: 40px;text-align: left;"+ f"{backgr_color}" + "} QPushButton:hover { "+ f"{backgr_color_light}" + " }")
-
-            widget = QWidget()
-            widget.setAccessibleName("commit_link")
-            connect_box = QVBoxLayout(widget)
-            connect_box.addWidget(commit_link_btn) #, alignment=Qt.AlignCenter) 
-            connect_box.setContentsMargins(0, 0, 0, 30)
-            connect_box.setAlignment(Qt.AlignBottom)  
-            widget.setGeometry(0, 0, width, height)
-            widget.mouseReleaseEvent = lambda event: self.closeLinkWidget()
-            self.dockwidget.link = widget 
+            self.dockwidget.link_url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
             
-            self.dockwidget.layout().addWidget(widget)
-            commit_link_btn.clicked.connect(lambda: self.openLink(url))
+            #self.dockwidget.link = widget 
+            self.dockwidget.showLink()#.layout().addWidget(LinkWidget(parent=self.dockwidget))
 
         except SpeckleException as e:
             logToUser("Error creating commit:" + e.message)
     
-    def openLink(self, url):
-        webbrowser.open(url, new=0, autoraise=True)
-        self.closeLinkWidget()
-
-    def closeLinkWidget(self):
-        try: 
-            # https://stackoverflow.com/questions/5899826/pyqt-how-to-remove-a-widget
-            self.dockwidget.layout().removeWidget(self.dockwidget.link)
-            #sip.delete(self.dockwidget.link)
-            self.dockwidget.link = None
-            return True
-        except Exception as e: 
-            logToUser(str(e)) 
-            return False 
-
     def onReceive(self):
         """Handles action when the Receive button is pressed"""
         try:

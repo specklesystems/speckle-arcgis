@@ -99,7 +99,7 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                     print("no curves")
                     for p in geom:
                         for pt in p: 
-                            print(pt)
+                            #print(pt)
                             if pt != None: pointList.append(pt) 
                     boundary = polylineFromVerticesToSpeckle(pointList, True, geom, layer) 
                     print(boundary)
@@ -231,51 +231,51 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
                 pt_count = 0
                 # add extra middle point for border
                 for pt in polyBorder:
-                if pt_count < len(polyBorder)-1: 
-                    pt2 = polyBorder[pt_count+1]
-                else: pt2 = polyBorder[0]
-                
-                trianglator.addPolygonVertex(trianglator.addVertex(pt.x, pt.y))
-                vertices.extend([pt.x, pt.y, pt.z])
+                    if pt_count < len(polyBorder)-1: 
+                        pt2 = polyBorder[pt_count+1]
+                    else: pt2 = polyBorder[0]
+                    
+                    trianglator.addPolygonVertex(trianglator.addVertex(pt.x, pt.y))
+                    vertices.extend([pt.x, pt.y, pt.z])
 
-                #trianglator.addPolygonVertex(trianglator.addVertex((pt.x+pt2.x)/4*3, (pt.y+pt2.y)/4*3))
-                #vertices.extend([(pt.x+pt2.x)/4*3, (pt.y+pt2.y)/4*3, (pt.z+pt2.z)/4*3])
+                    #trianglator.addPolygonVertex(trianglator.addVertex((pt.x+pt2.x)/4*3, (pt.y+pt2.y)/4*3))
+                    #vertices.extend([(pt.x+pt2.x)/4*3, (pt.y+pt2.y)/4*3, (pt.z+pt2.z)/4*3])
 
-                trianglator.addPolygonVertex(trianglator.addVertex((pt.x+pt2.x)/2, (pt.y+pt2.y)/2))
-                vertices.extend([(pt.x+pt2.x)/2, (pt.y+pt2.y)/2, (pt.z+pt2.z)/2])
-                
-                #trianglator.addPolygonVertex(trianglator.addVertex((pt.x+pt2.x)/4, (pt.y+pt2.y)/4))
-                #vertices.extend([(pt.x+pt2.x)/4, (pt.y+pt2.y)/4, (pt.z+pt2.z)/4])
+                    trianglator.addPolygonVertex(trianglator.addVertex((pt.x+pt2.x)/2, (pt.y+pt2.y)/2))
+                    vertices.extend([(pt.x+pt2.x)/2, (pt.y+pt2.y)/2, (pt.z+pt2.z)/2])
+                    
+                    #trianglator.addPolygonVertex(trianglator.addVertex((pt.x+pt2.x)/4, (pt.y+pt2.y)/4))
+                    #vertices.extend([(pt.x+pt2.x)/4, (pt.y+pt2.y)/4, (pt.z+pt2.z)/4])
 
-                total_vertices += 2
-                pt_count += 1
+                    total_vertices += 2
+                    pt_count += 1
 
                 #add void points
                 for i in range(len(voids)):
-                trianglator.beginHole()
+                    trianglator.beginHole()
 
 
-                pts = []
-                if isinstance(voids[i], Circle) or isinstance(voids[i], Arc): 
-                    pts = speckleArcCircleToPoints(voids[i]) 
-                elif isinstance(voids[i], Polycurve): 
-                    pts = specklePolycurveToPoints(voids[i]) 
-                elif isinstance(voids[i], Line): pass
-                else: 
-                    try: pts = voids[i].as_points()
-                    except: pass # if Line
-                #pts = voids[i].as_points()
-                for pt in pts:
-                    trianglator.addHoleVertex(trianglator.addVertex(pt.x, pt.y))
-                    vertices.extend([pt.x, pt.y, pt.z])
-                    total_vertices += 1
+                    pts = []
+                    if isinstance(voids[i], Circle) or isinstance(voids[i], Arc): 
+                        pts = speckleArcCircleToPoints(voids[i]) 
+                    elif isinstance(voids[i], Polycurve): 
+                        pts = specklePolycurveToPoints(voids[i]) 
+                    elif isinstance(voids[i], Line): pass
+                    else: 
+                        try: pts = voids[i].as_points()
+                        except: pass # if Line
+                    #pts = voids[i].as_points()
+                    for pt in pts:
+                        trianglator.addHoleVertex(trianglator.addVertex(pt.x, pt.y))
+                        vertices.extend([pt.x, pt.y, pt.z])
+                        total_vertices += 1
 
                 trianglator.triangulate()
                 i = 0
                 while i < trianglator.getNumTriangles():
-                tr = [trianglator.getTriangleV0(i),trianglator.getTriangleV1(i),trianglator.getTriangleV2(i)]
-                faces.extend([3, tr[0], tr[1], tr[2]])
-                i+=1
+                    tr = [trianglator.getTriangleV0(i),trianglator.getTriangleV1(i),trianglator.getTriangleV2(i)]
+                    faces.extend([3, tr[0], tr[1], tr[2]])
+                    i+=1
                 ran = range(0, total_vertices)
             
             #print(polygon)

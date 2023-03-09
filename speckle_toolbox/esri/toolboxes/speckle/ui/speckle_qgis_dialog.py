@@ -1,6 +1,7 @@
 
 import os
 import sys
+from typing import List
 #from speckle.converter.layers import getLayers
 
 #import ui.speckle_qgis_dialog
@@ -30,11 +31,13 @@ try:
     from speckle.converter.layers import getLayers
     from speckle.converter.layers import getAllProjLayers
     from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.linkWidget import LinkWidget
 except:
     #from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis_new import Speckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getLayers
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getAllProjLayers
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.linkWidget import LinkWidget
 
 #from ui.validation import tryGetStream
 
@@ -71,7 +74,6 @@ ui_class = os.path.dirname(os.path.abspath(__file__)) + "/speckle_qgis_dialog_ba
 print(os.path.dirname(__file__))
 
 class SpeckleGISDialog(QMainWindow):
-    #instances = []
 
     closingPlugin = pyqtSignal()
     streamList: QtWidgets.QComboBox
@@ -84,6 +86,7 @@ class SpeckleGISDialog(QMainWindow):
     saveLayerSelection: QtWidgets.QPushButton
     runButton: QtWidgets.QPushButton
     link = None
+    link_url: str = ""
 
     gridLayoutTitleBar = QtWidgets.QGridLayout
     
@@ -188,17 +191,28 @@ class SpeckleGISDialog(QMainWindow):
             self.runButton.setMaximumWidth(200)
             self.runButton.setIcon(QIcon(ICON_SEND))
 
-        #def eventFilter(self, qobject, qevent):
-        #    qtype = qevent.type()
-        #    if qtype == QEvent.FocusOut:
-        #       #disable the stay on top flag, by setting some other flag
-        #       self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
-        #       return True
-        #    return super(SpeckleGISDialog, self).eventFilter(qobject, qevent)
-        
+            widgetLink = LinkWidget(parent=self)
+            self.layout().addWidget(widgetLink)
+            self.link = widgetLink 
+
         except Exception as e: 
             logToUser(str(e)) 
-    
+
+    def showLink(self):
+        print("showLink")
+        try: 
+            self.link.setGeometry(0, 0, self.frameSize().width(), self.frameSize().height())
+        except Exception as e: 
+            logToUser(str(e)) 
+
+    def hideLink(self):
+        if self.link is None: return 
+        try: 
+            self.link.setGeometry(0, 0, 0, 0)
+        except Exception as e: 
+            logToUser(str(e)) 
+
+
     def closeEvent(self, event):
         try:
             #import threading
@@ -541,7 +555,7 @@ class SpeckleGISDialog(QMainWindow):
         try:
             self.layerSendModeDropdown.clear()
             self.layerSendModeDropdown.addItems(
-                ["Send selected layers", "Send saved layers"]
+                ["Send visible layers", "Send saved layers"]
             )
         except Exception as e: 
             logToUser(str(e)) 

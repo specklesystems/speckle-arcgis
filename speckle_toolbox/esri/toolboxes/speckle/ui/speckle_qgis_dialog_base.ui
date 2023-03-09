@@ -178,7 +178,7 @@
                   <bool>true</bool>
                 </property>
                 <property name="text">
-                  <string>Set current layer selection</string>
+                  <string>Set visible layers as selection</string>
                 </property>
               </widget>
             </item>

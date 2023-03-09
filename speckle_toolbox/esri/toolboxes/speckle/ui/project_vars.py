@@ -120,6 +120,7 @@ def get_project_layer_selection(self: SpeckleGIS):
         ######### need to check whether saved streams are available (account reachable)
         if len(saved_layers) > 0:
             for layerPath in saved_layers:
+                if layerPath == "": continue
                 found = 0
                 for layer in proj_layers:
                     print(layer.dataSource)
