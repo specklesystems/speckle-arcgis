@@ -12,6 +12,8 @@ from specklepy.api.credentials import Account, get_local_accounts #, StreamWrapp
 from specklepy.api.wrapper import StreamWrapper
 from gql import gql
 
+import inspect 
+
 import arcpy 
 try:
     from speckle.plugin_utils.logger import logToUser
@@ -47,7 +49,7 @@ class CreateBranchModalDialog(QtWidgets.QWidget):
             self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.onOkClicked)
             self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(self.onCancelClicked)
         except Exception as e:
-            logToUser(e)
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     def nameCheck(self):
         try:
@@ -57,7 +59,7 @@ class CreateBranchModalDialog(QtWidgets.QWidget):
                 self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False) 
             return
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
     def onOkClicked(self):
         try:
@@ -66,7 +68,7 @@ class CreateBranchModalDialog(QtWidgets.QWidget):
             self.handleBranchCreate.emit(name, description)
             self.close()
         except Exception as e:
-            logToUser(str(e))
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
             return 
 
     def onCancelClicked(self):
@@ -78,4 +80,4 @@ class CreateBranchModalDialog(QtWidgets.QWidget):
             self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
             self.speckle_client.authenticate_with_token(token=account.token)
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 

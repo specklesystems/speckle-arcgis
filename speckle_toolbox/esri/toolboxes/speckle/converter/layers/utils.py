@@ -5,6 +5,8 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import os
 
+import inspect 
+
 
 try: 
     from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
@@ -53,10 +55,10 @@ def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
                     layerGroup = gis_project.activeMap.createGroupLayer(newGroupName)
                     print(layerGroup)
                 else:
-                    logToUser("The map didn't fully load, try selecting the project Map or/and refreshing the plugin.", 1)
+                    logToUser("The map didn't fully load, try selecting the project Map or/and refreshing the plugin.", level=1, func = inspect.stack()[0][3])
                     return
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
@@ -81,7 +83,7 @@ def getVariantFromValue(value: Any) -> Union[str, None]:
                 break
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     return res
 
@@ -154,7 +156,7 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
 
         #fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return fields
 
 def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
@@ -185,7 +187,7 @@ def traverseDict(newF: dict, newVals: dict, nam: str, val: Any):
             newVals.update({nam: val})  
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return newF, newVals
 
 def get_scale_factor(units: str) -> float:
@@ -207,7 +209,7 @@ def get_scale_factor(units: str) -> float:
     }
     if units is not None and units.lower() in unit_scale.keys():
         return unit_scale[units]
-    logToUser(f"Units {units} are not supported. Meters will be applied by default.",0)
+    logToUser(f"Units {units} are not supported. Meters will be applied by default.", level=0, func = inspect.stack()[0][3])
     return 1.0
 
 def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, projectCRS: arcpy.SpatialReference, selectedLayer: arcLayer):
@@ -243,8 +245,8 @@ def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, proj
                     tr0 = list(selecterTr.keys())[0]
 
                 if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint":
-                    try: logToUser("Unsupported or invalid geometry in layer " + selectedLayer.name)
-                    except: logToUser("Unsupported or invalid geometry")
+                    try: logToUser("Unsupported or invalid geometry in layer " + selectedLayer.name, level=2, func = inspect.stack()[0][3])
+                    except: logToUser("Unsupported or invalid geometry", level=2, func = inspect.stack()[0][3])
 
                 # reproject geometry using chosen transformstion(s)
                 if tr0 is not None:
@@ -259,11 +261,11 @@ def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, proj
                     f_shape = ptgeo1
             
             except:
-                logToUser(f"Spatial Transformation not found for layer {selectedLayer.name}")
+                logToUser(f"Spatial Transformation not found for layer {selectedLayer.name}", level=2, func = inspect.stack()[0][3])
                 return None
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return f_shape    
 
 def traverseDictByKey(d: Dict, key:str ="", result = None) -> Dict:
@@ -288,7 +290,7 @@ def traverseDictByKey(d: Dict, key:str ="", result = None) -> Dict:
                         result = traverseDictByKey(item, key, result)
                         if result is not None: return result
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
     #print("__result is: ____________")
     #return result 
@@ -307,7 +309,7 @@ def hsv_to_rgb(listHSV):
         if i == 5: return (v, p, q)
         
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return (0,0,0)
 
 def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
@@ -317,7 +319,7 @@ def cmyk_to_rgb(c, m, y, k, cmyk_scale, rgb_scale=255):
         b = rgb_scale * (1.0 - y / float(cmyk_scale)) * (1.0 - k / float(cmyk_scale))
         return r, g, b
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return 0,0,0
 
 def newLayerGroupAndName(layerName: str, streamBranch: str, project: ArcGISProject) -> str:
@@ -351,7 +353,7 @@ def newLayerGroupAndName(layerName: str, streamBranch: str, project: ArcGISProje
         print(newName)       
         return newName, layerGroup        
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None, None
 
 
@@ -370,7 +372,7 @@ def curvedFeatureClassToSegments(layer) -> str:
         return newPath
      
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def validate_path(path: str):
@@ -392,5 +394,5 @@ def validate_path(path: str):
         #msg("validated path: %s; (from %s)" % (validated_path, path))
         return validated_path
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 

@@ -1,6 +1,7 @@
 
 from typing import Any, Callable, List, Optional 
 
+import inspect 
 
 from specklepy.objects import Base
 
@@ -43,7 +44,7 @@ def traverseObject(
             #print(name)
             traverseValue(base[name], callback, check, streamBranch)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
 def traverseValue(
     value: Any,
@@ -60,23 +61,24 @@ def traverseValue(
             for item in value:
                 traverseValue(item, callback, check, streamBranch)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
 def callback(base: Base, streamBranch: str) -> bool:
     try:
         #print("callback")
         if isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer):
             if isinstance(base, Layer):
-                logToUser(f"Speckle class \"Layer\" will be deprecated in future updates in favour of \"VectorLayer\" or \"RasterLayer\"", 0) 
+                logToUser(f"Speckle class \"Layer\" will be deprecated in future updates in favour of \"VectorLayer\" or \"RasterLayer\"", level=0, func = inspect.stack()[0][3]) 
             layer = layerToNative(base, streamBranch)
             #print(layer)
             if layer is not None:
-                arcpy.AddMessage("Layer created: " + layer.name)
+                logToUser("Layer created: " + layer.name(), level=0)
         else:
             loopObj(base, "", streamBranch)
+            logToUser("Data received", level=0)
         return True
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return False
 
 def loopObj(base: Base, baseName: str, streamBranch: str):
@@ -85,13 +87,14 @@ def loopObj(base: Base, baseName: str, streamBranch: str):
         for name in memberNames:
             if name in ["id", "applicationId", "units", "speckle_type"]: continue
             # skip if traversal goes to displayValue of an object, that will be readable anyway:
+            if not isinstance(base, Base): logToUser("NOT BASE: "+type(base), level=1, func = inspect.stack()[0][3]); continue
             if (name == "displayValue" or name == "@displayValue") and base.speckle_type.startswith(tuple(SPECKLE_TYPES_TO_READ)): continue 
 
             try: loopVal(base[name], baseName + "/" + name, streamBranch)
             except: pass
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
 def loopVal(value: Any, name: str, streamBranch: str): # "name" is the parent object/property/layer name
     try:
@@ -109,6 +112,7 @@ def loopVal(value: Any, name: str, streamBranch: str): # "name" is the parent ob
             #print("loop val - List")
             for i, item in enumerate(value):
                 loopVal(item, name, streamBranch)
+                if not isinstance(item, Base): logToUser("NOT BASE: "+type(item), level=1, func = inspect.stack()[0][3]); continue
                 if item.speckle_type and item.speckle_type.startswith("IFC"): 
                     # keep traversing infinitely, just don't run repeated conversion for the same list of objects
                     try: 
@@ -121,15 +125,18 @@ def loopVal(value: Any, name: str, streamBranch: str): # "name" is the parent ob
                                 bimLayerToNative(value, name, streamBranch)
                                 objectListConverted += 1
                         except: pass 
-                
+                elif item.speckle_type and item.speckle_type.endswith(".ModelCurve"): 
+                    if item["baseCurve"] is not None: 
+                        cadLayerToNative(value, name, streamBranch)
+                        break
                 elif item.speckle_type and (item.speckle_type == "Objects.Geometry.Mesh" or item.speckle_type == "Objects.Geometry.Brep" or item.speckle_type.startswith("Objects.BuiltElements.")):
                     bimLayerToNative(value, name, streamBranch)
                     break
                 elif item.speckle_type and item.speckle_type != "Objects.Geometry.Mesh" and item.speckle_type != "Objects.Geometry.Brep" and item.speckle_type.startswith("Objects.Geometry."): # or item.speckle_type == 'Objects.BuiltElements.Alignment'): 
                     pt, pl = cadLayerToNative(value, name, streamBranch)
-                    if pt is not None: arcpy.AddMessage("Layer group created: " + str(pt.name))
-                    if pl is not None: arcpy.AddMessage("Layer group created: " + str(pl.name))
+                    #if pt is not None: arcpy.AddMessage("Layer group created: " + str(pt.name))
+                    #if pl is not None: arcpy.AddMessage("Layer group created: " + str(pl.name))
                     break
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 

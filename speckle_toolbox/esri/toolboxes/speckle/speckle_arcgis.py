@@ -1,11 +1,17 @@
 
+import os
 import os.path
+import sys
 from typing import Any, Callable, List, Optional, Tuple, Union
+
+import threading
+import inspect
 
 from PyQt5.QtCore import QCoreApplication, QSettings, Qt, QTranslator, QRect 
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QAction, QDockWidget, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QAction, QDockWidget, QVBoxLayout, QWidget
 from PyQt5 import QtWidgets
+
 
 from specklepy.api import operations
 from specklepy.logging.exceptions import SpeckleException, GraphQLException
@@ -13,7 +19,6 @@ from specklepy.logging.exceptions import SpeckleException, GraphQLException
 from specklepy.api.models import Stream
 from specklepy.api.wrapper import StreamWrapper
 from specklepy.objects import Base
-from specklepy.transports.server import ServerTransport
 from specklepy.api.credentials import Account, get_local_accounts #, StreamWrapper
 from specklepy.api.client import SpeckleClient
 import webbrowser
@@ -48,23 +53,6 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
 
 # Import the code for the dialog
-
-     
-import os
-import sys
-import threading
-from typing import List
-
-from PyQt5.QtWidgets import (QMainWindow, QLabel, QApplication,
-    QDockWidget, QVBoxLayout, QWidget)
-from PyQt5.QtCore import Qt 
-from PyQt5 import QtGui, uic
-import arcpy
-
-try: 
-    from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-except: 
-    from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
 
 def startThread(sp_class): 
     print("START THREAD")
@@ -308,7 +296,7 @@ class SpeckleGIS:
             # remove this statement if dockwidget is to remain
             # for reuse if plugin is reopened    
         except Exception as e: 
-            logToUser(str(e))    
+            logToUser(str(e), func = inspect.stack()[0][3])    
         
 
     def unload(self):
@@ -330,12 +318,12 @@ class SpeckleGIS:
 
             # Check if stream id/url is empty
             if self.active_stream is None:
-                logToUser("Please select a stream from the list.", 1)
+                logToUser("Please select a stream from the list.", level=1, func = inspect.stack()[0][3])
                 return
 
             self.gis_project = ArcGISProject("CURRENT")
             if self.gis_project.activeMap is None: 
-                logToUser("No active Map", 1)
+                logToUser("No active Map", level=1, func = inspect.stack()[0][3])
                 return 
 
             print("On Send 2")
@@ -350,7 +338,7 @@ class SpeckleGIS:
             
             # Check if no layers are selected
             if len(layers) == 0: #len(selectedLayerNames) == 0:
-                logToUser("No layers selected", 1)
+                logToUser("No layers selected", level=1, func = inspect.stack()[0][3])
                 return
             print(layers)
             print("On Send 3")
@@ -378,14 +366,14 @@ class SpeckleGIS:
             transport = validateTransport(client, streamId)
             if transport == None: return
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
             return
     
         try:
             # this serialises the block and sends it to the transport
             objId = operations.send(base=base_obj, transports=[transport])
         except SpeckleException as e:
-            logToUser("Error sending data: " + str(e.message))
+            logToUser("Error sending data: " + str(e.message), level=2, func = inspect.stack()[0][3])
             return
 
         try:
@@ -406,7 +394,7 @@ class SpeckleGIS:
             self.dockwidget.showLink()#.layout().addWidget(LinkWidget(parent=self.dockwidget))
 
         except SpeckleException as e:
-            logToUser("Error creating commit:" + e.message)
+            logToUser("Error creating commit:" + e.message, level=2, func = inspect.stack()[0][3])
     
     def onReceive(self):
         """Handles action when the Receive button is pressed"""
@@ -416,12 +404,12 @@ class SpeckleGIS:
 
             # Check if stream id/url is empty
             if self.active_stream is None:
-                logToUser("Please select a stream from the list.", 1)
+                logToUser("Please select a stream from the list.", level=1, func = inspect.stack()[0][3])
                 return
 
             self.gis_project = ArcGISProject("CURRENT")
             if self.gis_project.activeMap is None: 
-                logToUser("No active Map", 1)
+                logToUser("No active Map", level=1, func = inspect.stack()[0][3])
                 return 
 
             # Get the stream wrapper
@@ -431,7 +419,7 @@ class SpeckleGIS:
             # Ensure the stream actually exists
             print("ON RECEIVE 2")
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
             return
         try:
             stream = validateStream(streamWrapper)
@@ -446,7 +434,7 @@ class SpeckleGIS:
             if commit == None: return
 
         except SpeckleException as e:
-            logToUser(str(e.message))
+            logToUser(str(e.message), level=2, func = inspect.stack()[0][3])
             return
 
         transport = validateTransport(client, streamId)
@@ -469,7 +457,7 @@ class SpeckleGIS:
 
             if app != "QGIS" and app != "ArcGIS": 
                 if self.gis_project.activeMap.spatialReference.type == "Geographic" or self.gis_project.activeMap.spatialReference is None: #TODO test with invalid CRS
-                    logToUser("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates", 0)
+                    logToUser("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates", level=0, func = inspect.stack()[0][3])
             arcpy.AddMessage(f"Succesfully received {objId}")
 
             # If group exists, remove layers inside  
@@ -483,7 +471,7 @@ class SpeckleGIS:
             traverseObject(commitObj, callback, check, str(newGroupName))
             
         except SpeckleException as e:
-            logToUser("Receive failed: "+ e.message)
+            logToUser("Receive failed: "+ e.message, level=2, func = inspect.stack()[0][3])
             return
 
     def reloadUI(self):
@@ -509,7 +497,7 @@ class SpeckleGIS:
             accounts = get_local_accounts()
             self.accounts = accounts
             if len(accounts) == 0:
-                logToUser("No accounts were found. Please remember to install the Speckle Manager and setup at least one account", 1)
+                logToUser("No accounts were found. Please remember to install the Speckle Manager and setup at least one account", level=1, func = inspect.stack()[0][3])
                 return False
             for acc in accounts:
                 if acc.isDefault: 
@@ -517,7 +505,7 @@ class SpeckleGIS:
                     break
             return True
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
             return False
 
     def run(self):
@@ -557,7 +545,7 @@ class SpeckleGIS:
                 #self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
                 self.dockwidget.enableElements(self)
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
     def onStreamAddButtonClicked(self):
         self.add_stream_modal = AddStreamModalDialog(None)
@@ -589,14 +577,14 @@ class SpeckleGIS:
 
             str_id = new_client.stream.create(name=str_name, description = description, is_public = is_public) 
             if isinstance(str_id, GraphQLException) or isinstance(str_id, SpeckleException):
-                logToUser(str_id.message)
+                logToUser(str_id.message, level=2, func = inspect.stack()[0][3])
                 return
             else:
                 sw = StreamWrapper(account.serverInfo.url + "/streams/" + str_id)
                 self.handleStreamAdd(sw) 
             return 
         except Exception as e: 
-            logToUser(str(e))
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
             return 
 
     def onBranchCreateClicked(self):
@@ -620,7 +608,7 @@ class SpeckleGIS:
             #description = "No description provided"
             br_id = new_client.branch.create(stream_id = sw.stream_id, name = br_name, description = description) 
             if isinstance(br_id, GraphQLException):
-                logToUser(br_id.message)
+                logToUser(br_id.message, level=2, func = inspect.stack()[0][3])
 
             self.active_stream = (sw, tryGetStream(sw))
             self.current_streams[0] = self.active_stream
@@ -631,7 +619,7 @@ class SpeckleGIS:
 
             return 
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
     def handleStreamAdd(self, sw: StreamWrapper):
         try:
@@ -650,7 +638,7 @@ class SpeckleGIS:
                     break 
                 index += 1
         except SpeckleException as e:
-            logToUser(e.message, 2)
+            logToUser(e.message, level=2, func = inspect.stack()[0][3])
             stream = None
         try:
             if streamExists == 0: 
@@ -665,4 +653,4 @@ class SpeckleGIS:
         
             return 
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 

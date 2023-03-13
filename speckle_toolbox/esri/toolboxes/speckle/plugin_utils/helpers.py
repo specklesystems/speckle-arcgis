@@ -1,5 +1,7 @@
 import os
 from typing import List
+import inspect 
+
 try:
     from speckle.plugin_utils.logger import logToUser
 except:
@@ -32,7 +34,7 @@ def validateNewFclassName(newName: str, prefix: str, all_layer_names: List[str])
                 #else: layerNameCreated +=1
 
         if layerNameCreated == 0:
-            logToUser('Feature class name already exists')
+            logToUser('Feature class name already exists', level=2, func = inspect.stack()[0][3])
             #return fixed_name
 
     return fixed_name

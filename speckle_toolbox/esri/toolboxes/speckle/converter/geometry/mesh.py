@@ -5,6 +5,8 @@ import math
 from specklepy.objects.geometry import Mesh, Point
 from specklepy.objects.other import RenderMaterial
 
+import inspect 
+
 import shapefile
 from shapefile import TRIANGLE_STRIP, TRIANGLE_FAN, OUTER_RING
 try: 
@@ -56,7 +58,7 @@ def meshToNative(meshes: List[Mesh], path: str):
                 except: pass
         w.close()
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return path
 
 
@@ -99,7 +101,7 @@ def writeMeshToShp(meshes: List[Mesh], path: str):
                         except: pass
         w.close()
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return path
 
 
@@ -119,7 +121,7 @@ def fill_multi_mesh_parts(w: shapefile.Writer, meshes: List[Mesh], geom_id: str)
         w.multipatch(parts_list, partTypes=types_list ) # one type for each part
         w.record(geom_id)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return w
 
 def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str):
@@ -131,7 +133,7 @@ def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str):
         w.record(geom_id)
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return w
 
 def deconstructSpeckleMesh(mesh: Mesh):
@@ -159,7 +161,7 @@ def deconstructSpeckleMesh(mesh: Mesh):
             except: break # when out of range 
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return parts_list, types_list
 
 def constructMesh(vertices, faces, colors):
@@ -171,7 +173,7 @@ def constructMesh(vertices, faces, colors):
         material.diffuse = colors[0]
         mesh.renderMaterial = material 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return mesh
 
 def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]], existing_vert: int, index: int, layer):
@@ -266,7 +268,7 @@ def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]],
 
         return total_vertices, vertices, faces, colors
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None, None, None, None 
 
 r'''
@@ -305,5 +307,5 @@ def rasterToMesh(vertices, faces, colors):
         mesh.units = "m"
         return mesh
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None

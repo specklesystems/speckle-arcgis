@@ -5,6 +5,9 @@ from specklepy.objects.geometry import Line, Mesh, Point, Polyline, Curve, Arc, 
 
 import arcpy 
 from typing import Any, List, Union, Sequence
+
+import inspect 
+
 try:
     from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
     from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
@@ -57,10 +60,10 @@ def convertToSpeckle(feature, index: str, layer, geomType, featureType) -> Union
         elif geomType == "MultiPatch":
             return polygonToSpeckleMesh(geom, index, layer, False)
         else:
-            logToUser("Unsupported or invalid geometry in layer " + layer.name, 1)
+            logToUser("Unsupported or invalid geometry in layer " + layer.name, level=1, func = inspect.stack()[0][3])
         return None
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 
@@ -90,7 +93,7 @@ def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
                 break
         #print(converted)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return converted
 
 def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference):
@@ -106,7 +109,7 @@ def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference):
         features = arcpy.Multipoint( arcpy.Array(all_pts) )
         #if len(features)==0: features = None
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return features
 
 def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
@@ -130,7 +133,7 @@ def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
 
         poly = arcpy.Polyline( arcpy.Array(full_array_list), sr, has_z=True )
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return poly
 
 def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO fix multi features
@@ -188,7 +191,7 @@ def multiPolygonToNative(items: List[Base], sr: arcpy.SpatialReference): #TODO f
         
         print(polygon)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     
     return polygon
 
@@ -206,6 +209,6 @@ def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference):
                     return multiPolygonToNative(items, sr)
             except: return None 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
     

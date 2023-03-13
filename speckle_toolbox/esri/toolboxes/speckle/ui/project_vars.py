@@ -16,6 +16,8 @@ from specklepy.api.wrapper import StreamWrapper
 from specklepy.api.models import Branch, Stream, Streams
 from osgeo import osr
 
+import inspect 
+
 try: 
     from speckle.ui.validation import tryGetStream
     from speckle.speckle_arcgis import SpeckleGIS
@@ -52,7 +54,7 @@ def get_project_streams(self: SpeckleGIS, content: str = None):
                     try: 
                         stream = tryGetStream(sw)
                     except SpeckleException as e:
-                        logToUser(e.message, 2)
+                        logToUser(e.message, level=2, func = inspect.stack()[0][3])
                         stream = None
                     #strId = stream.id # will cause exception if invalid
                     temp.append((sw, stream))
@@ -62,7 +64,7 @@ def get_project_streams(self: SpeckleGIS, content: str = None):
                 #    logger.logToUser(e.message, Qgis.Warning)
         self.current_streams = temp
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     
 def set_project_streams(self: SpeckleGIS):
     try:
@@ -100,7 +102,7 @@ def set_project_streams(self: SpeckleGIS):
                         if len(proj_layers) <= i: cursor.insertRow([value[i], "" , ""])
             del cursor 
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
   
 def get_project_layer_selection(self: SpeckleGIS):
     try:
@@ -129,10 +131,10 @@ def get_project_layer_selection(self: SpeckleGIS):
                         found += 1
                         break
                 if found == 0: 
-                    logToUser(f'Saved layer not found: "{layerPath}"', 1)
+                    logToUser(f'Saved layer not found: "{layerPath}"', level=1, func = inspect.stack()[0][3])
         self.current_layers = temp
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
 def set_project_layer_selection(self: SpeckleGIS):
     try:
@@ -174,7 +176,7 @@ def set_project_layer_selection(self: SpeckleGIS):
             del cursor 
             #print(table)
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     print("SET project layer selection 2")
 
@@ -196,7 +198,7 @@ def get_survey_point(self: SpeckleGIS, content = None):
             self.lat, self.lon = [float(i) for i in vals]
 
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     
 def set_survey_point(self: SpeckleGIS):
 
@@ -224,7 +226,7 @@ def set_survey_point(self: SpeckleGIS):
     except Exception as e:
         self.dockwidget.surveyPointLat.setText(str(self.lat))
         self.dockwidget.surveyPointLon.setText(str(self.lon))
-        logToUser("Lat, Lon values invalid: " + str(e))
+        logToUser("Lat, Lon values invalid: " + str(e), level=2, func = inspect.stack()[0][3])
         return False 
 
 def setProjectReferenceSystem(self: SpeckleGIS):
@@ -246,13 +248,13 @@ def setProjectReferenceSystem(self: SpeckleGIS):
             #transform = osr.CoordinateTransformation(source, newCrs)
 
             self.gis_project.activeMap.spatialReference =  newProjSR
-            logToUser("Custom project Spatial Reference successfully applied", 0)
+            logToUser("Custom project Spatial Reference successfully applied", level=0, func = inspect.stack()[0][3])
         else:
-            logToUser("Custom Spatial Reference could not be created", 1)
+            logToUser("Custom Spatial Reference could not be created", level=1, func = inspect.stack()[0][3])
 
         return True
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return False
 
 def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
@@ -271,7 +273,7 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
                 del cursor
             
             except Exception as e:
-                logToUser("Error creating a table: " + str(e), 1)
+                logToUser("Error creating a table: " + str(e), level=1, func = inspect.stack()[0][3])
                 return None
         else: 
             #print("table already exists")
@@ -286,7 +288,7 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
         return table
     
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
 
 def findOrCreateTableField(table: str, field: str):
@@ -333,7 +335,7 @@ def findOrCreateRow(table:str, fields: List[str]):
             del cursor
     
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
 r'''
 class speckleInputsClass:

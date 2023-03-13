@@ -9,6 +9,8 @@ from typing import Any, List, Tuple, Union
 
 #from regex import D
 
+import inspect 
+
 try:
     from speckle.converter.layers.CRS import CRS
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
@@ -47,6 +49,8 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 
 import numpy as np
 
+GEOM_LINE_TYPES = ["Objects.Geometry.Line", "Objects.Geometry.Polyline", "Objects.Geometry.Curve", "Objects.Geometry.Arc", "Objects.Geometry.Circle", "Objects.Geometry.Ellipse", "Objects.Geometry.Polycurve"]
+
 def getAllProjLayers(project: ArcGISProject) -> List[arcLayer]:
     print("get all project layers")
     #print(project)
@@ -63,10 +67,10 @@ def getAllProjLayers(project: ArcGISProject) -> List[arcLayer]:
                     #path = layer.dataSource
         else: 
             print(type(project.activeMap))
-            logToUser("Cannot get Project layers, Project Active Map not loaded or not selected",1)
+            logToUser("Cannot get Project layers, Project Active Map not loaded or not selected", level=1, func = inspect.stack()[0][3])
             return []
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return layers 
 
 
@@ -112,13 +116,13 @@ def getLayers(plugin, bySelection = False ) -> List[arcLayer]:
                             found += 1
                             break 
                     if found == 0: 
-                        logToUser(f'Saved layer not found: "{item[0]}"',1)
+                        logToUser(f'Saved layer not found: "{item[0]}"', level=1, func = inspect.stack()[0][3])
 
                 except:
-                    logToUser(f'Saved layer not found: "{item[0]}"',1)
+                    logToUser(f'Saved layer not found: "{item[0]}"', level=1, func = inspect.stack()[0][3])
                     continue
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return layers 
     
 def convertSelectedLayers(layers: List[arcLayer], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
@@ -146,7 +150,7 @@ def convertSelectedLayers(layers: List[arcLayer], project: ArcGISProject) -> Lis
             result.append(layerToSpeckle(layer, project))
         
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return result
 
 def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer, RasterLayer]: #now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
@@ -159,7 +163,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
         projectCRS = project.activeMap.spatialReference
         try: data = arcpy.Describe(layer.dataSource)
         except OSError as e: 
-            logToUser(str(e.args[0]))
+            logToUser(str(e.args[0]), level=2, func = inspect.stack()[0][3])
             return None
 
         layerName = layer.name
@@ -241,7 +245,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                     #layerBase.applicationId = selectedLayer.id()
 
             except OSError as e: 
-                logToUser(str(e))
+                logToUser(str(e), level=2, func = inspect.stack()[0][3])
                 return None
 
         elif layer.isRasterLayer:
@@ -265,7 +269,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
             #speckleLayer.renderer = layerRenderer
             #speckleLayer.applicationId = selectedLayer.id()
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     return speckleLayer
 
@@ -282,7 +286,7 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
             return rasterLayerToNative(layer, streamBranch, project)
         return None
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
 
 
@@ -312,7 +316,7 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
 
         return True
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return False
 
 
@@ -332,7 +336,7 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         active_map = project.activeMap
         
         if sr.type == "Geographic": 
-            logToUser(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly",1)
+            logToUser(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly", level=1, func = inspect.stack()[0][3])
 
         #CREATE A GROUP "received blabla" with sublayers
         layerGroup = None
@@ -544,7 +548,7 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
                 print("Layer attr error: " + str(e))
                 print(shp_num)
                 print(len(rowValues))
-                logToUser("Layer attribute error: " + e)
+                logToUser("Layer attribute error: " + e, level=2, func = inspect.stack()[0][3])
         del cur 
         
         print("create layer:")
@@ -566,9 +570,8 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
 
         return True #last one
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return False
-
 
 def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str) :
     print("01______Cad vector layer to native")
@@ -587,13 +590,17 @@ def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
             #print(geom)
             if geom.speckle_type == "Objects.Geometry.Point": 
                 geom_points.append(geom)
-            if geom.speckle_type == "Objects.Geometry.Line" or geom.speckle_type == "Objects.Geometry.Polyline" or geom.speckle_type == "Objects.Geometry.Curve" or geom.speckle_type == "Objects.Geometry.Arc" or geom.speckle_type == "Objects.Geometry.Circle" or geom.speckle_type == "Objects.Geometry.Ellipse" or geom.speckle_type == "Objects.Geometry.Polycurve":
+            elif geom.speckle_type in GEOM_LINE_TYPES:
                 geom_polylines.append(geom)
+            try:
+                if geom.speckle_type.endswith(".ModelCurve") and geom["baseCurve"].speckle_type in GEOM_LINE_TYPES:
+                    geom_polylines.append(geom["baseCurve"])
+            except: pass
         
         if len(geom_points)>0: layer_points = cadVectorLayerToNative(geom_points, layerName, "Points", streamBranch, project)
         if len(geom_polylines)>0: layer_polylines = cadVectorLayerToNative(geom_polylines, layerName, "Polylines", streamBranch, project)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     return [layer_points, layer_polylines]
 
@@ -613,7 +620,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         print(path)
         print(streamBranch)
         if sr.type == "Geographic": 
-            logToUser(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly", 1)
+            logToUser(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly", level=1, func = inspect.stack()[0][3])
 
         #CREATE A GROUP "received blabla" with sublayers
         layerGroup = None
@@ -726,7 +733,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         active_map.addLayerToGroup(layerGroup, vl)
         print("Layer created")
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     return vl
 
@@ -867,7 +874,7 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         except: pass
         '''
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return vl
 
 def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISProject):
@@ -1037,5 +1044,5 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         '''
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return rasterLayer

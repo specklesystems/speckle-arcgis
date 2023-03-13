@@ -9,6 +9,8 @@ import arcpy
 from arcpy.management import CreateCustomGeoTransformation
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
+import inspect 
+
 try: 
     from speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
     from speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
@@ -45,7 +47,7 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
         print(hasattr(data, "hasSpatialIndex")) 
         if hasattr(data, "isRevit") or hasattr(data, "isIFC") or hasattr(data, "bimLevels"): 
             print(f"Layer {selectedLayer.name} has unsupported data type")
-            logToUser(f"Layer {selectedLayer.name} has unsupported data type",1)
+            logToUser(f"Layer {selectedLayer.name} has unsupported data type", level=1, func = inspect.stack()[0][3])
             return None 
         #print(layer_sr.name)
         #print(projectCRS.name)
@@ -60,7 +62,7 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
         except Exception as error:
             print("Error converting geometry: " + str(error))
             print(selectedLayer)
-            logToUser("Error converting geometry: " + str(error))
+            logToUser("Error converting geometry: " + str(error), level=2, func = inspect.stack()[0][3])
         print(geom) 
         #print(featureType) 
         for i, name in enumerate(fieldnames):
@@ -73,7 +75,7 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
         #print(b)
         print("______end of __Feature to Speckle____________________")
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return b
 
 def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.SpatialReference):
@@ -112,7 +114,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
                 if variant == "SHORT": feat.update({key: None})
                 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return feat
              
 def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, path: str):
@@ -128,7 +130,7 @@ def bimFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference, 
         feat_updated = updateFeat(feat, fields, feature)
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return feat_updated
                 
 
@@ -158,7 +160,7 @@ def cadFeatureToNative(feature: Base, fields: dict, sr: arcpy.SpatialReference):
         print(feat)
         print(fields)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return feat_updated
 
 def addFeatVariant(key, variant, value, f):
@@ -178,7 +180,7 @@ def addFeatVariant(key, variant, value, f):
             else: feat.update({key: None}) 
         elif variant == "TEXT" or variant == "FLOAT" or variant == "LONG" or variant == "SHORT": feat.update({key: None})
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return feat 
 
 def updateFeat(feat:dict, fields: dict, feature: Base) -> Dict[str, Any]:
@@ -226,7 +228,7 @@ def updateFeat(feat:dict, fields: dict, feature: Base) -> Dict[str, Any]:
         feat_sorted = {k: v for k, v in sorted(feat.items(), key=lambda item: item[0])}
         #print("_________________end of updating a feature_________________________")
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return feat_sorted
 
 def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialReference, project: ArcGISProject) -> Base:
@@ -273,7 +275,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                 b['displayValue'] = [geom]
             print(geom)
         except Exception as error:
-            logToUser("Error converting point geometry: " + str(error)) 
+            logToUser("Error converting point geometry: " + str(error), level=2, func = inspect.stack()[0][3]) 
 
         for i, item in enumerate(rasterBandNames):
             print(item)
@@ -597,7 +599,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         b['displayValue'].append(mesh)
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return b
 
 r'''

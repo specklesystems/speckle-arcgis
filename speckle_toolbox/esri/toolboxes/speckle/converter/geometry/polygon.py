@@ -6,6 +6,8 @@ from arcpy.arcobjects.arcobjects import SpatialReference
 from specklepy.objects import Base
 from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, Line
 
+import inspect 
+
 try:
     from speckle.converter.geometry.mesh import rasterToMesh, constructMesh, meshPartsFromPolygon
     from speckle.converter.geometry.point import pointToCoord, pointToNative
@@ -76,7 +78,7 @@ def polygonToSpeckleMesh(feature, index: int, layer, multitype: bool):
         polygon.displayValue = [ mesh ] 
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon 
 
 def getPolyBoundaryVoids(geom, layer, multiType: bool):
@@ -134,7 +136,7 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                     voids.append(void)
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return boundary, voids
 
 def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
@@ -168,7 +170,7 @@ def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
             polygon.append(polygonToSpeckle(poly, index, layer, poly.isMultipart))
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon
 
 
@@ -286,7 +288,7 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
         #print("print resulted polygon")
         #print(polygon)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon
 
 def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
@@ -338,5 +340,5 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
         polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon

@@ -4,6 +4,8 @@ from PyQt5.QtWidgets import QAction, QDockWidget, QVBoxLayout, QWidget
 from PyQt5 import QtWidgets
 import webbrowser
 
+import inspect 
+
 try:
     from speckle.plugin_utils.logger import logToUser
 except:
@@ -53,7 +55,7 @@ class LinkWidget(QWidget):
             webbrowser.open(url, new=0, autoraise=True)
             self.parentWidget.hideLink()
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     def closeLinkWidget(self):
         return
@@ -68,7 +70,7 @@ class LinkWidget(QWidget):
             self.parentWidget.link = None
             return True
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
             return True 
         '''
 

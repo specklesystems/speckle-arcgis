@@ -12,6 +12,8 @@ from specklepy.api.credentials import get_local_accounts #, StreamWrapper
 from specklepy.api.wrapper import StreamWrapper
 from gql import gql
 
+import inspect 
+
 try:
     from speckle.plugin_utils.logger import logToUser
 except:
@@ -55,7 +57,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
             self.accounts_dropdown.currentIndexChanged.connect(self.onAccountSelected)
             self.populate_accounts_dropdown()
         except Exception as e:
-            logToUser(e)
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     def searchResultChanged(self):
         try:
@@ -63,7 +65,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
             if index == -1: self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False) 
             else: self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True) 
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
     def onSearchClicked(self):
         try:
@@ -79,19 +81,19 @@ class AddStreamModalDialog(QtWidgets.QWidget):
             elif self.speckle_client is not None: 
                 results = self.speckle_client.stream.search(query)
             elif self.speckle_client is None: 
-                logToUser(f"Account cannot be authenticated: {self.accounts_dropdown.currentText()}", 2) 
+                logToUser(f"Account cannot be authenticated: {self.accounts_dropdown.currentText()}", level=2, func = inspect.stack()[0][3]) 
             
             self.stream_results = results
             self.populateResultsList(sw)
             
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
     
     def populateResultsList(self, sw):
         try:
             self.search_results_list.clear()
             if isinstance(self.stream_results, SpeckleException): 
-                logToUser("Some streams cannot be accessed", 1)
+                logToUser("Some streams cannot be accessed", level=1, func = inspect.stack()[0][3])
                 return 
             for stream in self.stream_results:
                 host = ""
@@ -101,19 +103,19 @@ class AddStreamModalDialog(QtWidgets.QWidget):
                     host = self.speckle_client.account.serverInfo.url
                 
                 if isinstance(stream, SpeckleException): 
-                    logToUser("Some streams cannot be accessed", 1)
+                    logToUser("Some streams cannot be accessed", level=1, func = inspect.stack()[0][3])
                 else: 
                     self.search_results_list.addItems([
                         f"{stream.name}, {stream.id} | {host}" #for stream in self.stream_results 
                     ])
         
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
     def onOkClicked(self):
         try:
             if isinstance(self.stream_results, SpeckleException):
-                logToUser("Selected stream cannot be accessed", 1)
+                logToUser("Selected stream cannot be accessed", level=1, func = inspect.stack()[0][3])
                 return
             #elif index == -1 or len(self.stream_results) == 0:
             #    logger.logToUser("Select stream from \"Search Results\". No stream selected", Qgis.Warning)
@@ -129,10 +131,10 @@ class AddStreamModalDialog(QtWidgets.QWidget):
                     self.handleStreamAdd.emit(sw) #StreamWrapper(f"{acc.serverInfo.url}/streams/{stream.id}?u={acc.userInfo.id}"))
                     self.close()
                 except Exception as e:
-                    logToUser("Some streams cannot be accessed: " + str(e), 1)
+                    logToUser("Some streams cannot be accessed: " + str(e), level=1, func = inspect.stack()[0][3])
                     return 
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
     def onCancelClicked(self):
         self.close()
@@ -143,7 +145,7 @@ class AddStreamModalDialog(QtWidgets.QWidget):
             self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
             self.speckle_client.authenticate_with_token(token=account.token)
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
     def populate_accounts_dropdown(self):
         # Populate the accounts comboBox
@@ -157,5 +159,5 @@ class AddStreamModalDialog(QtWidgets.QWidget):
                 ]
             )
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
 
