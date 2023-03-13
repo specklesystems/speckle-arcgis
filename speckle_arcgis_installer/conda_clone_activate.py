@@ -99,6 +99,11 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
             if pythonExec.replace("\\python.exe","") not in (os.path.abspath(panda3d.__file__)): 
                 print(f"Installing {pkgName} to {pythonExec}")
                 subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
+        elif pkgName == "PyQt5":
+            import PyQt5 
+            if pythonExec.replace("\\python.exe","") not in (os.path.abspath(PyQt5.__file__)): 
+                print(f"Installing {pkgName} to {pythonExec}")
+                subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
     except Exception as e:
         print(f"{pkgName} not installed")
         subprocess_call( [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"])
@@ -133,3 +138,6 @@ if pythonPath is not None:
     installToolbox(pythonPath)
     installDependencies(pythonPath, "specklepy", "2.9.0"  )
     installDependencies(pythonPath, "panda3d", "1.10.11" )
+    installDependencies(pythonPath, "PyQt5", "5.15.9" )
+
+# manual: import sysconfig; import subprocess; x = sysconfig.get_paths()['data'] + r"\python.exe"; subprocess.run((x, "-m", "pip", "install", "PyQt5==5.15.9"), capture_output=True, text=True, shell=True, timeout=1000 )
