@@ -71,8 +71,26 @@ def installToolbox(newExec: str):
     whl_file = os.path.join(os.path.dirname(__file__), "speckle_toolbox-2.9.4-py3-none-any.whl" ) 
     print(whl_file)
     subprocess_call([newExec, '-m','pip','install','--upgrade', '--force-reinstall', whl_file])
-    # to uninstall: cmd.exe "C:\\Users\\username\\AppData\\Local\\ESRI\\conda\\envs\\arcgispro-2.9.4-py3-none-any.whl
+    # to uninstall: cmd.exe "X:\\xxx.whl
     return
+
+def clearToolbox(pythonExec: str):
+    # install pip
+    print("CLEAR toolbox")
+    print(pythonExec)
+    try:
+        
+        speckle_path = pythonExec.replace("python.exe","Lib\\site-packages\\") 
+        
+        print(speckle_path)
+        paths = os.listdir(speckle_path)
+        for p in paths:
+            if "speckle_toolbox" in p:
+                print("remove: " + str(p))
+                os.remove(p)
+    except Exception as e:
+        print(e)
+        pass
 
 def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
     # install pip
@@ -135,6 +153,7 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
     
 pythonPath = setup()
 if pythonPath is not None:
+    clearToolbox(pythonPath)
     installToolbox(pythonPath)
     installDependencies(pythonPath, "specklepy", "2.9.0"  )
     installDependencies(pythonPath, "panda3d", "1.10.11" )
