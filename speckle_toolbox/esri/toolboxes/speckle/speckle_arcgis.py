@@ -54,6 +54,9 @@ except:
 
 # Import the code for the dialog
 
+SPECKLE_COLOR = (59,130,246)
+SPECKLE_COLOR_LIGHT = (69,140,255)
+
 def startThread(sp_class): 
     print("START THREAD")
     t = threading.Thread(target=qtApp, args=(sp_class,))
@@ -118,9 +121,6 @@ Report issues at https://speckle.community/"""
     def execute(self, parameters: List, messages): 
         qtApp("")
         #startThread("")
-
-SPECKLE_COLOR = (59,130,246)
-SPECKLE_COLOR_LIGHT = (69,140,255)
 
 class SpeckleGIS:
     """Speckle Connector Plugin for ArcGIS"""
@@ -387,11 +387,11 @@ class SpeckleGIS:
                 source_application="ArcGIS",
             )
             arcpy.AddMessage("Successfully sent data to stream: " + streamId)
+
+            url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
+
+            self.dockwidget.showLink(url) 
             self.dockwidget.messageInput.setText("")
-            self.dockwidget.link_url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
-            
-            #self.dockwidget.link = widget 
-            self.dockwidget.showLink()#.layout().addWidget(LinkWidget(parent=self.dockwidget))
 
         except SpeckleException as e:
             logToUser("Error creating commit:" + e.message, level=2, func = inspect.stack()[0][3])

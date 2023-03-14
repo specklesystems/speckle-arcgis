@@ -43,6 +43,7 @@ def traverseObject(
                 pass
             #print(name)
             traverseValue(base[name], callback, check, streamBranch)
+        logToUser("Data received", level=0)
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
@@ -71,11 +72,10 @@ def callback(base: Base, streamBranch: str) -> bool:
                 logToUser(f"Speckle class \"Layer\" will be deprecated in future updates in favour of \"VectorLayer\" or \"RasterLayer\"", level=0, func = inspect.stack()[0][3]) 
             layer = layerToNative(base, streamBranch)
             #print(layer)
-            if layer is not None:
-                logToUser("Layer created: " + layer.name(), level=0)
+            #if layer is not None:
+            #    logToUser("Layer created: " + layer.name(), level=0)
         else:
             loopObj(base, "", streamBranch)
-            logToUser("Data received", level=0)
         return True
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])

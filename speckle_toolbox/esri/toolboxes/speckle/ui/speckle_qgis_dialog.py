@@ -200,8 +200,9 @@ class SpeckleGISDialog(QMainWindow):
         except Exception as e: 
             logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
-    def showLink(self):
+    def showLink(self, url = ""):
         print("showLink")
+        self.link_url = url
         try: 
             self.link.setGeometry(0, 0, self.frameSize().width(), self.frameSize().height())
         except Exception as e: 
