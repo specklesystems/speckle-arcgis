@@ -9,7 +9,7 @@ from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, 
 import inspect 
 
 try:
-    from speckle.converter.geometry.mesh import rasterToMesh, constructMesh, meshPartsFromPolygon
+    from speckle.converter.geometry.mesh import constructMesh, constructMeshFromRaster, meshPartsFromPolygon
     from speckle.converter.geometry.point import pointToCoord, pointToNative
     from speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
@@ -22,7 +22,7 @@ try:
     from speckle.plugin_utils.logger import logToUser
 
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, constructMesh, meshPartsFromPolygon
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, constructMesh, meshPartsFromPolygon
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
@@ -283,7 +283,7 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
             #print(polygon)
             col = featureColorfromNativeRenderer(index, layer)
             colors = [col for i in ran] # apply same color for all vertices
-            mesh = rasterToMesh(vertices, faces, colors)
+            mesh = constructMesh(vertices, faces, colors)
             polygon.displayValue = mesh 
         #print("print resulted polygon")
         #print(polygon)

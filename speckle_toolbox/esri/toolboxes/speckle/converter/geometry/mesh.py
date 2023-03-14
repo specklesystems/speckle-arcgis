@@ -164,6 +164,15 @@ def deconstructSpeckleMesh(mesh: Mesh):
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return parts_list, types_list
 
+def constructMeshFromRaster(vertices, faces, colors):
+    mesh = None
+    try:
+        mesh = Mesh.create(vertices, faces, colors)
+        mesh.units = "m"
+    except Exception as e:
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
+    return mesh
+
 def constructMesh(vertices, faces, colors):
     mesh = None
     try:
@@ -270,42 +279,3 @@ def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]],
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None, None, None, None 
-
-r'''
-def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh):
-    scale = get_scale_factor(mesh.units)
-
-    parts_list = []
-    types_list = []
-    count = 0 # sequence of vertex (not of flat coord list) 
-    try:
-        #print(len(mesh.faces))
-        if len(mesh.faces) % 4 == 0 and (mesh.faces[0] == 0 or mesh.faces[0] == 3):
-            for f in mesh.faces:
-                try:
-                    if mesh.faces[count] == 0 or mesh.faces[count] == 3: # only handle triangles
-                        f1 = [ scale*mesh.vertices[mesh.faces[count+1]*3], scale*mesh.vertices[mesh.faces[count+1]*3+1], scale*mesh.vertices[mesh.faces[count+1]*3+2] ]
-                        f2 = [ scale*mesh.vertices[mesh.faces[(count+2)]*3], scale*mesh.vertices[mesh.faces[(count+2)]*3+1], scale*mesh.vertices[mesh.faces[(count+2)]*3+2] ]
-                        f3 = [ scale*mesh.vertices[mesh.faces[(count+3)]*3], scale*mesh.vertices[mesh.faces[(count+3)]*3+1], scale*mesh.vertices[mesh.faces[(count+3)]*3+2] ]
-                        parts_list.append([ f1, f2, f3 ])
-                        types_list.append(TRIANGLE_FAN)
-                        count += 4
-                    else: 
-                        count += mesh.faces[count+1]
-                except: break
-            w.multipatch(parts_list, partTypes=types_list ) # one type for each part
-            w.record('displayMesh')
-        else: print("not triangulated mesh")
-
-    except Exception as e: pass #; print(e)
-    return w
-'''
-
-def rasterToMesh(vertices, faces, colors):
-    try:
-        mesh = Mesh.create(vertices, faces, colors)
-        mesh.units = "m"
-        return mesh
-    except Exception as e:
-        logToUser(str(e), level=2, func = inspect.stack()[0][3])
-        return None

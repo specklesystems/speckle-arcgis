@@ -18,7 +18,7 @@ try:
     from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
     from speckle.plugin_utils.helpers import findOrCreatePath
 
-    from speckle.converter.geometry.mesh import rasterToMesh, meshToNative, writeMeshToShp
+    from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
     from speckle.converter.layers.utils import findTransformation
     from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
     from speckle.plugin_utils.helpers import validateNewFclassName
@@ -31,7 +31,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative, writeMeshToShp
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import validateNewFclassName

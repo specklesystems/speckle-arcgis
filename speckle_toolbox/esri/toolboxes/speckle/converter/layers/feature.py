@@ -16,7 +16,7 @@ try:
     from speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
                                                 traverseDictByKey, hsv_to_rgb)
     from speckle.converter.geometry.point import pointToSpeckle
-    from speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle.converter.layers.symbology import jsonFromLayerStyle
     from speckle.plugin_utils.logger import logToUser
 except: 
@@ -24,7 +24,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
                                                 traverseDictByKey, hsv_to_rgb)
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, meshToNative
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import jsonFromLayerStyle
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
 
@@ -593,7 +593,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                 colors.extend([color,color,color,color])
                 count += 4
                 
-        mesh = rasterToMesh(vertices, faces, colors)
+        mesh = constructMeshFromRaster(vertices, faces, colors)
         if(b['displayValue'] is None):
             b['displayValue'] = []
         b['displayValue'].append(mesh)
