@@ -328,8 +328,8 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         #get Project CRS, use it by default for the new received layer
         
         vl = None
-        layerName = layerName + "_" + geomType
         layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+        layerName = layerName + "_" + geomType
         #if not "__Structural_Foundations_Mesh" in layerName: return None
         
         sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())

@@ -112,7 +112,7 @@ def loopVal(value: Any, name: str, streamBranch: str): # "name" is the parent ob
             #print("loop val - List")
             for i, item in enumerate(value):
                 loopVal(item, name, streamBranch)
-                if not isinstance(item, Base): logToUser("NOT BASE: "+type(item), level=1, func = inspect.stack()[0][3]); continue
+                if not isinstance(item, Base): continue
                 if item.speckle_type and item.speckle_type.startswith("IFC"): 
                     # keep traversing infinitely, just don't run repeated conversion for the same list of objects
                     try: 
