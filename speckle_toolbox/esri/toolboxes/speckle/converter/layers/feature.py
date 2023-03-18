@@ -18,7 +18,7 @@ try:
     from speckle.converter.geometry.point import pointToSpeckle
     from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle.converter.layers.symbology import jsonFromLayerStyle
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
@@ -26,7 +26,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import jsonFromLayerStyle
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 import numpy as np
 import colorsys

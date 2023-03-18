@@ -14,13 +14,13 @@ try:
     from speckle.converter.geometry.point import pointToNative
     from speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle.converter.layers.utils import get_scale_factor
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 from panda3d.core import Triangulator
 

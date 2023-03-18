@@ -32,14 +32,14 @@ try:
     #from speckle.speckle_arcgis_new import Speckle
     from speckle.converter.layers import getLayers
     from speckle.converter.layers import getAllProjLayers
-    from speckle.plugin_utils.logger import logToUser
-    from speckle.ui.linkWidget import LinkWidget
+    from speckle.ui.logger import logToUser
+    from speckle.ui.LogWidget import LogWidget
 except:
     #from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis_new import Speckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getLayers
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getAllProjLayers
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
-    from speckle_toolbox.esri.toolboxes.speckle.ui.linkWidget import LinkWidget
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.LogWidget import LogWidget
 
 #from ui.validation import tryGetStream
 
@@ -87,8 +87,7 @@ class SpeckleGISDialog(QMainWindow):
     layersWidget: QtWidgets.QListWidget
     saveLayerSelection: QtWidgets.QPushButton
     runButton: QtWidgets.QPushButton
-    link = None
-    link_url: str = ""
+    msgLog: LogWidget = None
 
     gridLayoutTitleBar = QtWidgets.QGridLayout
     
@@ -193,29 +192,24 @@ class SpeckleGISDialog(QMainWindow):
             self.runButton.setMaximumWidth(200)
             self.runButton.setIcon(QIcon(ICON_SEND))
 
-            widgetLink = LinkWidget(parent=self)
-            self.layout().addWidget(widgetLink)
-            self.link = widgetLink 
+            # add widgets that will only show on event trigger 
+            logWidget = LogWidget(parent=self)
+            self.layout().addWidget(logWidget)
+            self.msgLog = logWidget 
 
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
-    def showLink(self, url = ""):
-        print("showLink")
-        self.link_url = url
-        try: 
-            self.link.setGeometry(0, 0, self.frameSize().width(), self.frameSize().height())
-        except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
-
-    def hideLink(self):
-        if self.link is None: return 
-        try: 
-            self.link.setGeometry(0, 0, 0, 0)
-        except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
-
-
+    def resizeEvent(self, event):
+        try:
+            print("resize")
+            QtWidgets.QMainWindow.resizeEvent(self, event)
+            if self.msgLog.size().height() != 0: # visible
+                self.msgLog.setGeometry(0, 0, self.msgLog.parentWidget.frameSize().width(), self.msgLog.parentWidget.frameSize().height()) #.resize(self.frameSize().width(), self.frameSize().height())
+        except Exception as e:
+            #logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=self)
+            return
+    
     def closeEvent(self, event):
         try:
             #import threading
@@ -229,7 +223,7 @@ class SpeckleGISDialog(QMainWindow):
             event.accept()
         
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
         
     def clearDropdown(self):
         try:
@@ -238,7 +232,7 @@ class SpeckleGISDialog(QMainWindow):
             self.commitDropdown.clear()
             #self.layerSendModeDropdown.clear()
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def reloadDialogUI(self, plugin):
         try:
@@ -246,7 +240,7 @@ class SpeckleGISDialog(QMainWindow):
             self.populateUI(plugin) 
             self.enableElements(plugin)
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
         
 
@@ -261,7 +255,7 @@ class SpeckleGISDialog(QMainWindow):
             self.populateUI(plugin) 
             print("dockwidget run end")
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
 
     def setupOnFirstLoad(self, plugin):
@@ -284,7 +278,7 @@ class SpeckleGISDialog(QMainWindow):
             return 
         
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def setSendMode(self, plugin):
         try:
@@ -312,7 +306,7 @@ class SpeckleGISDialog(QMainWindow):
             self.runBtnStatusChanged(plugin)
             return
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
     
     def setReceiveMode(self, plugin):
         try:
@@ -339,7 +333,7 @@ class SpeckleGISDialog(QMainWindow):
             self.runBtnStatusChanged(plugin)
             return
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def completeStreamSection(self, plugin):
         self.streams_remove_button.clicked.connect( lambda: self.onStreamRemoveButtonClicked(plugin) )
@@ -358,7 +352,7 @@ class SpeckleGISDialog(QMainWindow):
             self.runBtnStatusChanged(plugin)
             self.runButton.setEnabled(False) 
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
   
     def runBtnStatusChanged(self, plugin):
         try:
@@ -379,7 +373,7 @@ class SpeckleGISDialog(QMainWindow):
                 else:
                     self.runButton.setEnabled(True)
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
             
 
     def layerSendModeChange(self, plugin, runMode = None):
@@ -401,7 +395,7 @@ class SpeckleGISDialog(QMainWindow):
                 else: self.runButton.setEnabled(True) # by manual selection
             elif self.layerSendModeDropdown.currentIndex() == 1: self.runBtnStatusChanged(plugin) # by saved
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
 
     def populateLayerDropdown(self, plugin, bySelection: bool = True):
@@ -448,7 +442,7 @@ class SpeckleGISDialog(QMainWindow):
             
             return
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def fillLayerList(self, layer):
         print("Fill layer list")
@@ -479,7 +473,7 @@ class SpeckleGISDialog(QMainWindow):
             
             return listItem
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
         
     def populateSurveyPoint(self, plugin):
         if not self:
@@ -491,7 +485,7 @@ class SpeckleGISDialog(QMainWindow):
             self.surveyPointLon.setText(str(plugin.lon))
         
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def enableElements(self, plugin):
         try:
@@ -505,7 +499,7 @@ class SpeckleGISDialog(QMainWindow):
             self.commitDropdown.setEnabled(False)
             self.show()
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def populateProjectStreams(self, plugin):
 
@@ -530,7 +524,7 @@ class SpeckleGISDialog(QMainWindow):
 
             if len(plugin.current_streams)>0: plugin.active_stream = plugin.current_streams[0]
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
         
 
     def onActiveStreamChanged(self, plugin):
@@ -551,7 +545,7 @@ class SpeckleGISDialog(QMainWindow):
             self.populateActiveStreamBranchDropdown(plugin)
             self.populateActiveCommitDropdown(plugin)
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
         
     def populateLayerSendModeDropdown(self):
         if not self: return
@@ -561,7 +555,7 @@ class SpeckleGISDialog(QMainWindow):
                 ["Send visible layers", "Send saved layers"]
             )
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def populateActiveStreamBranchDropdown(self, plugin):
         if not self: return
@@ -578,7 +572,7 @@ class SpeckleGISDialog(QMainWindow):
             )
             self.streamBranchDropdown.addItems(["Create New Branch"])
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def populateActiveCommitDropdown(self, plugin):
         if not self: return
@@ -586,6 +580,7 @@ class SpeckleGISDialog(QMainWindow):
             self.commitDropdown.clear()
             if plugin.active_stream is None: return
             branchName = self.streamBranchDropdown.currentText()
+            if branchName == "": return
             if branchName == "Create New Branch": 
                 self.streamBranchDropdown.setCurrentText("main")
                 plugin.onBranchCreateClicked()
@@ -605,7 +600,7 @@ class SpeckleGISDialog(QMainWindow):
                 )
             except: pass
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 
     def onStreamRemoveButtonClicked(self, plugin):
         try:
@@ -621,5 +616,5 @@ class SpeckleGISDialog(QMainWindow):
             #set_project_streams(plugin)
             self.populateProjectStreams(plugin)
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
 

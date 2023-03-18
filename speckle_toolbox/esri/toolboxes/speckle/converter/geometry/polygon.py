@@ -19,7 +19,7 @@ try:
                                                     specklePolycurveToPoints
                                                     )
     from speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, constructMesh, meshPartsFromPolygon
@@ -32,7 +32,7 @@ except:
                                                     specklePolycurveToPoints
                                                     )
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 
 import math

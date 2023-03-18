@@ -27,7 +27,6 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map
 from arcpy._mp import Layer as arcLayer
 
-
 try: 
     from speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer) 
@@ -38,7 +37,7 @@ try:
     from speckle.ui.create_stream import CreateStreamModalDialog
     from speckle.ui.create_branch import CreateBranchModalDialog
     from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser, logToUserWithAction
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
@@ -50,7 +49,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_stream import CreateStreamModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser, logToUserWithAction
 
 # Import the code for the dialog
 
@@ -318,12 +317,12 @@ class SpeckleGIS:
 
             # Check if stream id/url is empty
             if self.active_stream is None:
-                logToUser("Please select a stream from the list.", level=1, func = inspect.stack()[0][3])
+                logToUser("Please select a stream from the list.", level=1, func = inspect.stack()[0][3], plugin = self.dockwidget)
                 return
 
             self.gis_project = ArcGISProject("CURRENT")
             if self.gis_project.activeMap is None: 
-                logToUser("No active Map", level=1, func = inspect.stack()[0][3])
+                logToUser("No active Map", level=1, func = inspect.stack()[0][3], plugin = self.dockwidget)
                 return 
 
             print("On Send 2")
@@ -338,7 +337,7 @@ class SpeckleGIS:
             
             # Check if no layers are selected
             if len(layers) == 0: #len(selectedLayerNames) == 0:
-                logToUser("No layers selected", level=1, func = inspect.stack()[0][3])
+                logToUser("No layers selected", level=1, func = inspect.stack()[0][3], plugin = self.dockwidget)
                 return
             print(layers)
             print("On Send 3")
@@ -366,14 +365,14 @@ class SpeckleGIS:
             transport = validateTransport(client, streamId)
             if transport == None: return
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin = self.dockwidget) 
             return
     
         try:
             # this serialises the block and sends it to the transport
             objId = operations.send(base=base_obj, transports=[transport])
         except SpeckleException as e:
-            logToUser("Error sending data: " + str(e.message), level=2, func = inspect.stack()[0][3])
+            logToUser("Error sending data: " + str(e.message), level=2, func = inspect.stack()[0][3], plugin = self.dockwidget)
             return
 
         try:
@@ -390,11 +389,11 @@ class SpeckleGIS:
 
             url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
 
-            self.dockwidget.showLink(url) 
             self.dockwidget.messageInput.setText("")
+            logToUserWithAction(f"👌 Data sent to \"{streamName}\" \n View it online", level = 0, plugin=self.dockwidget, url = url)
 
         except SpeckleException as e:
-            logToUser("Error creating commit:" + e.message, level=2, func = inspect.stack()[0][3])
+            logToUser("Error creating commit:" + e.message, level=2, func = inspect.stack()[0][3], plugin = self.dockwidget)
     
     def onReceive(self):
         """Handles action when the Receive button is pressed"""
@@ -404,7 +403,7 @@ class SpeckleGIS:
 
             # Check if stream id/url is empty
             if self.active_stream is None:
-                logToUser("Please select a stream from the list.", level=1, func = inspect.stack()[0][3])
+                logToUser("Please select a stream from the list.", level=1, func = inspect.stack()[0][3], plugin = self.dockwidget)
                 return
 
             self.gis_project = ArcGISProject("CURRENT")
@@ -419,7 +418,7 @@ class SpeckleGIS:
             # Ensure the stream actually exists
             print("ON RECEIVE 2")
         except Exception as e: 
-            logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin = self.dockwidget) 
             return
         try:
             stream = validateStream(streamWrapper)
@@ -434,7 +433,7 @@ class SpeckleGIS:
             if commit == None: return
 
         except SpeckleException as e:
-            logToUser(str(e.message), level=2, func = inspect.stack()[0][3])
+            logToUser(str(e.message), level=2, func = inspect.stack()[0][3], plugin = self.dockwidget)
             return
 
         transport = validateTransport(client, streamId)
@@ -457,7 +456,7 @@ class SpeckleGIS:
 
             if app != "QGIS" and app != "ArcGIS": 
                 if self.gis_project.activeMap.spatialReference.type == "Geographic" or self.gis_project.activeMap.spatialReference is None: #TODO test with invalid CRS
-                    logToUser("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates", level=0, func = inspect.stack()[0][3])
+                    logToUser("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates", level=0, func = inspect.stack()[0][3], plugin = self.dockwidget)
             arcpy.AddMessage(f"Succesfully received {objId}")
 
             # If group exists, remove layers inside  
@@ -469,9 +468,12 @@ class SpeckleGIS:
             if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer)
             else: check: Callable[[Base], bool] = lambda base: isinstance(base, Base)
             traverseObject(commitObj, callback, check, str(newGroupName))
+
+            logToUser("👌 Data received", level = 0, plugin = self.dockwidget, blue = True)
+            return 
             
         except SpeckleException as e:
-            logToUser("Receive failed: "+ e.message, level=2, func = inspect.stack()[0][3])
+            logToUser("Receive failed: "+ e.message, level=2, func = inspect.stack()[0][3], plugin = self.dockwidget)
             return
 
     def reloadUI(self):

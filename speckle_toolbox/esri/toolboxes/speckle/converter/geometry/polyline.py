@@ -13,11 +13,11 @@ import inspect
 try:
     from speckle.converter.geometry.point import pointToCoord, pointToSpeckle, addZtoPoint
     from speckle.converter.layers.utils import get_scale_factor
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToSpeckle, addZtoPoint
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 
 def circleToSpeckle(center, point):

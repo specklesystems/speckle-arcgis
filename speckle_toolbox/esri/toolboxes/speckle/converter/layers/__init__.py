@@ -22,7 +22,7 @@ try:
     from speckle.converter.layers.utils import findTransformation
     from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
     from speckle.plugin_utils.helpers import validateNewFclassName
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
@@ -35,7 +35,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import validateNewFclassName
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 from specklepy.objects import Base
 from specklepy.objects.geometry import Mesh

@@ -13,7 +13,7 @@ try:
     from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
     from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
     from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
     from speckle.converter.geometry.mesh import meshToNative
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
@@ -21,7 +21,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import meshToNative
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 import numpy as np
 

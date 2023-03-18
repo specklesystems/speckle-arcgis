@@ -10,9 +10,9 @@ import inspect
 
 import arcpy 
 try:
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
   
 def tryGetStream (sw: StreamWrapper) -> Union[Stream, None]:
     try:

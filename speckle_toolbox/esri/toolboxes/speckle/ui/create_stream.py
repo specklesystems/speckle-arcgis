@@ -18,9 +18,9 @@ from gql import gql
 import inspect 
 
 try:
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 

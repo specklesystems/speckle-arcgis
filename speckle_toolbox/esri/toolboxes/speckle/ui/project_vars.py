@@ -22,12 +22,12 @@ try:
     from speckle.ui.validation import tryGetStream
     from speckle.speckle_arcgis import SpeckleGIS
     from speckle.converter.layers import getAllProjLayers
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.ui.validation import tryGetStream
     from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis import SpeckleGIS
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getAllProjLayers
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 FIELDS = ["project_streams","project_layer_selection", "lat_lon"]
 
