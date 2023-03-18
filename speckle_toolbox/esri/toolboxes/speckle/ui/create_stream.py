@@ -15,10 +15,12 @@ from specklepy.logging.exceptions import SpeckleException
 from specklepy.api.credentials import Account, get_local_accounts #, StreamWrapper
 from specklepy.api.wrapper import StreamWrapper
 from gql import gql
+import inspect 
+
 try:
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 
@@ -54,7 +56,7 @@ class CreateStreamModalDialog(QtWidgets.QWidget):
             self.accounts_dropdown.currentIndexChanged.connect(self.onAccountSelected)
             self.populate_accounts_dropdown()
         except Exception as e:
-            logToUser(e)
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     def nameCheck(self):
         try:
@@ -64,7 +66,7 @@ class CreateStreamModalDialog(QtWidgets.QWidget):
                 self.dialog_button_box.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False) 
             return
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     def onOkClicked(self):
         try:
@@ -75,7 +77,7 @@ class CreateStreamModalDialog(QtWidgets.QWidget):
             self.handleStreamCreate.emit(acc,name,description,public)
             self.close()
         except Exception as e:
-            logToUser(str(e))
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
             return 
 
     def onCancelClicked(self):
@@ -88,7 +90,7 @@ class CreateStreamModalDialog(QtWidgets.QWidget):
             self.speckle_client = SpeckleClient(account.serverInfo.url, account.serverInfo.url.startswith("https"))
             self.speckle_client.authenticate_with_token(token=account.token)
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
     def populate_accounts_dropdown(self):
         try:
@@ -102,5 +104,5 @@ class CreateStreamModalDialog(QtWidgets.QWidget):
                 ]
             )
         except Exception as e: 
-            logToUser(str(e)) 
+            logToUser(str(e), level=2, func = inspect.stack()[0][3])
 

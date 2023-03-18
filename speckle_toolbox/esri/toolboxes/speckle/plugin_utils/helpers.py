@@ -1,14 +1,29 @@
 import os
 from typing import List
-try:
-    from speckle.plugin_utils.logger import logToUser
-except:
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
-
+import inspect 
 
 def findOrCreatePath(path: str):
     if not os.path.exists(path): 
         os.makedirs(path)
+
+def splitTextIntoLines(text: str = "", number: int= 40) -> str: 
+    print("__splitTextIntoLines")
+    print(text)
+    msg = ""
+    try:
+        if len(text)>number:
+            try:
+                for i, x in enumerate(text):
+                    msg += x
+                    if i!=0 and i%number == 0: msg += "\n"
+            except Exception as e: print(e)
+        else: 
+            msg = text
+    except Exception as e:
+        print(e)
+        print(text)
+    
+    return msg
 
 def validateNewFclassName(newName: str, prefix: str, all_layer_names: List[str]) -> str:
     
@@ -32,7 +47,7 @@ def validateNewFclassName(newName: str, prefix: str, all_layer_names: List[str])
                 #else: layerNameCreated +=1
 
         if layerNameCreated == 0:
-            logToUser('Feature class name already exists')
+            pass #logToUser('Feature class name already exists', level=2, func = inspect.stack()[0][3])
             #return fixed_name
 
     return fixed_name

@@ -3,12 +3,14 @@ from specklepy.objects.geometry import Point, Line, Polyline, Circle, Arc, Polyc
 from specklepy.objects import Base
 from typing import List, Union
 
+import inspect 
+
 try:
     from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 
 def speckleBoundaryToSpecklePts(boundary: Union[None, Polyline, Arc, Line, Polycurve]) -> List[Point]:
@@ -25,5 +27,5 @@ def speckleBoundaryToSpecklePts(boundary: Union[None, Polyline, Arc, Line, Polyc
             try: polyBorder = boundary.as_points()
             except: pass # if Line or None
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polyBorder

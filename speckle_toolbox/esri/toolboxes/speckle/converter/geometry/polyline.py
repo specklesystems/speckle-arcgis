@@ -8,14 +8,16 @@ from specklepy.objects.geometry import Box, Vector, Point, Line, Polyline, Curve
 import arcpy 
 import numpy as np
 
+import inspect 
+
 try:
     from speckle.converter.geometry.point import pointToCoord, pointToSpeckle, addZtoPoint
     from speckle.converter.layers.utils import get_scale_factor
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToSpeckle, addZtoPoint
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 
 def circleToSpeckle(center, point):
@@ -38,7 +40,7 @@ def circleToSpeckle(center, point):
         #print(c)
         return c 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def multiPolylineToSpeckle(geom, feature, layer, multiType: bool):
@@ -53,7 +55,7 @@ def multiPolylineToSpeckle(geom, feature, layer, multiType: bool):
             polyline.append(polylineToSpeckle(poly, feature, layer, poly.isMultipart))
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polyline
 
 def polylineToSpeckle(geom, feature, layer, multiType: bool):
@@ -79,7 +81,7 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
                     pointList = pointList[:-1]
                 polyline = polylineFromVerticesToSpeckle(pointList, closed, feature, layer) 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polyline
 
 def polylineFromVerticesToSpeckle(vertices: List[Point], closed: bool, feature, layer) -> Polyline:
@@ -110,7 +112,7 @@ def polylineFromVerticesToSpeckle(vertices: List[Point], closed: bool, feature, 
             polyline.value.extend([point.x, point.y, point.z])
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polyline
 
 def arc3ptToSpeckle(p0: List, p1: List, p2: List, feature, layer) -> Arc: 
@@ -142,7 +144,7 @@ def arc3ptToSpeckle(p0: List, p1: List, p2: List, feature, layer) -> Arc:
         #arc['displayStyle']['color'] = col
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return arc
 
 def curveBezierToSpeckle(segmStartCoord, segmEndCoord, knots, feature, layer): 
@@ -183,7 +185,7 @@ def curveBezierToSpeckle(segmStartCoord, segmEndCoord, knots, feature, layer):
         print(curve) 
         return curve
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
 
 
@@ -253,11 +255,11 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
                                             print(segmStartCoord)
                                             print(segmEndCoord)
                                         else: # ellipse
-                                            logToUser("SpeckleWarning: ellipse geometry not supported yet",1) 
+                                            logToUser("SpeckleWarning: ellipse geometry not supported yet", level=1, func = inspect.stack()[0][3]) 
                                             segments = []
                                             break
                                     else: # elliptical curve
-                                        logToUser("SpeckleWarning: ellipse geometry not supported yet",1) 
+                                        logToUser("SpeckleWarning: ellipse geometry not supported yet", level=1, func = inspect.stack()[0][3]) 
                                         segments = []
                                         break
 
@@ -275,7 +277,7 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
                                     lastPt = segmEndCoord 
 
                                 if key2 == "b": # bezier curve (endPt, controlPts) 
-                                    logToUser("SpeckleWarning: bezier curve geometry not supported yet", 1) 
+                                    logToUser("SpeckleWarning: bezier curve geometry not supported yet", level=1, func = inspect.stack()[0][3]) 
                                     segments = []
                                     break
                                     r'''
@@ -345,7 +347,7 @@ def curveToSpeckle(geom, geomType, feature, layer) -> Union[Circle, Arc, Polylin
         
         print(boundary)
     except Exception as e:
-        logToUser(e)  
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])  
     return boundary 
 
 
@@ -362,7 +364,7 @@ def lineFrom2pt(pt1: List[float], pt2: List[float]):
         line.end = Point.from_list(pt2)
         line.start.units = line.end.units = "m" 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return line 
 
 def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyline:
@@ -387,7 +389,7 @@ def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyli
         polyline = arcpy.Polyline( arcpy.Array(pts_coord_list), sr, has_z=True )
         #print(polyline.JSON)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polyline
 
 
@@ -400,7 +402,7 @@ def lineToNative(line: Line, sr: arcpy.SpatialReference) -> arcpy.Polyline:
         return line
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def curveToNative(poly: Curve, sr: arcpy.SpatialReference) -> arcpy.Polyline:
@@ -410,7 +412,7 @@ def curveToNative(poly: Curve, sr: arcpy.SpatialReference) -> arcpy.Polyline:
         curve = polylineToNative(display, sr) 
         return curve
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def arcToNative(poly: Arc, sr: arcpy.SpatialReference) -> arcpy.Polyline:
@@ -419,10 +421,11 @@ def arcToNative(poly: Arc, sr: arcpy.SpatialReference) -> arcpy.Polyline:
         arc = arcToNativePolyline(poly, sr) #QgsCircularString(pointToNative(poly.startPoint), pointToNative(poly.midPoint), pointToNative(poly.endPoint))
         return arc
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
 
-def ellipseToNative():
+def ellipseToNative(poly: Ellipse, sr: arcpy.SpatialReference):
+    logToUser("Ellipse geometry is not supported yet", level=1)
     return
 
 def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
@@ -453,7 +456,7 @@ def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
         curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr , has_z=True)
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return curve
 
 def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Polyline:
@@ -470,7 +473,7 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
             elif isinstance(segm,Circle):  converted = circleToNative(segm, sr) # QgsLineString
             elif isinstance(segm,Arc):  converted = arcToNativePolyline(segm, sr) # QgsLineString
             else: # either return a part of the curve, of skip this segment and try next
-                logToUser(f"Part of the polycurve cannot be converted", 1)
+                logToUser(f"Part of the polycurve cannot be converted", level=1, func = inspect.stack()[0][3])
                 curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr , has_z=True)
                 return curve
             if converted is not None: 
@@ -487,14 +490,14 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
                         if len(points)>0 and pt.X == points[len(points)-1][0] and pt.Y == points[len(points)-1][1] and pt_z == points[len(points)-1][2]: pass
                         else: points.append(pointToCoord(Point(x=pt.X, y = pt.Y, z = pt_z, units = "m"))) # e.g. [[64.4584221540162, 5.499999999999999, 0.0], [64.45461685210796, 5.587155742747657, 0.0]]
             else:
-                logToUser(f"Part of the polycurve cannot be converted", 1)
+                logToUser(f"Part of the polycurve cannot be converted", level=1, func = inspect.stack()[0][3])
                 curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True )
                 return curve
         #print(curve)
         
         curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True )
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return curve
 
 def arcToNativePolyline(poly: Union[Arc, Circle], sr: arcpy.SpatialReference):
@@ -505,7 +508,7 @@ def arcToNativePolyline(poly: Union[Arc, Circle], sr: arcpy.SpatialReference):
         points = [pointToCoord(p) for p in pointsSpeckle]
         curve = arcpy.Polyline( arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True )
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return curve
 
 
@@ -529,7 +532,7 @@ def specklePolycurveToPoints(poly: Polycurve) -> List[Point]:
             points.extend(pts)
             
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return points
 
 def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]: 
@@ -579,7 +582,7 @@ def speckleArcCircleToPoints(poly: Union[Arc, Circle]) -> List[Point]:
             points.append(pt)
         if isinstance(poly, Arc): points.append(poly.endPoint)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return points
 
 
@@ -596,7 +599,7 @@ def getArcRadianAngle(arc: Arc) -> List[float]:
         if angle2 > angle1 and normal == -1: interval = abs( (2*math.pi-angle2) + angle1)
         return interval, angle1, angle2
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None, None, None
 
 def getArcAngles(poly: Arc) -> Tuple[float]: 
@@ -618,7 +621,7 @@ def getArcAngles(poly: Arc) -> Tuple[float]:
         return angle1, angle2 
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None, None 
 
 def getArcNormal(poly: Arc, midPt: Point): 
@@ -651,7 +654,7 @@ def getArcNormal(poly: Arc, midPt: Point):
         print(normal)
         return normal
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
 
 
@@ -674,5 +677,5 @@ def getArcCenter(p1: Point, p2: Point, p3: Point) -> Tuple[List, float]:
         center = center.tolist()
         return center, radius
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None, None

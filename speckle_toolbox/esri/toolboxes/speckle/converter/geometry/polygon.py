@@ -6,8 +6,10 @@ from arcpy.arcobjects.arcobjects import SpatialReference
 from specklepy.objects import Base
 from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, Line
 
+import inspect 
+
 try:
-    from speckle.converter.geometry.mesh import rasterToMesh, constructMesh, meshPartsFromPolygon
+    from speckle.converter.geometry.mesh import constructMesh, constructMeshFromRaster, meshPartsFromPolygon
     from speckle.converter.geometry.point import pointToCoord, pointToNative
     from speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
@@ -17,10 +19,10 @@ try:
                                                     specklePolycurveToPoints
                                                     )
     from speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import rasterToMesh, constructMesh, meshPartsFromPolygon
+    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, constructMesh, meshPartsFromPolygon
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
@@ -30,7 +32,7 @@ except:
                                                     specklePolycurveToPoints
                                                     )
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 
 import math
@@ -76,7 +78,7 @@ def polygonToSpeckleMesh(feature, index: int, layer, multitype: bool):
         polygon.displayValue = [ mesh ] 
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon 
 
 def getPolyBoundaryVoids(geom, layer, multiType: bool):
@@ -134,7 +136,7 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                     voids.append(void)
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return boundary, voids
 
 def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
@@ -168,7 +170,7 @@ def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
             polygon.append(polygonToSpeckle(poly, index, layer, poly.isMultipart))
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon
 
 
@@ -281,12 +283,12 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
             #print(polygon)
             col = featureColorfromNativeRenderer(index, layer)
             colors = [col for i in ran] # apply same color for all vertices
-            mesh = rasterToMesh(vertices, faces, colors)
+            mesh = constructMesh(vertices, faces, colors)
             polygon.displayValue = mesh 
         #print("print resulted polygon")
         #print(polygon)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon
 
 def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
@@ -338,5 +340,5 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
         polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return polygon

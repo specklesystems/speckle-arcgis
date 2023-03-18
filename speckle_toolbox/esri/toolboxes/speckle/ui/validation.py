@@ -6,11 +6,13 @@ from specklepy.transports.server import ServerTransport
 from specklepy.api.client import SpeckleClient
 from specklepy.logging.exceptions import SpeckleException, GraphQLException
 
+import inspect 
+
 import arcpy 
 try:
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
   
 def tryGetStream (sw: StreamWrapper) -> Union[Stream, None]:
     try:
@@ -20,7 +22,7 @@ def tryGetStream (sw: StreamWrapper) -> Union[Stream, None]:
             raise SpeckleException(stream.errors[0]['message'])
         return stream
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
 
 def validateStream(streamWrapper: StreamWrapper) -> Union[Stream, None]:
@@ -29,11 +31,11 @@ def validateStream(streamWrapper: StreamWrapper) -> Union[Stream, None]:
         if isinstance(stream, SpeckleException): return None
 
         if stream.branches is None:
-            logToUser("Stream has no branches")
+            logToUser("Stream has no branches", level=2, func = inspect.stack()[0][3])
             return None
         return stream
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 
@@ -47,26 +49,26 @@ def validateBranch(stream: Stream, branchName: str, checkCommits: bool) ->  Unio
                 branch = b
                 break
         if branch is None: 
-            logToUser("Failed to find a branch")
+            logToUser("Failed to find a branch", level=2, func = inspect.stack()[0][3])
             return None
         if checkCommits == True:
             if branch.commits is None:
-                logToUser("Failed to find a branch")
+                logToUser("Failed to find a branch", level=2, func = inspect.stack()[0][3])
                 return None
             if len(branch.commits.items)==0:
-                logToUser("Branch contains no commits")
+                logToUser("Branch contains no commits", level=2, func = inspect.stack()[0][3])
                 return None
         return branch
     
     except Exception as e: 
-        logToUser(str(e)) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
                 
 def validateCommit(branch: Branch, commitId: str) -> Union[Commit, None]:
     try:
         commit = None
         try: commitId = commitId.split(" | ")[0]
-        except: logToUser("Commit ID is not valid")
+        except: logToUser("Commit ID is not valid", level=2, func = inspect.stack()[0][3])
 
         for i in branch.commits.items:
             if i.id == commitId:
@@ -75,18 +77,18 @@ def validateCommit(branch: Branch, commitId: str) -> Union[Commit, None]:
         if commit is None:
             try: 
                 commit = branch.commits.items[0]
-                logToUser("Failed to find a commit. Receiving Latest")
+                logToUser("Failed to find a commit. Receiving Latest", level=2, func = inspect.stack()[0][3])
             except: 
-                logToUser("Failed to find a commit")
+                logToUser("Failed to find a commit", level=2, func = inspect.stack()[0][3])
                 return None
         return commit
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
 def validateTransport(client: SpeckleClient, streamId: str) -> Union[ServerTransport, None]:
     try: 
         transport = ServerTransport(client=client, stream_id=streamId)
         return transport
     except Exception as e: 
-        logToUser("Make sure you have sufficient permissions: " + str(e))
+        logToUser("Make sure you have sufficient permissions: " + str(e), level=2, func = inspect.stack()[0][3])
         return None

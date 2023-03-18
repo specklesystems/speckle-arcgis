@@ -3,12 +3,14 @@ from typing import List
 from specklepy.objects.geometry import Point
 import arcpy
 
+import inspect 
+
 try: 
     from speckle.converter.layers.utils import get_scale_factor
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 
 def multiPointToSpeckle(geom, feature, layer, multiType: bool):
@@ -23,7 +25,7 @@ def multiPointToSpeckle(geom, feature, layer, multiType: bool):
                 #print(type(pt))
                 if pt != None: pointList.append(pointToSpeckle(pt, feature, layer)) 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return pointList
 
 def pointToSpeckle(pt, feature, layer):
@@ -51,7 +53,7 @@ def pointToSpeckle(pt, feature, layer):
         #print(specklePoint)
         return specklePoint
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
@@ -63,7 +65,7 @@ def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
         return geom
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def pointToCoord(point: Point) -> List[float]:
@@ -74,7 +76,7 @@ def pointToCoord(point: Point) -> List[float]:
         #print(coords)
         return coords
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return [None, None, None]
 
 def scalePointToNative(point: Point, units: str) -> Point:
@@ -87,7 +89,7 @@ def scalePointToNative(point: Point, units: str) -> Point:
         pt.z = 0 if math.isnan(point.z) else point.z * scaleFactor
         return pt
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def addZtoPoint(coords: List): 
@@ -95,5 +97,5 @@ def addZtoPoint(coords: List):
         if len(coords) == 2: coords.append(0)
         return coords
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 

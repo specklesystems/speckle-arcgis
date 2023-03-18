@@ -5,6 +5,8 @@ import os
 
 from typing import Dict
 
+import inspect 
+
 import arcpy 
 from arcpy._mp import ArcGISProject, Layer as arcLayer
 from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
@@ -15,10 +17,10 @@ from specklepy.objects.other import RenderMaterial
 
 try:
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 def jsonFromLayerStyle(layerArcgis, path_style):
     # write updated renderer to file and get layerStyle variable 
@@ -30,7 +32,7 @@ def jsonFromLayerStyle(layerArcgis, path_style):
         os.remove(path_style)
         return layerStyle
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None 
 
 def symbol_color_to_speckle(color: dict):
@@ -41,7 +43,7 @@ def symbol_color_to_speckle(color: dict):
         b = int(color['RGB'][2])
         newColor = (r<<16) + (g<<8) + b
     except Exception as e:
-        logToUser(e, 1)
+        logToUser(str(e), level=1, func = inspect.stack()[0][3])
     return newColor
 
 
@@ -57,7 +59,7 @@ def colorFromRenderMaterial(material):
             color = {'RGB': [r, g, b, 100]}
             #print(color)
         except Exception as e:
-            logToUser(e, 1)
+            logToUser(str(e), level=1, func = inspect.stack()[0][3])
     return color
 
 def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetColors: List[RenderMaterial], layerArcgis, f_class, existingAttrs: List) -> Union[None, Dict[str, Any]] :
@@ -106,7 +108,7 @@ def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetCo
             #print(layerArcgis)
             return layerArcgis 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 
@@ -239,7 +241,7 @@ def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layer
 
                 else: return None 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 def get_rgb_from_speckle(rgb: int) -> Tuple[int, int, int]:
@@ -261,7 +263,7 @@ def check_rgb(r:int, g:int, b:int) -> Tuple[int, int, int]:
         return r,g,b
     
     except Exception as e:
-        logToUser(e) 
+        logToUser(str(e), level=2, func = inspect.stack()[0][3]) 
         return 0, 0, 0
 
 
@@ -379,7 +381,7 @@ def rasterRendererToNative(project: ArcGISProject, active_map, layerGroup,  laye
                 sym.updateColorizer('RasterStretchColorizer')
                 arcLayer.symbology = sym
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     
     return arcLayer
 
@@ -588,7 +590,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
         else: return None
     
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
 
@@ -691,7 +693,7 @@ def featureColorfromNativeRenderer(index: int, arcLayer: arcLayer) -> int:
             print('Else')
             return (100<<16) + (100<<8) + 100
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     
     #print("final color: ")
     #print(color) 

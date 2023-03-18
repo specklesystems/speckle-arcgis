@@ -5,6 +5,8 @@ import math
 from specklepy.objects.geometry import Mesh, Point
 from specklepy.objects.other import RenderMaterial
 
+import inspect 
+
 import shapefile
 from shapefile import TRIANGLE_STRIP, TRIANGLE_FAN, OUTER_RING
 try: 
@@ -12,13 +14,13 @@ try:
     from speckle.converter.geometry.point import pointToNative
     from speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle.converter.layers.utils import get_scale_factor
-    from speckle.plugin_utils.logger import logToUser
+    from speckle.ui.logger import logToUser
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 from panda3d.core import Triangulator
 
@@ -56,7 +58,7 @@ def meshToNative(meshes: List[Mesh], path: str):
                 except: pass
         w.close()
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return path
 
 
@@ -99,7 +101,7 @@ def writeMeshToShp(meshes: List[Mesh], path: str):
                         except: pass
         w.close()
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return path
 
 
@@ -119,7 +121,7 @@ def fill_multi_mesh_parts(w: shapefile.Writer, meshes: List[Mesh], geom_id: str)
         w.multipatch(parts_list, partTypes=types_list ) # one type for each part
         w.record(geom_id)
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return w
 
 def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str):
@@ -131,7 +133,7 @@ def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str):
         w.record(geom_id)
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return w
 
 def deconstructSpeckleMesh(mesh: Mesh):
@@ -159,8 +161,17 @@ def deconstructSpeckleMesh(mesh: Mesh):
             except: break # when out of range 
 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return parts_list, types_list
+
+def constructMeshFromRaster(vertices, faces, colors):
+    mesh = None
+    try:
+        mesh = Mesh.create(vertices, faces, colors)
+        mesh.units = "m"
+    except Exception as e:
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
+    return mesh
 
 def constructMesh(vertices, faces, colors):
     mesh = None
@@ -171,7 +182,7 @@ def constructMesh(vertices, faces, colors):
         material.diffuse = colors[0]
         mesh.renderMaterial = material 
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return mesh
 
 def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]], existing_vert: int, index: int, layer):
@@ -266,44 +277,5 @@ def meshPartsFromPolygon(polyBorder: List[Point], voidsAsPts: List[List[Point]],
 
         return total_vertices, vertices, faces, colors
     except Exception as e:
-        logToUser(e)
+        logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None, None, None, None 
-
-r'''
-def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh):
-    scale = get_scale_factor(mesh.units)
-
-    parts_list = []
-    types_list = []
-    count = 0 # sequence of vertex (not of flat coord list) 
-    try:
-        #print(len(mesh.faces))
-        if len(mesh.faces) % 4 == 0 and (mesh.faces[0] == 0 or mesh.faces[0] == 3):
-            for f in mesh.faces:
-                try:
-                    if mesh.faces[count] == 0 or mesh.faces[count] == 3: # only handle triangles
-                        f1 = [ scale*mesh.vertices[mesh.faces[count+1]*3], scale*mesh.vertices[mesh.faces[count+1]*3+1], scale*mesh.vertices[mesh.faces[count+1]*3+2] ]
-                        f2 = [ scale*mesh.vertices[mesh.faces[(count+2)]*3], scale*mesh.vertices[mesh.faces[(count+2)]*3+1], scale*mesh.vertices[mesh.faces[(count+2)]*3+2] ]
-                        f3 = [ scale*mesh.vertices[mesh.faces[(count+3)]*3], scale*mesh.vertices[mesh.faces[(count+3)]*3+1], scale*mesh.vertices[mesh.faces[(count+3)]*3+2] ]
-                        parts_list.append([ f1, f2, f3 ])
-                        types_list.append(TRIANGLE_FAN)
-                        count += 4
-                    else: 
-                        count += mesh.faces[count+1]
-                except: break
-            w.multipatch(parts_list, partTypes=types_list ) # one type for each part
-            w.record('displayMesh')
-        else: print("not triangulated mesh")
-
-    except Exception as e: pass #; print(e)
-    return w
-'''
-
-def rasterToMesh(vertices, faces, colors):
-    try:
-        mesh = Mesh.create(vertices, faces, colors)
-        mesh.units = "m"
-        return mesh
-    except Exception as e:
-        logToUser(e)
-        return None
