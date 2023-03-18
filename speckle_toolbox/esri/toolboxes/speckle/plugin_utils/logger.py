@@ -20,18 +20,14 @@ def createWindow(msg_old: str, func=None, level: int = 2):
             #msg.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint)
 
             msg = ""
-            if len(msg_old)>60:
+            if len(msg_old)>80:
                   try:
                         for i, x in enumerate(msg_old):
-                              print(x)
                               msg += x
-                              if i!=0 and i%60 == 0: msg += "\n"
-                              print(msg)
+                              if i!=0 and i%80 == 0: msg += "\n"
                   except Exception as e: print(e)
             else: 
                   msg = msg_old
-
-            print(msg)
 
             if level==0: 
                   window.setWindowTitle("Info")
