@@ -278,18 +278,42 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
     print("Layer to Native")
     try:
         project = arcpy.mp.ArcGISProject("CURRENT")
+
+        sr = arcpy.SpatialReference().loadFromString(layer.crs.wkt)
         if layer.type is None:
             # Handle this case
             return
         elif layer.type.endswith("VectorLayer"):
+            meshLayer = 0
             for f in layer.features:
-                for g in f["geometry"].displayValue:
-                    if isinstance(g, Mesh):
+                if meshLayer >0: break
+                if isinstance (f["geometry"], Base):
+                    try:
+                        bound = f["geometry"].boundary
+                        break 
+                    except: 
+                        for g in f["geometry"].displayValue:
+                            if isinstance(g, Mesh):
+                                try:
+                                    bimLayerToNative(layer.features, layer.name, streamBranch, sr)
+                                    meshLayer += 1
+                                    break 
+                                except: pass 
+                elif isinstance (f["geometry"], List):
+                    for v in f["geometry"]:
                         try:
-                            bimLayerToNative(layer.features, layer.name, streamBranch, layer.crs.wkt)
+                            bound = v.boundary
                             break 
-                        except: pass 
-            return vectorLayerToNative(layer, streamBranch, project)
+                        except: 
+                            for g in v.displayValue:
+                                if isinstance(g, Mesh):
+                                    try:
+                                        bimLayerToNative(layer.features, layer.name, streamBranch, sr)
+                                        meshLayer += 1
+                                        break 
+                                    except: pass 
+            if meshLayer==0:
+                return vectorLayerToNative(layer, streamBranch, project)
         elif layer.type.endswith("RasterLayer"):
             return rasterLayerToNative(layer, streamBranch, project)
         return None
@@ -313,7 +337,19 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
             try: geom = geom["geometry"] # in case it was originally GIS layer
             except: pass
 
-            if geom.speckle_type =='Objects.Geometry.Mesh':
+            if isinstance(geom, List): 
+                for g in geom:
+                    if g.speckle_type =='Objects.Geometry.Mesh':
+                        geom_meshes.append(g)
+                    else:
+                        try: 
+                            if g.displayValue: geom_meshes.append(g)
+                        except:
+                            try: 
+                                if g["@displayValue"]: geom_meshes.append(g)
+                            except: pass
+                
+            elif geom.speckle_type =='Objects.Geometry.Mesh':
                 geom_meshes.append(geom)
             else:
                 try: 
@@ -321,10 +357,7 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
                 except:
                     try: 
                         if geom["@displayValue"]: geom_meshes.append(geom)
-                    except:
-                        try: 
-                            if geom.displayMesh: geom_meshes.append(geom)
-                        except: pass
+                    except: pass
 
         if len(geom_meshes)>0: layer_meshes = bimVectorLayerToNative(geom_meshes, layerName, "Mesh", streamBranch, project, sr)
 
@@ -524,25 +557,26 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         print(heads)
         print(len(heads))
         
-        with arcpy.da.UpdateCursor(f_class, heads) as cur:
-            # For each row, evaluate the WELL_YIELD value (index position 
-            # of 0), and update WELL_CLASS (index position of 1)
-            shp_num = 0
-            try:
-                for rowShape in cur: 
-                    for i,r in enumerate(rowShape):
-                        rowShape[i] = rowValues[shp_num][i]
-                        if matrix[i][1] == 'TEXT' and rowShape[i] is not None: rowShape[i] = str(rowValues[shp_num][i]) 
-                        if isinstance(rowValues[shp_num][i], str): # cut if string is too long
-                            rowShape[i] = rowValues[shp_num][i][:255]
-                    cur.updateRow(rowShape)
-                    shp_num += 1
-            except Exception as e: 
-                print("Layer attr error: " + str(e))
-                print(shp_num)
-                print(len(rowValues))
-                logToUser("Layer attribute error: " + e, level=2, func = inspect.stack()[0][3])
-        del cur 
+        if len(heads) > 0:
+            with arcpy.da.UpdateCursor(f_class, heads) as cur:
+                # For each row, evaluate the WELL_YIELD value (index position 
+                # of 0), and update WELL_CLASS (index position of 1)
+                shp_num = 0
+                try:
+                    for rowShape in cur: 
+                        for i,r in enumerate(rowShape):
+                            rowShape[i] = rowValues[shp_num][i]
+                            if matrix[i][1] == 'TEXT' and rowShape[i] is not None: rowShape[i] = str(rowValues[shp_num][i]) 
+                            if isinstance(rowValues[shp_num][i], str): # cut if string is too long
+                                rowShape[i] = rowValues[shp_num][i][:255]
+                        cur.updateRow(rowShape)
+                        shp_num += 1
+                except Exception as e: 
+                    print("Layer attr error: " + str(e))
+                    print(shp_num)
+                    print(len(rowValues))
+                    logToUser("Layer attribute error: " + e, level=2, func = inspect.stack()[0][3])
+            del cur 
         
         print("create layer:")
         vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)

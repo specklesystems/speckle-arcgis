@@ -33,7 +33,7 @@ def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
                 #print(l.longName)
                 if l.isFeatureLayer:
                     # condition for feature layers:
-                    fields = arcpy.ListFields(l.dataSource)
+                    fields =  [f.name for f in arcpy.ListFields(l.dataSource)] 
                     print(fields)
                     if "Speckle_ID" in fields or "speckle_id" in fields:
                         gis_project.activeMap.removeLayer(l) 

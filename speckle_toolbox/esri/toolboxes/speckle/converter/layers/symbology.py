@@ -104,6 +104,8 @@ def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetCo
                             #print("found label")
                             material = fetColors[i]
                             #print(material)
+                            print("Symbol: ")
+                            print(itm.symbol)
                             itm.symbol.color = colorFromSpeckle(material) 
                             itm.label = label
                             break
@@ -112,7 +114,7 @@ def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetCo
             return layerArcgis 
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
-        return None
+        return layerArcgis
 
 
 def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layerSpeckle: Union[Layer, VectorLayer], layerArcgis, f_class, existingAttrs: List) -> Union[None, Dict[str, Any]] :

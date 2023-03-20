@@ -17,6 +17,7 @@ def logToUser(msg: str, func=None, level: int = 2, plugin = None, blue = False):
 
       try: 
             if func is not None: msg += "::" + str(func)
+            print(msg)
             writeToLog(msg, level)
             if dockwidget is None: return
 
