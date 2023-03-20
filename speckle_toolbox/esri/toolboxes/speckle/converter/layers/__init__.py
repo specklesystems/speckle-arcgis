@@ -479,21 +479,23 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
                     try: # get render material from any part of the mesh (list of items in displayValue)
                         for k, item in enumerate(f.displayValue):
                             try:
-                                fetColors.append(item.renderMaterial)  
+                                fetColors.append(item.renderMaterial.diffuse)  
                                 colorFound += 1
                                 break
                             except: pass
+                        if colorFound == 0: fetColors.append(f.renderMaterial.diffuse)
                     except: 
                         try:
                             for k, item in enumerate(f["@displayValue"]):
                                 try: 
-                                    fetColors.append(item.renderMaterial) 
+                                    fetColors.append(item.renderMaterial.diffuse) 
                                     colorFound += 1
                                     break
                                 except: pass
+                            if colorFound == 0: fetColors.append(f.renderMaterial.diffuse)
                         except: 
                             try:
-                                fetColors.append(f.renderMaterial) 
+                                fetColors.append(f.displayStyle.color) 
                                 colorFound += 1
                             except: pass
                 

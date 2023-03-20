@@ -99,7 +99,11 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
         for key, variant in fields.items(): 
             try: value = feature[key]
             except: 
-                if key == 'Speckle_ID': value = feature['id'] 
+                if key == 'Speckle_ID': 
+                    try: 
+                        value = str(feature["speckle_id"]) # if GIS already generated this field
+                    except:
+                        value = str(feature["id"])
                 else: 
                     arcpy.AddWarning(f'Field {key} not found')
                     return None 

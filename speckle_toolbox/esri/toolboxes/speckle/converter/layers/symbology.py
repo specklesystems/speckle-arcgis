@@ -47,20 +47,20 @@ def symbol_color_to_speckle(color: dict):
     return newColor
 
 
-def colorFromRenderMaterial(material):
+def colorFromSpeckle(rgb):
 
     color = {'RGB': [245, 245, 245, 100]} #Objects.Other.RenderMaterial
-    if material is not None:
+    if rgb is not None:
         try: 
-            rgb = material.diffuse
             r = (rgb & 0xFF0000) >> 16
             g = (rgb & 0xFF00) >> 8
             b = rgb & 0xFF 
             color = {'RGB': [r, g, b, 100]}
-            #print(color)
+            return color
+        
         except Exception as e:
             logToUser(str(e), level=1, func = inspect.stack()[0][3])
-    return color
+            return {'RGB': [245, 245, 245, 100]}
 
 def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetColors: List[RenderMaterial], layerArcgis, f_class, existingAttrs: List) -> Union[None, Dict[str, Any]] :
     print("___________APPLY VECTOR RENDERER______________")
@@ -101,7 +101,7 @@ def cadBimRendererToNative(project: ArcGISProject, active_map, layerGroup, fetCo
                             #print("found label")
                             material = fetColors[i]
                             #print(material)
-                            itm.symbol.color = colorFromRenderMaterial(material) 
+                            itm.symbol.color = colorFromSpeckle(material) 
                             itm.label = label
                             break
             layerArcgis.symbology = sym
