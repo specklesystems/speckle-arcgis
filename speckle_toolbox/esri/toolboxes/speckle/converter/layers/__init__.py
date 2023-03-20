@@ -17,7 +17,7 @@ try:
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
     from speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
     from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
-    from speckle.plugin_utils.helpers import findOrCreatePath
+    from speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors
 
     from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
     from speckle.converter.layers.utils import findTransformation
@@ -30,7 +30,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors 
 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
@@ -282,6 +282,13 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
             # Handle this case
             return
         elif layer.type.endswith("VectorLayer"):
+            for f in layer.features:
+                for g in f["geometry"].displayValue:
+                    if isinstance(g, Mesh):
+                        try:
+                            bimLayerToNative(layer.features, layer.name, streamBranch, layer.crs.wkt)
+                            break 
+                        except: pass 
             return vectorLayerToNative(layer, streamBranch, project)
         elif layer.type.endswith("RasterLayer"):
             return rasterLayerToNative(layer, streamBranch, project)
@@ -291,7 +298,7 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
         return None 
 
 
-def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str) :
+def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, sr = None) :
     print("01______BIM layer to native")
     try:
         print(layerName)
@@ -303,6 +310,9 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
         layer_meshes = None
         #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
         for geom in layerContentList:
+            try: geom = geom["geometry"] # in case it was originally GIS layer
+            except: pass
+
             if geom.speckle_type =='Objects.Geometry.Mesh':
                 geom_meshes.append(geom)
             else:
@@ -316,15 +326,15 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
                             if geom.displayMesh: geom_meshes.append(geom)
                         except: pass
 
-        if len(geom_meshes)>0: layer_meshes = bimVectorLayerToNative(geom_meshes, layerName, "Mesh", streamBranch, project)
+        if len(geom_meshes)>0: layer_meshes = bimVectorLayerToNative(geom_meshes, layerName, "Mesh", streamBranch, project, sr)
 
-        return True
+        return layer_meshes
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return False
 
 
-def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
+def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, streamBranch: str, project: ArcGISProject, sr = None): 
     # no support for mltipatches, maybe in 3.1: https://community.esri.com/t5/arcgis-pro-ideas/better-support-for-multipatches-in-arcpy/idi-p/953614/page/2#comments
     print("02_________BIM vector layer to native_____")
     try:
@@ -336,9 +346,9 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         layerName = layerName + "_" + geomType
         #if not "__Structural_Foundations_Mesh" in layerName: return None
         
-        sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
         active_map = project.activeMap
-        
+        if sr is None: sr = arcpy.SpatialReference(text = active_map.spatialReference.exportToString())
+                
         if sr.type == "Geographic": 
             logToUser(f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly", level=1, func = inspect.stack()[0][3])
 
@@ -457,7 +467,6 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         fetColors = []
         rows_delete = []
 
-        
         cursor = arcpy.da.SearchCursor(f_class, "Speckle_ID")
         class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
         del cursor 
@@ -480,33 +489,10 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
 
                 new_feat = bimFeatureToNative(exist_feat, newFields, sr, path_bim)
                 if new_feat is not None and new_feat != "": 
-                    colorFound = 0
-                    try: # get render material from any part of the mesh (list of items in displayValue)
-                        for k, item in enumerate(f.displayValue):
-                            try:
-                                fetColors.append(item.renderMaterial.diffuse)  
-                                colorFound += 1
-                                break
-                            except: pass
-                        if colorFound == 0: fetColors.append(f.renderMaterial.diffuse)
-                    except: 
-                        try:
-                            for k, item in enumerate(f["@displayValue"]):
-                                try: 
-                                    fetColors.append(item.renderMaterial.diffuse) 
-                                    colorFound += 1
-                                    break
-                                except: pass
-                            if colorFound == 0: fetColors.append(f.renderMaterial.diffuse)
-                        except: 
-                            try:
-                                fetColors.append(f.displayStyle.color) 
-                                colorFound += 1
-                            except: pass
-                
+                    fetColors = findFeatColors(fetColors, f)
+
                     fets.append(new_feat)
                     fetIds.append(f.id)
-                    if colorFound == 0: fetColors.append(None)
                     #print(len(fets))
             except Exception as e: print(e)
         
@@ -575,7 +561,7 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         
         #os.remove(path_bim)
 
-        return True #last one
+        return vl2 #last one
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return False
@@ -699,9 +685,11 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         if len(matrix)>0: AddFields(str(f_class), matrix)
 
         fets = []
+        fetColors = []
         for f in geomList[:]: 
             new_feat = cadFeatureToNative(f, newFields, sr)
             if new_feat != "" and new_feat != None: 
+                fetColors = findFeatColors(fetColors, f)
                 fets.append(new_feat)
         print("features created")
         print(len(fets))
@@ -739,6 +727,15 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         #active_map.addLayer(new_layer)
         active_map.addLayerToGroup(layerGroup, vl)
         print("Layer created")
+
+        vl2 = None
+        print(newName)
+        for l in project.activeMap.listLayers(): 
+            if l.longName == layerGroup.longName + "\\" + newName:
+                vl2 = l 
+                break
+        path_lyr = cadBimRendererToNative(project, active_map, layerGroup, fetColors, vl2, f_class, heads)
+
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
 

@@ -77,7 +77,7 @@ def writeMeshToShp(meshes: List[Mesh], path: str):
         #print(meshes)
         #print(mesh.units)
         w = shapefile.Writer(path) 
-        w.field('speckle_id', 'C')
+        w.field('Speckle_ID', 'C')
 
         shapes = []
         for geom in meshes:

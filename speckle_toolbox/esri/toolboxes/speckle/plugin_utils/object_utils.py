@@ -70,7 +70,7 @@ def callback(base: Base, streamBranch: str) -> bool:
         if isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer):
             if isinstance(base, Layer):
                 logToUser(f"Speckle class \"Layer\" will be deprecated in future updates in favour of \"VectorLayer\" or \"RasterLayer\"", level=0, func = inspect.stack()[0][3]) 
-            layer = layerToNative(base, streamBranch)
+            layerToNative(base, streamBranch)
             #print(layer)
             #if layer is not None:
             #    logToUser("Layer created: " + layer.name(), level=0)

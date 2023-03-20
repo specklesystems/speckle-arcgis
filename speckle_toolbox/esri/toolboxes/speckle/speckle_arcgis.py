@@ -309,6 +309,7 @@ class SpeckleGIS:
         #    self.iface.removeToolBarIcon(action)
 
     def onRunButtonClicked(self):
+        self.dockwidget.msgLog.setGeometry(0, 0, self.dockwidget.frameSize().width(), self.dockwidget.frameSize().height())
         if self.btnAction == 0: self.onSend()
         elif self.btnAction == 1: self.onReceive()
 
