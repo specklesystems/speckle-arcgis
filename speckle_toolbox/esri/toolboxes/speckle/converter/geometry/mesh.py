@@ -1,3 +1,5 @@
+from datetime import datetime
+import os
 from typing import List
 import arcpy
 import math
@@ -9,25 +11,31 @@ import inspect
 
 import shapefile
 from shapefile import TRIANGLE_STRIP, TRIANGLE_FAN, OUTER_RING
+
 try: 
     from speckle.converter.layers.utils import get_scale_factor
     from speckle.converter.geometry.point import pointToNative
     from speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle.converter.layers.utils import get_scale_factor
     from speckle.ui.logger import logToUser
+    from speckle.plugin_utils.helpers import findOrCreatePath
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
 
 from panda3d.core import Triangulator
 
-def meshToNative(meshes: List[Mesh], path: str):
+def meshToNative(meshes: List[Mesh], path: str = ""):
     """Converts a Speckle Mesh to MultiPatch"""
     print("06___________________Mesh to Native")
     try:
+        if path == "" :
+            path = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+            findOrCreatePath(path)
         #print(meshes)
         #print(mesh.units)
         w = shapefile.Writer(path) 

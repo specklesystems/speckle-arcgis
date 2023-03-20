@@ -1,6 +1,7 @@
 """
 Contains all Layer related classes and methods.
 """
+from datetime import datetime
 import os
 from typing import Any, List, Tuple, Union
 
@@ -9,7 +10,7 @@ from typing import Any, List, Tuple, Union
 
 #from regex import D
 
-import inspect 
+import inspect
 
 try:
     from speckle.converter.layers.CRS import CRS
@@ -21,7 +22,7 @@ try:
     from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
     from speckle.converter.layers.utils import findTransformation
     from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
-    from speckle.plugin_utils.helpers import validateNewFclassName
+    from speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
     from speckle.ui.logger import logToUser
 
 except: 
@@ -34,7 +35,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import validateNewFclassName
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
 
 from specklepy.objects import Base
@@ -294,6 +295,9 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
     print("01______BIM layer to native")
     try:
         print(layerName)
+        
+        layerName = removeSpecialCharacters(layerName)
+
         project = ArcGISProject("CURRENT")
         geom_meshes = []
         layer_meshes = None
@@ -320,7 +324,6 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
         return False
 
 
-
 def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, streamBranch: str, project: ArcGISProject): 
     # no support for mltipatches, maybe in 3.1: https://community.esri.com/t5/arcgis-pro-ideas/better-support-for-multipatches-in-arcpy/idi-p/953614/page/2#comments
     print("02_________BIM vector layer to native_____")
@@ -328,7 +331,8 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         #get Project CRS, use it by default for the new received layer
         
         vl = None
-        layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+        
+        layerName = removeSpecialCharacters(layerName)
         layerName = layerName + "_" + geomType
         #if not "__Structural_Foundations_Mesh" in layerName: return None
         
@@ -360,9 +364,10 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
 
 
         path = project.filePath.replace("aprx","gdb") #
-        path_bim = "\\".join(project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\BIM_layers\\" + streamBranch+ "\\" + newName + "\\" #arcpy.env.workspace + "\\" #
-        print(path_bim)
-        
+
+        p: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+        #findOrCreatePath(p)
+        path_bim = p + "\\Layers_Speckle\\BIM_layers\\" + streamBranch+ "\\" + newName + "\\" #arcpy.env.workspace + "\\" #
         findOrCreatePath(path_bim)
         print(path_bim)
         
@@ -611,7 +616,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
     vl = None
     try:
         #get Project CRS, use it by default for the new received layer
-        layerName = layerName.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+        layerName = removeSpecialCharacters(layerName)
         layerName = layerName + "_" + geomType
         print(layerName)
         
@@ -743,8 +748,8 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
     print("_________Vector Layer to Native_________")
     vl = None
     try:
-        layerName = layer.name.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
-        
+        layerName = removeSpecialCharacters(layer.name)
+
         print(layerName)
         sr = arcpy.SpatialReference(text=layer.crs.wkt) 
         active_map = project.activeMap
@@ -884,8 +889,8 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
     rasterLayer = None
     try:
 
-        layerName = layer.name.replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
-        
+        layerName = removeSpecialCharacters(layer.name) + "_Speckle"
+
         print(layerName)
         sr = arcpy.SpatialReference(text=layer.crs.wkt) 
         print(layer.crs.wkt)
@@ -895,7 +900,9 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         rasterHasSr = False
         print(path)
 
-        path_bands = "\\".join(path.split("\\")[:-1]) + "\\Layers_Speckle\\raster_bands\\" + streamBranch 
+        p: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+        #findOrCreatePath(p)
+        path_bands = p + "\\Layers_Speckle\\raster_bands\\" + streamBranch 
         findOrCreatePath(path_bands)
 
         try: 

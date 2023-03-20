@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import math
 import os
@@ -5,11 +6,12 @@ import os
 from typing import Dict, Any, Callable, List, Optional, Tuple
 
 from specklepy.objects import Base
+from specklepy.objects.geometry import Mesh
 import arcpy 
 from arcpy.management import CreateCustomGeoTransformation
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
-import inspect 
+import inspect
 
 try: 
     from speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
@@ -19,6 +21,7 @@ try:
     from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle.converter.layers.symbology import jsonFromLayerStyle
     from speckle.ui.logger import logToUser
+    from speckle.plugin_utils.helpers import findOrCreatePath 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
@@ -27,6 +30,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import jsonFromLayerStyle
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath 
 
 import numpy as np
 import colorsys
@@ -85,6 +89,8 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
         try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
         except:  speckle_geom = feature # for created in other software
         #print(speckle_geom)
+
+        arcGisGeom = None
         if isinstance(speckle_geom, list):
             if len(speckle_geom)>1 or geomType == "Multipoint": arcGisGeom = convertToNativeMulti(speckle_geom, sr)
             else: arcGisGeom = convertToNative(speckle_geom[0], sr)
@@ -362,8 +368,12 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         else: 
             #RGB colorizer 
             root_path = "\\".join(project.filePath.split("\\")[:-1])
-            if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
-            path_style = root_path + '\\Layers_Speckle\\raster_bands\\' + selectedLayer.name + '_temp.lyrx'
+            root_path: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+            root_path += '\\Layers_Speckle\\raster_bands\\'
+            findOrCreatePath(root_path)
+            
+            #if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
+            path_style = root_path  + selectedLayer.name + '_temp.lyrx'
             symJson = jsonFromLayerStyle(selectedLayer, path_style)
 
             # read from Json

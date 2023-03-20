@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from typing import Any, List, Tuple, Union
 import copy
@@ -18,9 +19,11 @@ from specklepy.objects.other import RenderMaterial
 try:
     from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
     from speckle.ui.logger import logToUser
+    from speckle.plugin_utils.helpers import findOrCreatePath
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
 
 def jsonFromLayerStyle(layerArcgis, path_style):
     # write updated renderer to file and get layerStyle variable 
@@ -293,10 +296,16 @@ def rasterRendererToNative(project: ArcGISProject, active_map, layerGroup,  laye
             if not hasattr(arcLayer.symbology, 'colorizer'): 
                 # multiband raster, CIMRasterRGBColorizer 
                 # arcpy doesnt support multiband raster symbology: https://community.esri.com/t5/arcgis-api-for-python-questions/why-does-arcpy-mp-arcgis-pro-2-6-mosaic-dataset/td-p/1016312 
-                root_path = "\\".join(project.filePath.split("\\")[:-1])
-                if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
-                path_style = root_path + '\\Layers_Speckle\\raster_bands\\' + newName + '_old.lyrx'
-                path_style2 = root_path + '\\Layers_Speckle\\raster_bands\\' + newName + '_new.lyrx'
+                #root_path = "\\".join(project.filePath.split("\\")[:-1])
+                #f not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
+                
+                root_path: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+                root_path += '\\Layers_Speckle\\raster_bands\\'
+                findOrCreatePath(root_path)
+                
+                path_style = root_path + newName + '_old.lyrx'
+                path_style2 = root_path + newName + '_new.lyrx'
+
                 symJson = jsonFromLayerStyle(arcLayer, path_style)
 
             if renderer['type']  == 'singlebandgray':
@@ -396,9 +405,14 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
                 else: rType = 'singlebandgray'
             except: 
                 rType = "multibandcolor"
-                root_path = "\\".join(project.filePath.split("\\")[:-1])
-                if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
-                path_style = root_path + '\\Layers_Speckle\\raster_bands\\' + arcLayer.name + '_temp.lyrx'
+                #root_path = "\\".join(project.filePath.split("\\")[:-1])
+                #if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
+                
+                root_path: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+                root_path += '\\Layers_Speckle\\raster_bands\\'
+                findOrCreatePath(root_path)
+
+                path_style = root_path + arcLayer.name + '_temp.lyrx'
                 #path_style2 = root_path + '\\' + newName + '_new.lyrx'
                 symJson = jsonFromLayerStyle(arcLayer, path_style)
 

@@ -38,6 +38,8 @@ try:
     from speckle.ui.create_branch import CreateBranchModalDialog
     from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle.ui.logger import logToUser, logToUserWithAction
+    from speckle.plugin_utils.helpers import removeSpecialCharacters
+
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
@@ -50,6 +52,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser, logToUserWithAction
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import removeSpecialCharacters
 
 # Import the code for the dialog
 
@@ -461,7 +464,7 @@ class SpeckleGIS:
 
             # If group exists, remove layers inside  
             newGroupName = streamId + "_" + branch.name + "_" + commit.id
-            
+            newGroupName = removeSpecialCharacters(newGroupName)
             findAndClearLayerGroup(self.gis_project, newGroupName)
             
             print("after create group")
