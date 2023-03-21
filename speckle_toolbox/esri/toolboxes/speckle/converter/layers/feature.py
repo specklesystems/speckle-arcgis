@@ -568,7 +568,11 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                             # REMAP band values to (0,255) range
                             print(e)
                             valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                            colorRVal = colorGVal = colorBVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
+                            if valRange == 0: 
+                                if min(rasterBandVals[bandIndex]) ==0: colorVal = 0
+                                else: colorVal = 255
+                            else: 
+                                colorRVal = colorGVal = colorBVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
                         
                         print("__pixel color_")
                         print(colorRVal)
@@ -582,20 +586,45 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                                 # REMAP band values to (0,255) range
                                 valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
                                 colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
-                                if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                                if colorizer.invertColorRamp is True: 
+                                    if valRange == 0: 
+                                        if float(colorizer.maxLabel) == 0: colorVal = 0
+                                        else: colorVal = 255
+                                    else: 
+                                        colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
                                 color =  (colorVal<<16) + (colorVal<<8) + colorVal
                         except: # if no Min Max labels:
                             # REMAP band values to (0,255) range
                             valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                            colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
+                            
+                            if valRange == 0: 
+                                if min(rasterBandVals[bandIndex]) == 0: colorVal = 0
+                                else: colorVal = 255
+                            else: 
+                                colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
                             color =  (colorVal<<16) + (colorVal<<8) + colorVal
                 else: # rgb
                     # REMAP band values to (0,255) range
-                    if rvalRange is not None and redBand is not None: colorRVal = int( (rasterBandVals[redBand][int(count/4)] - float(rbvalMin)) / rvalRange * 255 )
+                    if rvalRange is not None and redBand is not None: 
+                        if rvalRange == 0: 
+                            if float(rbvalMin) == 0: colorVal = 0
+                            else: colorVal = 255
+                        else: 
+                            colorRVal = int( (rasterBandVals[redBand][int(count/4)] - float(rbvalMin)) / rvalRange * 255 )
                     else: colorRVal = 0
-                    if gvalRange is not None and greenBand is not None: colorGVal = int( (rasterBandVals[greenBand][int(count/4)] - float(gbvalMin)) / gvalRange * 255 )
+                    if gvalRange is not None and greenBand is not None: 
+                        if gvalRange == 0: 
+                            if float(gbvalMin) == 0: colorVal = 0
+                            else: colorVal = 255
+                        else: 
+                            colorGVal = int( (rasterBandVals[greenBand][int(count/4)] - float(gbvalMin)) / gvalRange * 255 )
                     else: colorGVal = 0
-                    if bvalRange is not None and blueBand is not None: colorBVal = int( (rasterBandVals[blueBand][int(count/4)] - float(bbvalMin)) / bvalRange * 255 )
+                    if bvalRange is not None and blueBand is not None: 
+                        if bvalRange == 0: 
+                            if float(bbvalMin) == 0: colorVal = 0
+                            else: colorVal = 255
+                        else: 
+                            colorBVal = int( (rasterBandVals[blueBand][int(count/4)] - float(bbvalMin)) / bvalRange * 255 )
                     else: colorBVal = 0
                     print("__pixel color_")
                     print(colorRVal)

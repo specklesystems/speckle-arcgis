@@ -389,6 +389,9 @@ class SpeckleGIS:
                 message="Sent objects from ArcGIS" if len(message) == 0 else message,
                 source_application="ArcGIS",
             )
+            if isinstance(commit_id, SpeckleException):
+                logToUser("Error creating commit: "+str(commit_id.message), level = 2, func = inspect.stack()[0][3], plugin=self.dockwidget)
+                return
             arcpy.AddMessage("Successfully sent data to stream: " + streamId)
 
             url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
