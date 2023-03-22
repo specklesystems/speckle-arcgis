@@ -289,7 +289,7 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
                 if meshLayer >0: break
                 if isinstance (f["geometry"], Base):
                     try:
-                        bound = f["geometry"].boundary
+                        bound = f["geometry"].boundary # polygon found, default to receiving VectorLayer
                         break 
                     except: 
                         for g in f["geometry"].displayValue:
@@ -302,7 +302,7 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
                 elif isinstance (f["geometry"], List):
                     for v in f["geometry"]:
                         try:
-                            bound = v.boundary
+                            bound = v.boundary # polygon found, default to receiving VectorLayer
                             break 
                         except: 
                             for g in v.displayValue:
@@ -333,9 +333,16 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
         geom_meshes = []
         layer_meshes = None
         #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
-        for geom in layerContentList:
-            try: geom = geom["geometry"] # in case it was originally GIS layer
-            except: pass
+        for geom_old in layerContentList:
+            try: 
+                geom: Base = geom_old["geometry"] # in case it was originally GIS layer
+                fields_to_ignore = ["displayValue", "@displayValue", "displayMesh"]
+                #print(geom_old.get_dynamic_member_names())
+                for p in geom_old.get_dynamic_member_names():
+                    if p not in fields_to_ignore:
+                        geom[p] = geom_old[p]
+
+            except: geom = geom_old
 
             if isinstance(geom, List): 
                 for g in geom:
