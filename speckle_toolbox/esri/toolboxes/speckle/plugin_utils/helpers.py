@@ -78,9 +78,14 @@ def findFeatColors(fetColors, f):
                 except: pass
             if colorFound == 0: fetColors.append(f.renderMaterial.diffuse)
         except: 
-            try:
-                fetColors.append(f.displayStyle.color) 
+            # the Mesh itself has a renderer 
+            try: # get render material from any part of the mesh (list of items in displayValue)
+                fetColors.append(f.renderMaterial.diffuse)  
                 colorFound += 1
-            except: pass
+            except: 
+                try:
+                    fetColors.append(f.displayStyle.color) 
+                    colorFound += 1
+                except: pass
     if colorFound == 0: fetColors.append(None)
     return fetColors
