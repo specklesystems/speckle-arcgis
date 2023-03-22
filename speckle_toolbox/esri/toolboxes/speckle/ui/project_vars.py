@@ -210,6 +210,10 @@ def set_survey_point(self: SpeckleGIS):
         vals =[ str(self.dockwidget.surveyPointLat.text()), str(self.dockwidget.surveyPointLon.text()) ]
 
         self.lat, self.lon = [float(i.replace(" ","")) for i in vals]
+        
+        if self.lat>180 or self.lat<-180 or self.lon >180 or self.lon<-180:
+            logToUser("LAT LON values must be within (-180, 180). You can right-click on the canvas location to copy coordinates in WGS 84", level = 1, plugin=self.dockwidget)
+            return True 
         pt = str(self.lat) + ";" + str(self.lon) 
 
         table = findOrCreateSpeckleTable(project)
