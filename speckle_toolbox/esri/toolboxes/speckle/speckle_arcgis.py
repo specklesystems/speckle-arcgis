@@ -38,6 +38,8 @@ try:
     from speckle.ui.create_branch import CreateBranchModalDialog
     from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle.ui.logger import logToUser, logToUserWithAction
+    from speckle.plugin_utils.helpers import removeSpecialCharacters
+
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
@@ -50,6 +52,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser, logToUserWithAction
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import removeSpecialCharacters
 
 # Import the code for the dialog
 
@@ -306,6 +309,7 @@ class SpeckleGIS:
         #    self.iface.removeToolBarIcon(action)
 
     def onRunButtonClicked(self):
+        self.dockwidget.msgLog.setGeometry(0, 0, self.dockwidget.frameSize().width(), self.dockwidget.frameSize().height())
         if self.btnAction == 0: self.onSend()
         elif self.btnAction == 1: self.onReceive()
 
@@ -385,6 +389,9 @@ class SpeckleGIS:
                 message="Sent objects from ArcGIS" if len(message) == 0 else message,
                 source_application="ArcGIS",
             )
+            if isinstance(commit_id, SpeckleException):
+                logToUser("Error creating commit: "+str(commit_id.message), level = 2, func = inspect.stack()[0][3], plugin=self.dockwidget)
+                return
             arcpy.AddMessage("Successfully sent data to stream: " + streamId)
 
             url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
@@ -461,7 +468,7 @@ class SpeckleGIS:
 
             # If group exists, remove layers inside  
             newGroupName = streamId + "_" + branch.name + "_" + commit.id
-            
+            newGroupName = removeSpecialCharacters(newGroupName)
             findAndClearLayerGroup(self.gis_project, newGroupName)
             
             print("after create group")

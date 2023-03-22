@@ -6,6 +6,11 @@ def findOrCreatePath(path: str):
     if not os.path.exists(path): 
         os.makedirs(path)
 
+def removeSpecialCharacters(text: str) -> str:
+    new_text = text.replace("[","_").replace("]","_").replace(" ","_").replace("-","_").replace("(","_").replace(")","_").replace(":","_").replace("\\","_").replace("/","_").replace("\"","_").replace("&","_").replace("@","_").replace("$","_").replace("%","_").replace("^","_")
+    #new_text = text.encode('iso-8859-1', errors='ignore').decode('utf-8')
+    return new_text
+
 def splitTextIntoLines(text: str = "", number: int= 40) -> str: 
     print("__splitTextIntoLines")
     print(text)
@@ -52,3 +57,30 @@ def validateNewFclassName(newName: str, prefix: str, all_layer_names: List[str])
 
     return fixed_name
     
+def findFeatColors(fetColors, f):
+    
+    colorFound = 0
+    try: # get render material from any part of the mesh (list of items in displayValue)
+        for k, item in enumerate(f.displayValue):
+            try:
+                fetColors.append(item.renderMaterial.diffuse)  
+                colorFound += 1
+                break
+            except: pass
+        if colorFound == 0: fetColors.append(f.renderMaterial.diffuse)
+    except: 
+        try:
+            for k, item in enumerate(f["@displayValue"]):
+                try: 
+                    fetColors.append(item.renderMaterial.diffuse) 
+                    colorFound += 1
+                    break
+                except: pass
+            if colorFound == 0: fetColors.append(f.renderMaterial.diffuse)
+        except: 
+            try:
+                fetColors.append(f.displayStyle.color) 
+                colorFound += 1
+            except: pass
+    if colorFound == 0: fetColors.append(None)
+    return fetColors

@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import math
 import os
@@ -5,11 +6,12 @@ import os
 from typing import Dict, Any, Callable, List, Optional, Tuple
 
 from specklepy.objects import Base
+from specklepy.objects.geometry import Mesh
 import arcpy 
 from arcpy.management import CreateCustomGeoTransformation
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
-import inspect 
+import inspect
 
 try: 
     from speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
@@ -19,6 +21,7 @@ try:
     from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle.converter.layers.symbology import jsonFromLayerStyle
     from speckle.ui.logger import logToUser
+    from speckle.plugin_utils.helpers import findOrCreatePath 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
@@ -27,6 +30,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import jsonFromLayerStyle
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath 
 
 import numpy as np
 import colorsys
@@ -85,6 +89,8 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
         try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
         except:  speckle_geom = feature # for created in other software
         #print(speckle_geom)
+
+        arcGisGeom = None
         if isinstance(speckle_geom, list):
             if len(speckle_geom)>1 or geomType == "Multipoint": arcGisGeom = convertToNativeMulti(speckle_geom, sr)
             else: arcGisGeom = convertToNative(speckle_geom[0], sr)
@@ -99,7 +105,11 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
         for key, variant in fields.items(): 
             try: value = feature[key]
             except: 
-                if key == 'Speckle_ID': value = feature['id'] 
+                if key == 'Speckle_ID': 
+                    try: 
+                        value = str(feature["speckle_id"]) # if GIS already generated this field
+                    except:
+                        value = str(feature["id"])
                 else: 
                     arcpy.AddWarning(f'Field {key} not found')
                     return None 
@@ -358,8 +368,12 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
         else: 
             #RGB colorizer 
             root_path = "\\".join(project.filePath.split("\\")[:-1])
-            if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
-            path_style = root_path + '\\Layers_Speckle\\raster_bands\\' + selectedLayer.name + '_temp.lyrx'
+            root_path: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+            root_path += '\\Layers_Speckle\\raster_bands\\'
+            findOrCreatePath(root_path)
+            
+            #if not os.path.exists(root_path + '\\Layers_Speckle\\raster_bands'): os.makedirs(root_path + '\\Layers_Speckle\\raster_bands')
+            path_style = root_path  + selectedLayer.name + '_temp.lyrx'
             symJson = jsonFromLayerStyle(selectedLayer, path_style)
 
             # read from Json
@@ -554,7 +568,11 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                             # REMAP band values to (0,255) range
                             print(e)
                             valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                            colorRVal = colorGVal = colorBVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
+                            if valRange == 0: 
+                                if min(rasterBandVals[bandIndex]) ==0: colorVal = 0
+                                else: colorVal = 255
+                            else: 
+                                colorRVal = colorGVal = colorBVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
                         
                         print("__pixel color_")
                         print(colorRVal)
@@ -568,20 +586,45 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                                 # REMAP band values to (0,255) range
                                 valRange = float(colorizer.maxLabel) - float(colorizer.minLabel) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
                                 colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - float(colorizer.minLabel)) / valRange * 255 )
-                                if colorizer.invertColorRamp is True: colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
+                                if colorizer.invertColorRamp is True: 
+                                    if valRange == 0: 
+                                        if float(colorizer.maxLabel) == 0: colorVal = 0
+                                        else: colorVal = 255
+                                    else: 
+                                        colorVal = int( (-rasterBandVals[bandIndex][int(count/4)] + float(colorizer.maxLabel)) / valRange * 255 )
                                 color =  (colorVal<<16) + (colorVal<<8) + colorVal
                         except: # if no Min Max labels:
                             # REMAP band values to (0,255) range
                             valRange = max(rasterBandVals[bandIndex]) - min(rasterBandVals[bandIndex]) #(rasterBandMaxVal[bandIndex] - rasterBandMinVal[bandIndex])
-                            colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
+                            
+                            if valRange == 0: 
+                                if min(rasterBandVals[bandIndex]) == 0: colorVal = 0
+                                else: colorVal = 255
+                            else: 
+                                colorVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
                             color =  (colorVal<<16) + (colorVal<<8) + colorVal
                 else: # rgb
                     # REMAP band values to (0,255) range
-                    if rvalRange is not None and redBand is not None: colorRVal = int( (rasterBandVals[redBand][int(count/4)] - float(rbvalMin)) / rvalRange * 255 )
+                    if rvalRange is not None and redBand is not None: 
+                        if rvalRange == 0: 
+                            if float(rbvalMin) == 0: colorVal = 0
+                            else: colorVal = 255
+                        else: 
+                            colorRVal = int( (rasterBandVals[redBand][int(count/4)] - float(rbvalMin)) / rvalRange * 255 )
                     else: colorRVal = 0
-                    if gvalRange is not None and greenBand is not None: colorGVal = int( (rasterBandVals[greenBand][int(count/4)] - float(gbvalMin)) / gvalRange * 255 )
+                    if gvalRange is not None and greenBand is not None: 
+                        if gvalRange == 0: 
+                            if float(gbvalMin) == 0: colorVal = 0
+                            else: colorVal = 255
+                        else: 
+                            colorGVal = int( (rasterBandVals[greenBand][int(count/4)] - float(gbvalMin)) / gvalRange * 255 )
                     else: colorGVal = 0
-                    if bvalRange is not None and blueBand is not None: colorBVal = int( (rasterBandVals[blueBand][int(count/4)] - float(bbvalMin)) / bvalRange * 255 )
+                    if bvalRange is not None and blueBand is not None: 
+                        if bvalRange == 0: 
+                            if float(bbvalMin) == 0: colorVal = 0
+                            else: colorVal = 255
+                        else: 
+                            colorBVal = int( (rasterBandVals[blueBand][int(count/4)] - float(bbvalMin)) / bvalRange * 255 )
                     else: colorBVal = 0
                     print("__pixel color_")
                     print(colorRVal)

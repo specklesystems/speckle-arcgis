@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, Any, List, Union
 import json 
 from specklepy.objects import Base
@@ -30,15 +31,31 @@ def findAndClearLayerGroup(gis_project: ArcGISProject, newGroupName: str = ""):
             #print(l.longName)
             if l.longName.startswith(newGroupName + "\\"):
                 #print(l.longName)
-                gis_project.activeMap.removeLayer(l)
-                groupExists+=1
+                if l.isFeatureLayer:
+                    # condition for feature layers:
+                    fields =  [f.name for f in arcpy.ListFields(l.dataSource)] 
+                    print(fields)
+                    if "Speckle_ID" in fields or "speckle_id" in fields:
+                        gis_project.activeMap.removeLayer(l) 
+                        groupExists+=1
+                elif l.isRasterLayer:
+                    # condition for raster layers: 
+                    if "_Speckle" in l.name:
+                        gis_project.activeMap.removeLayer(l) 
+                        groupExists+=1
+
             elif l.longName == newGroupName: 
                 groupExists+=1
         print(newGroupName)
         if groupExists == 0:
             # create empty group layer file "\\Layers_Speckle\\
-            path = "\\".join(gis_project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\"
+            
+            path: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
+            path += "\\Layers_Speckle\\"
             findOrCreatePath(path)
+
+            #path = "\\".join(gis_project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\"
+            #findOrCreatePath(path)
             lyr_path = path + newGroupName + ".lyrx"
             print(lyr_path)
             try:
