@@ -14,6 +14,8 @@ from specklepy.logging.exceptions import (
 )
 from specklepy.api.wrapper import StreamWrapper 
 from specklepy.api.models import Branch, Stream, Streams
+from specklepy.logging import metrics
+
 from osgeo import osr
 
 import inspect 
@@ -174,6 +176,8 @@ def set_project_layer_selection(self: SpeckleGIS):
                         if len(value) <= i: cursor.insertRow([proj_streams[i], "" , ""])
                 #print(i)
             del cursor 
+            metrics.track("Connector Action", self.active_account, {"name": "Toggle Set layer selection"})
+
             #print(table)
     except Exception as e: 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
@@ -225,6 +229,7 @@ def set_survey_point(self: SpeckleGIS):
             del cursor   
         
         setProjectReferenceSystem(self)
+        metrics.track("Connector Action", self.active_account, {"name": "Toggle Set survey point"})
         return True
 
     except Exception as e:

@@ -23,6 +23,7 @@ import importlib
 
 from specklepy.api.wrapper import StreamWrapper
 from specklepy.api.client import SpeckleClient
+from specklepy.logging import metrics
 
 import arcpy 
 
@@ -263,8 +264,8 @@ class SpeckleGISDialog(QMainWindow):
             self.runButton.clicked.connect(plugin.onRunButtonClicked)
             
             self.streams_add_button.clicked.connect( plugin.onStreamAddButtonClicked )
-            self.reloadButton.clicked.connect(plugin.reloadUI)
-            self.closeButton.clicked.connect(plugin.onClosePlugin)
+            self.reloadButton.clicked.connect(lambda: self.refreshClicked(plugin))
+            self.closeButton.clicked.connect(lambda: self.closeClicked(plugin))
             self.saveSurveyPoint.clicked.connect(plugin.set_survey_point)
             self.saveLayerSelection.clicked.connect(lambda: self.populateLayerDropdown(plugin))
             self.sendModeButton.clicked.connect(lambda: self.setSendMode(plugin))
@@ -279,6 +280,22 @@ class SpeckleGISDialog(QMainWindow):
         
         except Exception as e: 
             logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin=self)
+
+    def refreshClicked(self, plugin):
+        try:
+            metrics.track("Connector Action", plugin.active_account, {"name": "Toggle Refresh"})
+            plugin.reloadUI()
+        except Exception as e:
+            logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=self)
+            return
+
+    def closeClicked(self, plugin):
+        try:
+            metrics.track("Connector Action", plugin.active_account, {"name": "Toggle Close"})
+            plugin.onClosePlugin()
+        except Exception as e:
+            logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=self)
+            return
 
     def setSendMode(self, plugin):
         try:

@@ -21,6 +21,7 @@ from specklepy.api.wrapper import StreamWrapper
 from specklepy.objects import Base
 from specklepy.api.credentials import Account, get_local_accounts #, StreamWrapper
 from specklepy.api.client import SpeckleClient
+from specklepy.logging import metrics
 import webbrowser
 
 import arcpy
@@ -84,6 +85,12 @@ class Toolbox:
         self.alias = "speckle_toolbox_"  
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
+        try: 
+            version = arcpy.GetInstallInfo()['Version']
+            python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
+            metrics.set_host_app("ArcGIS", ', '.join([f"{version}", python_version])) 
+        except: 
+            metrics.set_host_app("ArcGIS")
 
 class Speckle:
     #instances = []
@@ -142,6 +149,7 @@ class SpeckleGIS:
 
     default_account: Account
     accounts: List[Account]
+    active_account: Account
 
     def __init__(self):
         """Constructor. 
@@ -154,6 +162,7 @@ class SpeckleGIS:
         self.current_streams = []
         self.active_stream = None
         self.default_account = None 
+        self.active_account = None
         self.accounts = [] 
 
         self.btnAction = 0
@@ -310,6 +319,13 @@ class SpeckleGIS:
 
     def onRunButtonClicked(self):
         self.dockwidget.msgLog.setGeometry(0, 0, self.dockwidget.frameSize().width(), self.dockwidget.frameSize().height())
+        try:
+            streamWrapper = self.active_stream[0]
+            client = streamWrapper.get_client()
+            self.active_account = client.account 
+        except:
+            pass        
+
         if self.btnAction == 0: self.onSend()
         elif self.btnAction == 1: self.onReceive()
 
@@ -511,6 +527,7 @@ class SpeckleGIS:
             for acc in accounts:
                 if acc.isDefault: 
                     self.default_account = acc 
+                    self.active_account = acc
                     break
             return True
         except Exception as e: 
