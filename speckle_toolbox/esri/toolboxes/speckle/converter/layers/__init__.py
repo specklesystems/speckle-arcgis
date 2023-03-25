@@ -292,6 +292,12 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
                         bound = f["geometry"].boundary # polygon found, default to receiving VectorLayer
                         break 
                     except: 
+                        # skip the value if invalid
+                        try: d = f["geometry"].displayValue
+                        except: 
+                            arcpy.AddError(f"Feature \"{f.id}\" skipped")
+                            continue
+
                         for g in f["geometry"].displayValue:
                             if isinstance(g, Mesh):
                                 try:
@@ -305,6 +311,12 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
                             bound = v.boundary # polygon found, default to receiving VectorLayer
                             break 
                         except: 
+                            # skip the value if invalid
+                            try: d = v.displayValue
+                            except: 
+                                arcpy.AddError(f"Feature \"{f.id}\" skipped")
+                                continue
+
                             for g in v.displayValue:
                                 if isinstance(g, Mesh):
                                     try:
