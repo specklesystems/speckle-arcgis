@@ -285,7 +285,8 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
             col = featureColorfromNativeRenderer(index, layer)
             colors = [col for i in ran] # apply same color for all vertices
             mesh = constructMesh(vertices, faces, colors)
-            polygon.displayValue = mesh 
+            
+            if mesh is not None: polygon.displayValue = [ mesh ] 
         #print("print resulted polygon")
         #print(polygon)
     except Exception as e:
