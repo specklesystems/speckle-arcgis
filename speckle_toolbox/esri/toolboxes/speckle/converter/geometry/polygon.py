@@ -75,7 +75,8 @@ def polygonToSpeckleMesh(feature, index: int, layer, multitype: bool):
         #print("Colors: ")
         #print(colors)
         mesh = constructMesh(vertices, faces, colors)
-        polygon.displayValue = [ mesh ] 
+        if mesh is not None: polygon.displayValue = [ mesh ] 
+        else: pass 
 
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
