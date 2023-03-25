@@ -61,8 +61,19 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
         ######################################### Convert geometry ##########################################
         try:
             geom = convertToSpeckle(f_shape, index, selectedLayer, geomType, featureType) 
-            if geom is not None: print(geom); b["geometry"] = geom 
-            else: b["geometry"] = []
+            
+            b["geometry"] = []
+            if geom is not None and geom!="None": 
+                if isinstance(geom, List):
+                    for g in geom:
+                        if g is not None and g!="None": b["geometry"].append(g)
+                        else:
+                            print(g)
+                else:
+                    b["geometry"] = [geom]
+            else: 
+                print(geom)
+            
         except Exception as error:
             print("Error converting geometry: " + str(error))
             print(selectedLayer)
@@ -114,7 +125,12 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
                     arcpy.AddWarning(f'Field {key} not found')
                     return None 
 
-            if variant == "TEXT": value = str(value) 
+            if variant == "TEXT": 
+                value = str(value)
+                if len(value)>255: 
+                    print(len(value))
+                    value = value[:255] 
+                    arcpy.AddWarning(f"Field \"{key}\" values are trimmed at 255 characters")
             if variant == getVariantFromValue(value) and value != "NULL" and value != "None": 
                 feat.update({key: value})
             else: 
@@ -177,7 +193,12 @@ def addFeatVariant(key, variant, value, f):
     #print("Add feat variant")
     feat = f
     try:
-        if variant == "TEXT": value = str(value) 
+        if variant == "TEXT": 
+            value = str(value)[:255] 
+            if len(value)>255: 
+                print(len(value))
+                value = value[:255] 
+                arcpy.AddWarning(f"Field \"{key}\" values are trimmed at 255 characters")
 
         if value != "NULL" and value != "None":
             #if key == 'area': print(value); print(type(value)); print(getVariantFromValue(value))

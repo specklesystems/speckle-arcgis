@@ -203,7 +203,7 @@ class SpeckleGISDialog(QMainWindow):
 
     def resizeEvent(self, event):
         try:
-            print("resize")
+            #print("resize")
             QtWidgets.QMainWindow.resizeEvent(self, event)
             if self.msgLog.size().height() != 0: # visible
                 self.msgLog.setGeometry(0, 0, self.msgLog.parentWidget.frameSize().width(), self.msgLog.parentWidget.frameSize().height()) #.resize(self.frameSize().width(), self.frameSize().height())
