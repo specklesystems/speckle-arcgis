@@ -75,12 +75,15 @@ def polygonToSpeckleMesh(feature, index: int, layer, multitype: bool):
         #print("Colors: ")
         #print(colors)
         mesh = constructMesh(vertices, faces, colors)
-        if mesh is not None: polygon.displayValue = [ mesh ] 
-        else: pass 
+        if mesh is not None: 
+            polygon.displayValue = [ mesh ] 
+        else: 
+            logToUser("Mesh creation from Polygon failed. Boundaries will be used as displayValue", level = 1, func = inspect.stack()[0][3])
+        return polygon 
 
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
-    return polygon 
+        return None 
 
 def getPolyBoundaryVoids(geom, layer, multiType: bool):
     #print("__getPolyBoundaryVoids__")
@@ -286,12 +289,18 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
             colors = [col for i in ran] # apply same color for all vertices
             mesh = constructMesh(vertices, faces, colors)
             
-            if mesh is not None: polygon.displayValue = [ mesh ] 
-        #print("print resulted polygon")
-        #print(polygon)
+            if mesh is not None: 
+                polygon.displayValue = [ mesh ] 
+            else: 
+                logToUser("Mesh creation from Polygon failed. Boundaries will be used as displayValue", level = 1, func = inspect.stack()[0][3])
+            return polygon
+        else:
+            logToUser("Not enough points for Polygon boundary", level = 1, func = inspect.stack()[0][3])
+            return None
+
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
-    return polygon
+        return None
 
 def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
     """Converts a Speckle Polygon base object to QgsPolygon.
