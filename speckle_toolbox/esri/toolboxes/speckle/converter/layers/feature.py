@@ -68,10 +68,12 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
                     for g in geom:
                         if g is not None and g!="None": b["geometry"].append(g)
                         else:
+                            arcpy.AddError(f"Feature skipped due to invalid geometry")
                             print(g)
                 else:
                     b["geometry"] = [geom]
             else: 
+                arcpy.AddError(f"Feature skipped due to invalid geometry")
                 print(geom)
             
         except Exception as error:

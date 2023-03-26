@@ -233,7 +233,8 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                             if b is not None: 
                                 layerObjs.append(b)
                                 print(b)
-                            
+                        
+                        else: arcpy.AddError(f"Feature skipped due to invalid geometry")
                         print("____End of Feature # " + str(i+1))
                         
                     print("__ finish iterating features")
@@ -295,7 +296,7 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
                         # skip the value if invalid
                         try: d = f["geometry"].displayValue
                         except: 
-                            arcpy.AddError(f"Feature \"{f.id}\" skipped")
+                            arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
                             continue
 
                         for g in f["geometry"].displayValue:
@@ -314,7 +315,7 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
                             # skip the value if invalid
                             try: d = v.displayValue
                             except: 
-                                arcpy.AddError(f"Feature \"{f.id}\" skipped")
+                                arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
                                 continue
 
                             for g in v.displayValue:
@@ -530,14 +531,20 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         for f in geomList[:]: 
             try:
                 exist_feat = None
-                for shape_id in class_shapes:
+                shape_id = None
+                n = None
+                for n, shape_id in enumerate(class_shapes):
                     #print(shape_id[0])
                     if shape_id == f.id:
                         exist_feat = f
                         break
                 
                 
-                if exist_feat is None: print(shape_id); rows_delete.append(n); continue 
+                if exist_feat is None: 
+                    arcpy.AddError(f"Feature \"{shape_id}\" skipped due to invalid geometry")
+                    print(shape_id)
+                    rows_delete.append(n)
+                    continue 
 
                 new_feat = bimFeatureToNative(exist_feat, newFields, sr, path_bim)
                 if new_feat is not None and new_feat != "": 
@@ -546,6 +553,9 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
                     fets.append(new_feat)
                     fetIds.append(f.id)
                     #print(len(fets))
+                else:
+                    arcpy.AddError(f"Feature \"{shape_id}\" skipped due to invalid geometry")
+                    
             except Exception as e: print(e)
         
         #print(len(geomList))
@@ -744,6 +754,8 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
             if new_feat != "" and new_feat != None: 
                 fetColors = findFeatColors(fetColors, f)
                 fets.append(new_feat)
+            else:
+                arcpy.AddError(f"Feature skipped due to invalid geometry")
         print("features created")
         print(len(fets))
         print(all_keys)
@@ -861,6 +873,7 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         for f in layer.features: 
             new_feat = featureToNative(f, newFields, geomType, sr)
             if new_feat != "" and new_feat!= None: fets.append(new_feat)
+            else: arcpy.AddError(f"Feature skipped due to invalid geometry")
         
         #print(fets)
         if len(fets) == 0: return None
