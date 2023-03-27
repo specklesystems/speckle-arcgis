@@ -39,7 +39,7 @@ try:
     from speckle.ui.create_branch import CreateBranchModalDialog
     from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle.ui.logger import logToUser, logToUserWithAction
-    from speckle.plugin_utils.helpers import removeSpecialCharacters
+    from speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
@@ -53,7 +53,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser, logToUserWithAction
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import removeSpecialCharacters
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
 
 # Import the code for the dialog
 
@@ -88,7 +88,7 @@ class Toolbox:
         try: 
             version = arcpy.GetInstallInfo()['Version']
             python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
-            metrics.set_host_app("ArcGIS", ', '.join([f"{version}", python_version])) 
+            metrics.set_host_app("ArcGIS", "ArcGIS " + ', '.join([f"{version}", python_version])) 
         except: 
             metrics.set_host_app("ArcGIS")
 
@@ -135,6 +135,7 @@ class SpeckleGIS:
     """Speckle Connector Plugin for ArcGIS"""
 
     version: str
+    gis_version: str
     dockwidget: Optional[SpeckleGISDialog]
     add_stream_modal: AddStreamModalDialog
     create_stream_modal: CreateStreamModalDialog
@@ -157,6 +158,13 @@ class SpeckleGIS:
         """
         print("Start SpeckleGIS")
         self.version = "0.0.99"
+        try:
+            version = arcpy.GetInstallInfo()['Version']
+            python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
+            full_version = ' '.join([f"{version}", python_version])
+        except: full_version = arcpy.GetInstallInfo()['Version']
+
+        self.gis_version = full_version
         # Save reference to the QGIS interface
         self.dockwidget = None
         #self.iface = None
@@ -405,8 +413,10 @@ class SpeckleGIS:
                 object_id=objId,
                 branch_name=branchName,
                 message="Sent objects from ArcGIS" if len(message) == 0 else message,
-                source_application="ArcGIS",
+                source_application="ArcGIS " + self.gis_version,
             )
+            metrics.track(metrics.SEND, self.active_account, {"connector_version": str(self.version)})
+
             if isinstance(commit_id, SpeckleException):
                 logToUser("Error creating commit: "+str(commit_id.message), level = 2, func = inspect.stack()[0][3], plugin=self.dockwidget)
                 return
@@ -466,16 +476,23 @@ class SpeckleGIS:
         print("ON RECEIVE 3")
         try:
             objId = commit.referencedObject
+            
+            if branch.name is None or commit.id is None or objId is None: 
+                return 
+            
             #commitDetailed = client.commit.get(streamId, commit.id)
-            app = commit.sourceApplication
-            if branch.name is None or commit.id is None or objId is None: return 
+            app_full = commit.sourceApplication
+            app = getAppName(commit.sourceApplication)
+            client_id = client.account.userInfo.id
 
-            commitObj = operations.receive(objId, transport, None)
+            commitObj = operations._untracked_receive(objId, transport, None)
+            metrics.track(metrics.RECEIVE, self.active_account, {"sourceHostAppVersion": app_full, "sourceHostApp": app, "isMultiplayer": commit.authorId != client_id,"connector_version": str(self.version)})
+
 
             client.commit.received(
             streamId,
             commit.id,
-            source_application="ArcGIS",
+            source_application="ArcGIS " + self.gis_version,
             message="Received commit in ArcGIS",
             )
 
