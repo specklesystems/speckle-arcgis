@@ -134,6 +134,7 @@ Report issues at https://speckle.community/"""
 class SpeckleGIS:
     """Speckle Connector Plugin for ArcGIS"""
 
+    version: str
     dockwidget: Optional[SpeckleGISDialog]
     add_stream_modal: AddStreamModalDialog
     create_stream_modal: CreateStreamModalDialog
@@ -155,6 +156,7 @@ class SpeckleGIS:
         """Constructor. 
         """
         print("Start SpeckleGIS")
+        self.version = "0.0.99"
         # Save reference to the QGIS interface
         self.dockwidget = None
         #self.iface = None
@@ -554,6 +556,7 @@ class SpeckleGIS:
                 self.pluginIsActive = True
                 if self.dockwidget is None:
                     self.dockwidget = SpeckleGISDialog()
+                    self.dockwidget.addLabel(self)
                     self.dockwidget.show()
                     #self.gis_project.fileNameChanged.connect(self.reloadUI)
                     #self.gis_project.homePathChanged.connect(self.reloadUI)
