@@ -490,7 +490,7 @@ class SpeckleGIS:
             print("after create group")
             if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer)
             else: check: Callable[[Base], bool] = lambda base: isinstance(base, Base)
-            traverseObject(commitObj, callback, check, str(newGroupName))
+            traverseObject(commitObj, callback, check, str(newGroupName), self)
 
             logToUser("👌 Data received", level = 0, plugin = self.dockwidget, blue = True)
             return 

@@ -30,7 +30,7 @@ def splitTextIntoLines(text: str = "", number: int= 40) -> str:
     
     return msg
 
-def validateNewFclassName(newName: str, prefix: str, all_layer_names: List[str]) -> str:
+def validateNewFclassName(newName: str, all_layer_names: List[str], prefix: str = "") -> str:
     
     fixed_name = newName
 
@@ -44,7 +44,7 @@ def validateNewFclassName(newName: str, prefix: str, all_layer_names: List[str])
                 break 
         if layerNameCreated == 0:
             for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
-                test_fixed_name = validateNewFclassName((fixed_name + "_" + letter), prefix, all_layer_names)
+                test_fixed_name = validateNewFclassName((fixed_name + "_" + letter), all_layer_names, prefix)
                 if (prefix + test_fixed_name) not in all_layer_names: 
                     fixed_name = test_fixed_name 
                     layerNameCreated +=1

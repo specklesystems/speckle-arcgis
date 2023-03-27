@@ -6,17 +6,20 @@ import arcpy
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import os
 
-import inspect 
+import inspect
 
 
 try: 
     from speckle.converter.layers.emptyLayerTemplates import createGroupLayer
     from speckle.plugin_utils.helpers import findOrCreatePath
     from speckle.ui.logger import logToUser
+    from speckle.plugin_utils.helpers import validateNewFclassName 
+
 except:
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import validateNewFclassName 
 
 #ATTRS_REMOVE = ['geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
 ATTRS_REMOVE = ['speckleTyp','speckle_id','geometry','applicationId','bbox','displayStyle', 'id', 'renderMaterial', 'displayMesh', 'displayValue'] 
@@ -360,13 +363,8 @@ def newLayerGroupAndName(layerName: str, streamBranch: str, project: ArcGISProje
         #print(all_layer_names)
         print(newName)
 
-        longName = streamBranch + "\\" + newName 
-        if longName in all_layer_names: 
-            for index, letter in enumerate('234567890abcdefghijklmnopqrstuvwxyz'):
-                if (longName + "_" + letter) not in all_layer_names: 
-                    newName += "_"+letter 
-                    layerExists +=1 
-                    break 
+        newName = validateNewFclassName(newName, all_layer_names, streamBranch + "\\")
+
         print(newName)       
         return newName, layerGroup        
     except Exception as e:
