@@ -1,11 +1,13 @@
 
 import time
-from typing import List
+from typing import Any, List
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication, QSettings, Qt, QTranslator, QRect, QObject
 from PyQt5.QtWidgets import QAction, QDockWidget, QVBoxLayout, QWidget, QPushButton
 from PyQt5 import QtWidgets
 import webbrowser
+from specklepy.logging import metrics
+from specklepy.api.credentials import Account
 
 import inspect 
 
@@ -28,6 +30,9 @@ class LogWidget(QWidget):
     used_btns: List[int] = []
     btns: List[QPushButton]
     max_msg: int
+
+    active_account: Account
+    speckle_version: str
 
     # constructor
     def __init__(self, parent=None):
@@ -144,6 +149,9 @@ class LogWidget(QWidget):
             if url == "": return
 
             webbrowser.open(url, new=0, autoraise=True)
+
+            metrics.track("Connector Action", self.active_account, {"name": "Open In Web", "connector_version": str(self.speckle_version)})
+
             self.hide()
         except Exception as e: 
             pass #logger.logToUser(str(e), level=2, func = inspect.stack()[0][3])

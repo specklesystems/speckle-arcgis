@@ -574,6 +574,7 @@ class SpeckleGIS:
                 if self.dockwidget is None:
                     self.dockwidget = SpeckleGISDialog()
                     self.dockwidget.addLabel(self)
+                    self.dockwidget.addProps(self)
                     self.dockwidget.show()
                     #self.gis_project.fileNameChanged.connect(self.reloadUI)
                     #self.gis_project.homePathChanged.connect(self.reloadUI)

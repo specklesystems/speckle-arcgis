@@ -176,7 +176,7 @@ def set_project_layer_selection(plugin: SpeckleGIS):
                         if len(value) <= i: cursor.insertRow([proj_streams[i], "" , ""])
                 #print(i)
             del cursor 
-            metrics.track("Connector Action", plugin.active_account, {"name": "Toggle Set layer selection", "connector_version": str(plugin.version)})
+            metrics.track("Connector Action", plugin.active_account, {"name": "Save Layer Selection", "connector_version": str(plugin.version)})
 
             #print(table)
     except Exception as e: 
@@ -229,7 +229,7 @@ def set_survey_point(plugin: SpeckleGIS):
             del cursor   
         
         setProjectReferenceSystem(plugin)
-        metrics.track("Connector Action", plugin.active_account, {"name": "Toggle Set survey point", "connector_version": str(plugin.version)})
+        metrics.track("Connector Action", plugin.active_account, {"name": "Set As Center Point", "connector_version": str(plugin.version)})
         return True
 
     except Exception as e:
