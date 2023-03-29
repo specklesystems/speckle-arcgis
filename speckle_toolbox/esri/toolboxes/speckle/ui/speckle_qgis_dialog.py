@@ -285,7 +285,11 @@ class SpeckleGISDialog(QMainWindow):
 
     def refreshClicked(self, plugin):
         try:
-            metrics.track("Connector Action", plugin.active_account, {"name": "Refresh", "connector_version": str(plugin.version)})
+            try:
+                metrics.track("Connector Action", plugin.active_account, {"name": "Refresh", "connector_version": str(plugin.version)})
+            except:
+                pass
+            
             plugin.reloadUI()
         except Exception as e:
             logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=self)
@@ -293,7 +297,11 @@ class SpeckleGISDialog(QMainWindow):
 
     def closeClicked(self, plugin):
         try:
-            metrics.track("Connector Action", plugin.active_account, {"name": "Close", "connector_version": str(plugin.version)})
+            try:
+                metrics.track("Connector Action", plugin.active_account, {"name": "Close", "connector_version": str(plugin.version)})
+            except:
+                pass
+            
             plugin.onClosePlugin()
         except Exception as e:
             logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=self)

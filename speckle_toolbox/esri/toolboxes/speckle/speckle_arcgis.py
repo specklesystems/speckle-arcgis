@@ -415,8 +415,27 @@ class SpeckleGIS:
                 message="Sent objects from ArcGIS" if len(message) == 0 else message,
                 source_application="ArcGIS " + self.gis_version,
             )
-            metrics.track(metrics.SEND, self.active_account, {"connector_version": str(self.version)})
+            r'''
+            try:
+                metr_filter = "Visible" if bySelection is True else "Saved"
+                metr_main = True if branchName=="main" else False
+                metr_saved_streams = len(self.current_streams)
+                metr_branches = len(self.active_stream[1].branches.items)
+                metr_collab = len(self.active_stream[1].collaborators)
+                metr_projected = True if self.gis_project.activeMap.spatialReference.type != "Geographic" else False 
+                if self.gis_project.activeMap.spatialReference is None: metr_projected = None
+                try:
+                    crs_lat = project.activeMap.spatialReference.latitudeOfOrigin
+                    crs_lon = project.activeMap.spatialReference.centralMeridian
+                    metr_crs = True if self.lat!=0 and self.lon!=0 and crs_lat == self.lat and crs_lon == self.lon else False
+                except:
+                    metr_crs = False
 
+                metrics.track(metrics.SEND, self.active_account, {"branches":metr_branches, "collaborators":metr_collab,"connector_version": str(self.version), "filter": metr_filter, "isMain": metr_main, "savedStreams": metr_saved_streams, "projectedCRS": metr_projected, "customCRS": metr_crs})
+            except:
+                metrics.track(metrics.SEND, self.active_account)
+            '''
+            
             if isinstance(commit_id, SpeckleException):
                 logToUser("Error creating commit: "+str(commit_id.message), level = 2, func = inspect.stack()[0][3], plugin=self.dockwidget)
                 return
@@ -486,8 +505,20 @@ class SpeckleGIS:
             client_id = client.account.userInfo.id
 
             commitObj = operations._untracked_receive(objId, transport, None)
-            metrics.track(metrics.RECEIVE, self.active_account, {"sourceHostAppVersion": app_full, "sourceHostApp": app, "isMultiplayer": commit.authorId != client_id,"connector_version": str(self.version)})
+            
+            try:
+                crs_lat = self.gis_project.activeMap.spatialReference.latitudeOfOrigin
+                crs_lon = self.gis_project.activeMap.spatialReference.centralMeridian
+                metr_crs = True if self.lat!=0 and self.lon!=0 and crs_lat == self.lat and crs_lon == self.lon else False
+                metr_projected = True if self.gis_project.activeMap.spatialReference.type != "Geographic" else False 
+                if self.gis_project.activeMap.spatialReference is None: metr_projected = None
+            except:
+                metr_crs = False
 
+            try:
+                metrics.track(metrics.RECEIVE, self.active_account, {"sourceHostAppVersion": app_full, "sourceHostApp": app, "isMultiplayer": commit.authorId != client_id,"connector_version": str(self.version), "projectedCRS": metr_projected, "customCRS": metr_crs})
+            except:
+                metrics.track(metrics.RECEIVE, self.active_account)
 
             client.commit.received(
             streamId,
@@ -496,7 +527,7 @@ class SpeckleGIS:
             message="Received commit in ArcGIS",
             )
 
-            if app != "QGIS" and app != "ArcGIS": 
+            if app.lower() != "qgis" and app.lower() != "arcgis":
                 if self.gis_project.activeMap.spatialReference.type == "Geographic" or self.gis_project.activeMap.spatialReference is None: #TODO test with invalid CRS
                     logToUser("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates", level=0, func = inspect.stack()[0][3], plugin = self.dockwidget)
             arcpy.AddMessage(f"Succesfully received {objId}")
@@ -507,8 +538,8 @@ class SpeckleGIS:
             findAndClearLayerGroup(self.gis_project, newGroupName)
             
             print("after create group")
-            if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer)
-            else: check: Callable[[Base], bool] = lambda base: isinstance(base, Base)
+            if app.lower() == "qgis" or app.lower() == "arcgis": check: Callable[[Base], bool] = lambda base: base.speckle_type and (base.speckle_type.endswith("VectorLayer") or base.speckle_type.endswith("Layer") or base.speckle_type.endswith("RasterLayer") )
+            else: check: Callable[[Base], bool] = lambda base: (base.speckle_type and base.speckle_type.endswith("Base") )
             traverseObject(commitObj, callback, check, str(newGroupName), self)
 
             logToUser("👌 Data received", level = 0, plugin = self.dockwidget, blue = True)
