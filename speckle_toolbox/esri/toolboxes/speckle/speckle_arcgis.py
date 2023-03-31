@@ -444,7 +444,7 @@ class SpeckleGIS:
             url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
 
             self.dockwidget.messageInput.setText("")
-            logToUserWithAction(f"👌 Data sent to \"{streamName}\" \n View it online", level = 0, plugin=self.dockwidget, url = url)
+            logToUser(f"👌 Data sent to \"{streamName}\" \n View it online", level = 0, plugin=self.dockwidget, url = url)
 
         except SpeckleException as e:
             logToUser("Error creating commit:" + e.message, level=2, func = inspect.stack()[0][3], plugin = self.dockwidget)
@@ -572,7 +572,7 @@ class SpeckleGIS:
             accounts = get_local_accounts()
             self.accounts = accounts
             if len(accounts) == 0:
-                logToUser("No accounts were found. Please remember to install the Speckle Manager and setup at least one account", level=1, func = inspect.stack()[0][3])
+                logToUser("No accounts were found. Please remember to install the Speckle Manager and setup at least one account", level=1, url="https://speckle-releases.netlify.app/", func = inspect.stack()[0][3])
                 return False
             for acc in accounts:
                 if acc.isDefault: 
