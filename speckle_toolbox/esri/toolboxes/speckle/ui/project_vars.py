@@ -179,8 +179,8 @@ def set_project_layer_selection(plugin: SpeckleGIS):
 
             try:
                 metrics.track("Connector Action", plugin.active_account, {"name": "Save Layer Selection", "connector_version": str(plugin.version)})
-            except:
-                pass
+            except Exception as e:
+                logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=plugin.dockwidget )
 
             #print(table)
     except Exception as e: 
@@ -236,8 +236,8 @@ def set_survey_point(plugin: SpeckleGIS):
         
         try:
             metrics.track("Connector Action", plugin.active_account, {"name": "Set As Center Point", "connector_version": str(plugin.version)})
-        except:
-            pass
+        except Exception as e:
+            logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=plugin.dockwidget )
         
         return True
 
