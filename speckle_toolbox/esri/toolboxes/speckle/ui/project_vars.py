@@ -138,11 +138,11 @@ def get_project_layer_selection(self: SpeckleGIS):
     except Exception as e: 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
-def set_project_layer_selection(self: SpeckleGIS):
+def set_project_layer_selection(plugin: SpeckleGIS):
     try:
         print("SET project layer selection function")
-        project = self.gis_project
-        value: List[str] = [layer[1].dataSource for layer in self.current_layers] #",".join([layer[1].dataSource for layer in self.current_layers]) 
+        project = plugin.gis_project
+        value: List[str] = [layer[1].dataSource for layer in plugin.current_layers] #",".join([layer[1].dataSource for layer in plugin.current_layers]) 
         print(value)
 
         table = findOrCreateSpeckleTable(project)
@@ -176,7 +176,11 @@ def set_project_layer_selection(self: SpeckleGIS):
                         if len(value) <= i: cursor.insertRow([proj_streams[i], "" , ""])
                 #print(i)
             del cursor 
-            metrics.track("Connector Action", self.active_account, {"name": "Toggle Set layer selection"})
+
+            try:
+                metrics.track("Connector Action", plugin.active_account, {"name": "Save Layer Selection", "connector_version": str(plugin.version)})
+            except Exception as e:
+                logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=plugin.dockwidget )
 
             #print(table)
     except Exception as e: 
@@ -184,10 +188,10 @@ def set_project_layer_selection(self: SpeckleGIS):
 
     print("SET project layer selection 2")
 
-def get_survey_point(self: SpeckleGIS, content = None):
+def get_survey_point(plugin: SpeckleGIS, content = None):
     try:
         print("get survey point")
-        project = self.gis_project
+        project = plugin.gis_project
         table = findOrCreateSpeckleTable(project)
         if table is None: return 
 
@@ -199,26 +203,26 @@ def get_survey_point(self: SpeckleGIS, content = None):
 
         if points != "": 
             vals: List[str] = points.replace(" ","").split(";")[:2]
-            self.lat, self.lon = [float(i) for i in vals]
+            plugin.lat, plugin.lon = [float(i) for i in vals]
 
     except Exception as e: 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
     
-def set_survey_point(self: SpeckleGIS):
+def set_survey_point(plugin: SpeckleGIS):
 
     try:
         # from widget (2 strings) to local vars + update SR of the map
         print("SET survey point")
         
-        project = self.gis_project
-        vals =[ str(self.dockwidget.surveyPointLat.text()), str(self.dockwidget.surveyPointLon.text()) ]
+        project = plugin.gis_project
+        vals =[ str(plugin.dockwidget.surveyPointLat.text()), str(plugin.dockwidget.surveyPointLon.text()) ]
 
-        self.lat, self.lon = [float(i.replace(" ","")) for i in vals]
+        plugin.lat, plugin.lon = [float(i.replace(" ","")) for i in vals]
         
-        if self.lat>180 or self.lat<-180 or self.lon >180 or self.lon<-180:
+        if plugin.lat>180 or plugin.lat<-180 or plugin.lon >180 or plugin.lon<-180:
             logToUser("LAT LON values must be within (-180, 180). You can right-click on the canvas location to copy coordinates in WGS 84", level = 1, plugin=self.dockwidget)
             return True 
-        pt = str(self.lat) + ";" + str(self.lon) 
+        pt = str(plugin.lat) + ";" + str(plugin.lon) 
 
         table = findOrCreateSpeckleTable(project)
         if table is not None:
@@ -228,20 +232,25 @@ def set_survey_point(self: SpeckleGIS):
                     break
             del cursor   
         
-        setProjectReferenceSystem(self)
-        metrics.track("Connector Action", self.active_account, {"name": "Toggle Set survey point"})
+        setProjectReferenceSystem(plugin)
+        
+        try:
+            metrics.track("Connector Action", plugin.active_account, {"name": "Set As Center Point", "connector_version": str(plugin.version)})
+        except Exception as e:
+            logToUser(e, level = 2, func = inspect.stack()[0][3], plugin=plugin.dockwidget )
+        
         return True
 
     except Exception as e:
-        self.dockwidget.surveyPointLat.setText(str(self.lat))
-        self.dockwidget.surveyPointLon.setText(str(self.lon))
+        plugin.dockwidget.surveyPointLat.setText(str(plugin.lat))
+        plugin.dockwidget.surveyPointLon.setText(str(plugin.lon))
         logToUser("Lat, Lon values invalid: " + str(e), level=2, func = inspect.stack()[0][3])
         return False 
 
-def setProjectReferenceSystem(self: SpeckleGIS):
+def setProjectReferenceSystem(plugin: SpeckleGIS):
     try: 
         # save to project; create SR
-        newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(self.lon) + " lat_0=" + str(self.lat) + " +x_0=0 +y_0=0 +k_0=1"
+        newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(plugin.lon) + " lat_0=" + str(plugin.lat) + " +x_0=0 +y_0=0 +k_0=1"
         newCrs = osr.SpatialReference()
         newCrs.ImportFromProj4(newCrsString)
         newCrs.MorphToESRI() # converts the WKT to an ESRI-compatible format
@@ -253,10 +262,10 @@ def setProjectReferenceSystem(self: SpeckleGIS):
             newProjSR.loadFromString(newCrs.ExportToWkt())
 
             #source = osr.SpatialReference() 
-            #source.ImportFromWkt(self.project.activeMap.spatialReference.exportToString())
+            #source.ImportFromWkt(plugin.project.activeMap.spatialReference.exportToString())
             #transform = osr.CoordinateTransformation(source, newCrs)
 
-            self.gis_project.activeMap.spatialReference =  newProjSR
+            plugin.gis_project.activeMap.spatialReference =  newProjSR
             logToUser("Custom project Spatial Reference successfully applied", level=0, func = inspect.stack()[0][3])
         else:
             logToUser("Custom Spatial Reference could not be created", level=1, func = inspect.stack()[0][3])

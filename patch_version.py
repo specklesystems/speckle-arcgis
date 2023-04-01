@@ -8,6 +8,7 @@ def patch_installer(tag):
     conda_file = "speckle_arcgis_installer/conda_clone_activate.py"
     #toolbox_install_file = "speckle_arcgis_installer/toolbox_install.py"
     toolbox_manual_install_file = "speckle_arcgis_installer/toolbox_install_manual.py"
+    plugin_start_file = "speckle_toolbox/esri/toolboxes/speckle/speckle_arcgis.py"
 
     #py_tag = get_specklepy_version()
     with open(iss_file, "r") as file:
@@ -32,6 +33,18 @@ def patch_installer(tag):
             file.writelines(lines)
             print(f"Patched whl setup with connector v{tag} and specklepy ")
     file.close()
+
+    with open(plugin_start_file, "r") as file:
+        lines = file.readlines()
+        for i, line in enumerate(lines):
+            if 'self.version = ' in line: 
+                lines[i] = lines[i].split("")[0] + "\"" + tag.split('-')[0] + "\""
+                break
+        with open(plugin_start_file, "w") as file:
+            file.writelines(lines)
+            print(f"Patched GIS start file with connector v{tag} and specklepy ")
+    file.close()
+
 
     def whlFileRename(fileName: str): 
         with open(fileName, "r") as file:

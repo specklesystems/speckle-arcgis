@@ -1,11 +1,13 @@
 
 import time
-from typing import List
+from typing import Any, List, Tuple
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication, QSettings, Qt, QTranslator, QRect, QObject
 from PyQt5.QtWidgets import QAction, QDockWidget, QVBoxLayout, QWidget, QPushButton
 from PyQt5 import QtWidgets
 import webbrowser
+from specklepy.logging import metrics
+from specklepy.api.credentials import Account
 
 import inspect 
 
@@ -28,6 +30,9 @@ class LogWidget(QWidget):
     used_btns: List[int] = []
     btns: List[QPushButton]
     max_msg: int
+
+    active_account: Account
+    speckle_version: str
 
     # constructor
     def __init__(self, parent=None):
@@ -79,47 +84,8 @@ class LogWidget(QWidget):
         self.msgs.clear()
 
 
-    def addButton(self, text: str = "something went wrong", level: int = 2, url = ""):
+    def addButton(self, text: str = "something went wrong", level: int = 2, url = "", blue = False):
         print("Add button")
-
-        self.setGeometry(0, 0, self.parentWidget.frameSize().width(), self.parentWidget.frameSize().height())
-        
-        # find index of the first unused button
-        btn, index = self.getNextBtn()
-        btn.setAccessibleName("")
-
-        btn.setStyleSheet("QPushButton {color: black; border: 0px;border-radius: 17px;padding: 20px;height: 40px;text-align: left;"+ f"{BACKGR_COLOR_GREY}" + "}")
-        btn.setText(text)
-        self.resizeToText(btn)
-
-        #btn.resize(btn.sizeHint())
-        self.layout.addWidget(btn) #, alignment=Qt.AlignCenter) 
-
-        self.msgs.append(text)
-        self.used_btns.append(1)
-
-    def addInfoButton(self, text: str = "link here", level: int = 2, url = ""):
-        print("Add blue button")
-
-        self.setGeometry(0, 0, self.parentWidget.frameSize().width(), self.parentWidget.frameSize().height())
-        
-        # find index of the first unused button
-        btn, index = self.getNextBtn()
-        btn.setAccessibleName("")
-        
-        # style the button
-        btn.setStyleSheet("QPushButton {color: white;border: 0px;border-radius: 17px;padding: 20px;height: 40px;text-align: left;"+ f"{BACKGR_COLOR}" + "}")
-        btn.setText(text)
-        btn = self.resizeToText(btn)
-
-        self.layout.addWidget(btn) #, alignment=Qt.AlignCenter) 
-
-        self.msgs.append(text)
-        self.used_btns.append(1)
-
-
-    def addLinkButton(self, text: str = "link here", level: int = 2, url = ""):
-        print("Add link button")
 
         self.setGeometry(0, 0, self.parentWidget.frameSize().width(), self.parentWidget.frameSize().height())
         
@@ -127,11 +93,19 @@ class LogWidget(QWidget):
         btn, index = self.getNextBtn()
         btn.setAccessibleName(url)
 
-        # style the button
-        btn.setStyleSheet("QPushButton {color: white;border: 0px;border-radius: 17px;padding: 20px;height: 40px;text-align: left;"+ f"{BACKGR_COLOR}" + "} QPushButton:hover { "+ f"{BACKGR_COLOR_LIGHT}" + " }")
+        if url != "":
+            btn.setStyleSheet("QPushButton {color: white;border: 0px;border-radius: 17px;padding: 20px;height: 40px;text-align: left;"+ f"{BACKGR_COLOR}" + "} QPushButton:hover { "+ f"{BACKGR_COLOR_LIGHT}" + " }")
+        
+        else:
+            if blue is False: 
+                btn.setStyleSheet("QPushButton {color: black; border: 0px;border-radius: 17px;padding: 20px;height: 40px;text-align: left;"+ f"{BACKGR_COLOR_GREY}" + "}")
+            else:
+                btn.setStyleSheet("QPushButton {color: white;border: 0px;border-radius: 17px;padding: 20px;height: 40px;text-align: left;"+ f"{BACKGR_COLOR}" + "}")
+        
         btn.setText(text)
         self.resizeToText(btn)
 
+        #btn.resize(btn.sizeHint())
         self.layout.addWidget(btn) #, alignment=Qt.AlignCenter) 
 
         self.msgs.append(text)
@@ -144,12 +118,18 @@ class LogWidget(QWidget):
             if url == "": return
 
             webbrowser.open(url, new=0, autoraise=True)
+            
+            try:
+                metrics.track("Connector Action", self.active_account, {"name": "Open In Web", "connector_version": str(self.speckle_version)})
+            except:
+                pass   
+               
             self.hide()
         except Exception as e: 
             pass #logger.logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
-    def getNextBtn(self) -> QPushButton:
-        index = len(self.used_btns)
+    def getNextBtn(self) -> Tuple[QPushButton, int]:
+        index = len(self.used_btns) # get the next "free" button 
 
         if index >= len(self.btns): 
             # remove first button
@@ -157,7 +137,8 @@ class LogWidget(QWidget):
 
             self.used_btns.clear()
             index = 0 
-        btn = self.btns[index] # get the next "free" button 
+
+        btn = self.btns[index]
         return btn, index 
     
     def resizeToText(self, btn):

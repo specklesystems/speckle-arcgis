@@ -275,10 +275,10 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
 
     return speckleLayer
 
-def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: str) -> arcLayer:
+def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: str, plugin=None) -> arcLayer:
     print("Layer to Native")
     try:
-        project = arcpy.mp.ArcGISProject("CURRENT")
+        project = plugin.gis_project
 
         sr = arcpy.SpatialReference().loadFromString(layer.crs.wkt)
         if layer.type is None:
@@ -335,14 +335,14 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
         return None 
 
 
-def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, sr = None) :
+def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, sr = None, plugin=None) :
     print("01______BIM layer to native")
     try:
         print(layerName)
         
         layerName = removeSpecialCharacters(layerName)
 
-        project = ArcGISProject("CURRENT")
+        project = plugin.gis_project
         geom_meshes = []
         layer_meshes = None
         #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
@@ -423,7 +423,7 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         #print(all_layer_names)
 
         longName = streamBranch + "\\" + newName 
-        newName = validateNewFclassName(newName, streamBranch + "\\", all_layer_names)
+        newName = validateNewFclassName(newName, all_layer_names, streamBranch + "\\")
 
 
         path = project.filePath.replace("aprx","gdb") #
@@ -629,14 +629,14 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return False
 
-def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str) :
+def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch: str, plugin=None) :
     print("01______Cad vector layer to native")
     layer_points = []
     layer_polylines = []
     try:
         geom_points = []
         geom_polylines = []
-        project = ArcGISProject("CURRENT")
+        project = plugin.gis_project
         print(layerName)
         geom_polygones = []
         geom_meshes = []
@@ -696,7 +696,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         #print(all_layer_names)
 
         longName = streamBranch + "\\" + newName 
-        newName = validateNewFclassName(newName, streamBranch + "\\", all_layer_names)
+        newName = validateNewFclassName(newName, all_layer_names, streamBranch + "\\")
 
         # particularly if the layer comes from ArcGIS
         if "polygon" in geomType.lower(): geomType = "Polygon"
@@ -838,8 +838,13 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
         class_name = "f_class_" + newName
         #print(class_name)
-        try: f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
-        except arcgisscripting.ExecuteError: class_name+="_"; f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
+        try: 
+            f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
+        except arcgisscripting.ExecuteError: 
+            all_classes = arcpy.ListFeatureClasses()
+            print(all_classes)
+            class_name = validateNewFclassName(class_name, all_classes)
+            f_class = CreateFeatureclass(path, class_name, geomType, has_z="ENABLED", spatial_reference = sr)
 
         # get and set Layer attribute fields
         # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
@@ -905,7 +910,8 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
 
         #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
         
-        active_map.addLayerToGroup(layerGroup, vl)
+        try: active_map.addLayerToGroup(layerGroup, vl)
+        except Exception as e: logToUser("Layer not added: "+str(e), level=2, func = inspect.stack()[0][3], plugin = plugin.dockwidget)
         vl2 = None
         print(newName)
         for l in project.activeMap.listLayers(): 

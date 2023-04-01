@@ -39,7 +39,7 @@ try:
     from speckle.ui.create_branch import CreateBranchModalDialog
     from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle.ui.logger import logToUser, logToUserWithAction
-    from speckle.plugin_utils.helpers import removeSpecialCharacters
+    from speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
@@ -53,7 +53,7 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser, logToUserWithAction
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import removeSpecialCharacters
+    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
 
 # Import the code for the dialog
 
@@ -88,7 +88,7 @@ class Toolbox:
         try: 
             version = arcpy.GetInstallInfo()['Version']
             python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
-            metrics.set_host_app("ArcGIS", ', '.join([f"{version}", python_version])) 
+            metrics.set_host_app("ArcGIS", "ArcGIS " + ', '.join([f"{version}", python_version])) 
         except: 
             metrics.set_host_app("ArcGIS")
 
@@ -134,6 +134,8 @@ Report issues at https://speckle.community/"""
 class SpeckleGIS:
     """Speckle Connector Plugin for ArcGIS"""
 
+    version: str
+    gis_version: str
     dockwidget: Optional[SpeckleGISDialog]
     add_stream_modal: AddStreamModalDialog
     create_stream_modal: CreateStreamModalDialog
@@ -155,6 +157,14 @@ class SpeckleGIS:
         """Constructor. 
         """
         print("Start SpeckleGIS")
+        self.version = "0.0.99"
+        try:
+            version = arcpy.GetInstallInfo()['Version']
+            python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
+            full_version = ' '.join([f"{version}", python_version])
+        except: full_version = arcpy.GetInstallInfo()['Version']
+
+        self.gis_version = full_version
         # Save reference to the QGIS interface
         self.dockwidget = None
         #self.iface = None
@@ -403,8 +413,29 @@ class SpeckleGIS:
                 object_id=objId,
                 branch_name=branchName,
                 message="Sent objects from ArcGIS" if len(message) == 0 else message,
-                source_application="ArcGIS",
+                source_application="ArcGIS " + self.gis_version,
             )
+            r'''
+            try:
+                metr_filter = "Visible" if bySelection is True else "Saved"
+                metr_main = True if branchName=="main" else False
+                metr_saved_streams = len(self.current_streams)
+                metr_branches = len(self.active_stream[1].branches.items)
+                metr_collab = len(self.active_stream[1].collaborators)
+                metr_projected = True if self.gis_project.activeMap.spatialReference.type != "Geographic" else False 
+                if self.gis_project.activeMap.spatialReference is None: metr_projected = None
+                try:
+                    crs_lat = project.activeMap.spatialReference.latitudeOfOrigin
+                    crs_lon = project.activeMap.spatialReference.centralMeridian
+                    metr_crs = True if self.lat!=0 and self.lon!=0 and crs_lat == self.lat and crs_lon == self.lon else False
+                except:
+                    metr_crs = False
+
+                metrics.track(metrics.SEND, self.active_account, {"branches":metr_branches, "collaborators":metr_collab,"connector_version": str(self.version), "filter": metr_filter, "isMain": metr_main, "savedStreams": metr_saved_streams, "projectedCRS": metr_projected, "customCRS": metr_crs})
+            except:
+                metrics.track(metrics.SEND, self.active_account)
+            '''
+            
             if isinstance(commit_id, SpeckleException):
                 logToUser("Error creating commit: "+str(commit_id.message), level = 2, func = inspect.stack()[0][3], plugin=self.dockwidget)
                 return
@@ -413,7 +444,7 @@ class SpeckleGIS:
             url = streamWrapper.stream_url.split("?")[0] + "/commits/" + commit_id
 
             self.dockwidget.messageInput.setText("")
-            logToUserWithAction(f"👌 Data sent to \"{streamName}\" \n View it online", level = 0, plugin=self.dockwidget, url = url)
+            logToUser(f"👌 Data sent to \"{streamName}\" \n View it online", level = 0, plugin=self.dockwidget, url = url)
 
         except SpeckleException as e:
             logToUser("Error creating commit:" + e.message, level=2, func = inspect.stack()[0][3], plugin = self.dockwidget)
@@ -464,20 +495,39 @@ class SpeckleGIS:
         print("ON RECEIVE 3")
         try:
             objId = commit.referencedObject
+            
+            if branch.name is None or commit.id is None or objId is None: 
+                return 
+            
             #commitDetailed = client.commit.get(streamId, commit.id)
-            app = commit.sourceApplication
-            if branch.name is None or commit.id is None or objId is None: return 
+            app_full = commit.sourceApplication
+            app = getAppName(commit.sourceApplication)
+            client_id = client.account.userInfo.id
 
-            commitObj = operations.receive(objId, transport, None)
+            commitObj = operations._untracked_receive(objId, transport, None)
+            
+            try:
+                crs_lat = self.gis_project.activeMap.spatialReference.latitudeOfOrigin
+                crs_lon = self.gis_project.activeMap.spatialReference.centralMeridian
+                metr_crs = True if self.lat!=0 and self.lon!=0 and crs_lat == self.lat and crs_lon == self.lon else False
+                metr_projected = True if self.gis_project.activeMap.spatialReference.type != "Geographic" else False 
+                if self.gis_project.activeMap.spatialReference is None: metr_projected = None
+            except:
+                metr_crs = False
+
+            try:
+                metrics.track(metrics.RECEIVE, self.active_account, {"sourceHostAppVersion": app_full, "sourceHostApp": app, "isMultiplayer": commit.authorId != client_id,"connector_version": str(self.version), "projectedCRS": metr_projected, "customCRS": metr_crs})
+            except:
+                metrics.track(metrics.RECEIVE, self.active_account)
 
             client.commit.received(
             streamId,
             commit.id,
-            source_application="ArcGIS",
+            source_application="ArcGIS " + self.gis_version,
             message="Received commit in ArcGIS",
             )
 
-            if app != "QGIS" and app != "ArcGIS": 
+            if app.lower() != "qgis" and app.lower() != "arcgis":
                 if self.gis_project.activeMap.spatialReference.type == "Geographic" or self.gis_project.activeMap.spatialReference is None: #TODO test with invalid CRS
                     logToUser("Conversion from metric units to DEGREES not supported. It is advisable to set the project Spatial reference to Projected type before receiving CAD geometry (e.g. EPSG:32631), or create a custom one from geographic coordinates", level=0, func = inspect.stack()[0][3], plugin = self.dockwidget)
             arcpy.AddMessage(f"Succesfully received {objId}")
@@ -488,9 +538,9 @@ class SpeckleGIS:
             findAndClearLayerGroup(self.gis_project, newGroupName)
             
             print("after create group")
-            if app == "QGIS" or app == "ArcGIS": check: Callable[[Base], bool] = lambda base: isinstance(base, VectorLayer) or isinstance(base, Layer) or isinstance(base, RasterLayer)
-            else: check: Callable[[Base], bool] = lambda base: isinstance(base, Base)
-            traverseObject(commitObj, callback, check, str(newGroupName))
+            if app.lower() == "qgis" or app.lower() == "arcgis": check: Callable[[Base], bool] = lambda base: base.speckle_type and (base.speckle_type.endswith("VectorLayer") or base.speckle_type.endswith("Layer") or base.speckle_type.endswith("RasterLayer") )
+            else: check: Callable[[Base], bool] = lambda base: (base.speckle_type and base.speckle_type.endswith("Base") )
+            traverseObject(commitObj, callback, check, str(newGroupName), self)
 
             logToUser("👌 Data received", level = 0, plugin = self.dockwidget, blue = True)
             return 
@@ -522,7 +572,7 @@ class SpeckleGIS:
             accounts = get_local_accounts()
             self.accounts = accounts
             if len(accounts) == 0:
-                logToUser("No accounts were found. Please remember to install the Speckle Manager and setup at least one account", level=1, func = inspect.stack()[0][3])
+                logToUser("No accounts were found. Please remember to install the Speckle Manager and setup at least one account", level=1, url="https://speckle-releases.netlify.app/", func = inspect.stack()[0][3])
                 return False
             for acc in accounts:
                 if acc.isDefault: 
@@ -554,6 +604,8 @@ class SpeckleGIS:
                 self.pluginIsActive = True
                 if self.dockwidget is None:
                     self.dockwidget = SpeckleGISDialog()
+                    self.dockwidget.addLabel(self)
+                    self.dockwidget.addProps(self)
                     self.dockwidget.show()
                     #self.gis_project.fileNameChanged.connect(self.reloadUI)
                     #self.gis_project.homePathChanged.connect(self.reloadUI)
