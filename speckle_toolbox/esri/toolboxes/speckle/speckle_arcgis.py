@@ -86,9 +86,11 @@ class Toolbox:
         # List of tool classes associated with this toolbox
         self.tools = [Speckle]  
         try: 
-            version = arcpy.GetInstallInfo()['Version']
-            python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
-            metrics.set_host_app("ArcGIS", "ArcGIS " + ', '.join([f"{version}", python_version])) 
+            version: str = arcpy.GetInstallInfo()['Version']
+            python_version: str = f"python {'.'.join(map(str, sys.version_info[:2]))}"
+            #metrics.set_host_app("ArcGIS", "ArcGIS " + ', '.join([f"{version}", python_version])) 
+            metrics.set_host_app("ArcGIS", "ArcGIS " + version.split(".")[0])
+
         except: 
             metrics.set_host_app("ArcGIS")
 
@@ -413,7 +415,7 @@ class SpeckleGIS:
                 object_id=objId,
                 branch_name=branchName,
                 message="Sent objects from ArcGIS" if len(message) == 0 else message,
-                source_application="ArcGIS " + self.gis_version,
+                source_application="ArcGIS " + self.gis_version.split(".")[0],
             )
             r'''
             try:
@@ -424,6 +426,8 @@ class SpeckleGIS:
                 metr_collab = len(self.active_stream[1].collaborators)
                 metr_projected = True if self.gis_project.activeMap.spatialReference.type != "Geographic" else False 
                 if self.gis_project.activeMap.spatialReference is None: metr_projected = None
+
+                python_version: str = f"python {'.'.join(map(str, sys.version_info[:2]))}"
                 try:
                     crs_lat = project.activeMap.spatialReference.latitudeOfOrigin
                     crs_lon = project.activeMap.spatialReference.centralMeridian
@@ -431,7 +435,7 @@ class SpeckleGIS:
                 except:
                     metr_crs = False
 
-                metrics.track(metrics.SEND, self.active_account, {"branches":metr_branches, "collaborators":metr_collab,"connector_version": str(self.version), "filter": metr_filter, "isMain": metr_main, "savedStreams": metr_saved_streams, "projectedCRS": metr_projected, "customCRS": metr_crs})
+                metrics.track(metrics.SEND, self.active_account, {"hostAppFullVersion":self.gis_version, "pythonVersion": python_version,"branches":metr_branches, "collaborators":metr_collab,"connector_version": str(self.version), "filter": metr_filter, "isMain": metr_main, "savedStreams": metr_saved_streams, "projectedCRS": metr_projected, "customCRS": metr_crs})
             except:
                 metrics.track(metrics.SEND, self.active_account)
             '''
@@ -516,14 +520,15 @@ class SpeckleGIS:
                 metr_crs = False
 
             try:
-                metrics.track(metrics.RECEIVE, self.active_account, {"sourceHostAppVersion": app_full, "sourceHostApp": app, "isMultiplayer": commit.authorId != client_id,"connector_version": str(self.version), "projectedCRS": metr_projected, "customCRS": metr_crs})
+                python_version: str = f"python {'.'.join(map(str, sys.version_info[:2]))}"
+                metrics.track(metrics.RECEIVE, self.active_account, {"hostAppFullVersion":self.gis_version,"pythonVersion": python_version,"sourceHostAppVersion": app_full, "sourceHostApp": app, "isMultiplayer": commit.authorId != client_id,"connector_version": str(self.version), "projectedCRS": metr_projected, "customCRS": metr_crs})
             except:
                 metrics.track(metrics.RECEIVE, self.active_account)
 
             client.commit.received(
             streamId,
             commit.id,
-            source_application="ArcGIS " + self.gis_version,
+            source_application="ArcGIS " + self.gis_version.split(".")[0],
             message="Received commit in ArcGIS",
             )
 
