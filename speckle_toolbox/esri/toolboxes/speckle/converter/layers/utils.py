@@ -173,7 +173,7 @@ def getLayerAttributes(featuresList: List[Base], attrsToRemove: List[str] = ATTR
         for name in all_props:
             if name not in fields.keys(): 
                 fields.update({name: 'TEXT'}) 
-
+        print(fields)
         #fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])

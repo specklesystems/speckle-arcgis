@@ -276,19 +276,34 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
     return speckleLayer
 
 def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
-    print("Layer to Native")
+    print("________________________________________Layer to Native")
     try:
         project = plugin.gis_project
+        
+        layer_elements = layer.elements
+        if layer_elements is None or len(layer_elements)==0:
+            layer_elements = layer.features
 
-        print(layer.crs.wkt)
+        #print(layer.crs.wkt)
         sr = arcpy.SpatialReference(text = layer.crs.wkt)
         print(sr)
-        if layer.collectionType is None:
+
+        try: 
+            collectionType = layer.collectionType
+            if collectionType is None or collectionType=="None": raise Exception
+        except: 
+            #print("except")
+            collectionType = layer.type
+        #print(collectionType)
+        collectionType = layer.speckle_type
+        print(collectionType)
+
+        if collectionType is None:
             # Handle this case
             return
-        elif layer.collectionType.endswith("VectorLayer"):
+        elif collectionType.endswith("VectorLayer"):
             meshLayer = 0
-            for f in layer.elements:
+            for f in layer_elements:
                 print(f["geometry"])
                 if meshLayer >0: break
                 if isinstance (f["geometry"], Base):
@@ -311,7 +326,7 @@ def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
                             if isinstance(g, Mesh):
                                 print(g)
                                 try:
-                                    bimLayerToNative(layer.elements, layer.name, streamBranch, sr, plugin)
+                                    bimLayerToNative(layer_elements, layer.name, streamBranch, sr, plugin)
                                     meshLayer += 1
                                     break 
                                 except: pass 
@@ -334,7 +349,7 @@ def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
                                 if isinstance(g, Mesh):
                                     try:
                                         meshes = []
-                                        for el in layer.elements: 
+                                        for el in layer_elements: 
                                             for el_g in el.geometry:
                                                 for el_g.d in el_g.displayValue:
                                                     if isinstance(el_g.d, Mesh): meshes.append(el_g.d)
@@ -344,7 +359,7 @@ def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
                                     except: pass 
             if meshLayer==0:
                 return vectorLayerToNative(layer, streamBranch, project)
-        elif layer.collectionType.endswith("RasterLayer"):
+        elif collectionType.endswith("RasterLayer"):
             return rasterLayerToNative(layer, streamBranch, project)
         return None
     except Exception as e:
@@ -833,14 +848,18 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
 
     return vl
 
-def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, project: ArcGISProject):
+def vectorLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
     print("_________Vector Layer to Native_________")
     vl = None
     try:
         layerName = removeSpecialCharacters(layer.name)
-
+        layer_elements = layer.elements
+        if layer_elements is None or len(layer_elements)==0:
+            layer_elements = layer.features
+        print(layer.elements)
+        print(layer.features)
         print(layerName)
-        print(layer.crs.wkt)
+        #print(layer.crs.wkt)
         sr = arcpy.SpatialReference(text = layer.crs.wkt) #(text=layer.crs.wkt) 
         active_map = project.activeMap
         path = arcpy.env.workspace #project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
@@ -876,7 +895,9 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
 
         # get and set Layer attribute fields
         # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
-        newFields = getLayerAttributes(layer.elements)
+        newFields = getLayerAttributes(layer_elements)
+        
+        print(newFields)
         fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid"]
         matrix = []
         all_keys = []
@@ -901,9 +922,10 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
                     matrix.append([key, value, key, 255])
                     #print(matrix)
         if len(matrix)>0: AddFields(str(f_class), matrix)
-
+        
+        print(layer_elements)
         fets = []
-        for f in layer.elements: 
+        for f in layer_elements: 
             new_feat = featureToNative(f, newFields, geomType, sr)
             if new_feat != "" and new_feat!= None: fets.append(new_feat)
             else: arcpy.AddError(f"Feature skipped due to invalid geometry")
@@ -981,17 +1003,20 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return vl
 
-def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISProject):
-
+def rasterLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
+    print("RASTER LAYER TO NATIVE")
     rasterLayer = None
     try:
 
         layerName = removeSpecialCharacters(layer.name) + "_Speckle"
 
+        layer_elements = layer.elements
+        if layer_elements is None or len(layer_elements)==0:
+            layer_elements = layer.features
         print(layerName)
-        print(layer.crs.wkt)
+        #print(layer.crs.wkt)
         sr = arcpy.SpatialReference(text = layer.crs.wkt) #(text=layer.crs.wkt) 
-        print(layer.crs.wkt)
+        #print(layer.crs.wkt)
         active_map = project.activeMap
         path = arcpy.env.workspace #project.filePath.replace("aprx","gdb")
         #path = '.'.join(path.split("\\")[:-1])
@@ -1005,7 +1030,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
 
         try: 
             srRasterWkt = str(layer.rasterCrs.wkt)
-            print(layer.rasterCrs.wkt)
+            #print(layer.rasterCrs.wkt)
             srRaster = arcpy.SpatialReference(text = srRasterWkt) # by native raster SR
             rasterHasSr = True
         except: 
@@ -1015,11 +1040,11 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         print(srRaster)
 
         newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
-        print(newName)
+        #print(newName)
         if "." in newName: newName = '.'.join(newName.split(".")[:-1])
-        print(newName)
+        #print(newName)
         
-        feat = layer.elements[0]
+        feat = layer_elements[0]
         bandNames = feat["Band names"]
         bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
 
@@ -1028,7 +1053,9 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         xres = float(feat["X resolution"])
         yres = float(feat["Y resolution"])
         bandsCount=int(feat["Band count"])
-        originPt = arcpy.Point(feat['displayValue'][0].x, feat['displayValue'][0].y, feat['displayValue'][0].z)
+        print(feat['displayValue'])
+        try: originPt = arcpy.Point(feat['displayValue'][0].x, feat['displayValue'][0].y, 0)
+        except: originPt = arcpy.Point(feat['displayValue'][0].vertices[0], feat['displayValue'][0].vertices[1], 0) 
         print(originPt)
         #if source projection is different from layer display projection, convert display OriginPt to raster source projection 
         if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
