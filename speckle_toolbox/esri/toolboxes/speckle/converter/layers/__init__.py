@@ -183,7 +183,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
             print("VECTOR LAYER HERE")
             
             speckleLayer = VectorLayer(units = "m")
-            speckleLayer.type="VectorLayer"
+            speckleLayer.collectionType="VectorLayer"
             speckleLayer.name = layerName
             speckleLayer.crs = speckleReprojectedCrs
             speckleLayer.renderer = rendererToSpeckle(project, project.activeMap, layer, None)
@@ -238,10 +238,10 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
                         print("____End of Feature # " + str(i+1))
                         
                     print("__ finish iterating features")
-                    speckleLayer.features=layerObjs
+                    speckleLayer.elements=layerObjs
                     speckleLayer.geomType = data.shapeType
 
-                    if len(speckleLayer.features) == 0: return None
+                    if len(speckleLayer.elements) == 0: return None
 
                     #layerBase.renderer = layerRenderer
                     #layerBase.applicationId = selectedLayer.id()
@@ -262,9 +262,9 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
             speckleLayer.name = layerName
             speckleLayer.crs = speckleReprojectedCrs
             speckleLayer.rasterCrs = layerCRS
-            speckleLayer.type="RasterLayer"
+            speckleLayer.collectionType="RasterLayer"
             #speckleLayer.geomType="Raster"
-            speckleLayer.features = layerObjs
+            speckleLayer.elements = layerObjs
             
             speckleLayer.renderer = rendererToSpeckle(project, project.activeMap, layer, b)
             
@@ -275,25 +275,33 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
 
     return speckleLayer
 
-def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: str, plugin=None) -> arcLayer:
+def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
     print("Layer to Native")
     try:
         project = plugin.gis_project
 
-        sr = arcpy.SpatialReference().loadFromString(layer.crs.wkt)
-        if layer.type is None:
+        print(layer.crs.wkt)
+        sr = arcpy.SpatialReference(text = layer.crs.wkt)
+        print(sr)
+        if layer.collectionType is None:
             # Handle this case
             return
-        elif layer.type.endswith("VectorLayer"):
+        elif layer.collectionType.endswith("VectorLayer"):
             meshLayer = 0
-            for f in layer.features:
+            for f in layer.elements:
+                print(f["geometry"])
                 if meshLayer >0: break
                 if isinstance (f["geometry"], Base):
                     try:
+                        print("boundary")
                         bound = f["geometry"].boundary # polygon found, default to receiving VectorLayer
+                        print(bound)
+                        if bound is None: raise Exception
                         break 
                     except: 
                         # skip the value if invalid
+                        print(f["geometry"])
+                        print(f["geometry"].displayValue)
                         try: d = f["geometry"].displayValue
                         except: 
                             arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
@@ -301,15 +309,19 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
 
                         for g in f["geometry"].displayValue:
                             if isinstance(g, Mesh):
+                                print(g)
                                 try:
-                                    bimLayerToNative(layer.features, layer.name, streamBranch, sr)
+                                    bimLayerToNative(layer.elements, layer.name, streamBranch, sr, plugin)
                                     meshLayer += 1
                                     break 
                                 except: pass 
                 elif isinstance (f["geometry"], List):
                     for v in f["geometry"]:
                         try:
+                            print("bound")
                             bound = v.boundary # polygon found, default to receiving VectorLayer
+                            print(bound)
+                            if bound is None: raise Exception
                             break 
                         except: 
                             # skip the value if invalid
@@ -317,17 +329,22 @@ def layerToNative(layer: Union[Layer, VectorLayer, RasterLayer], streamBranch: s
                             except: 
                                 arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
                                 continue
-
+                            print(d)
                             for g in v.displayValue:
                                 if isinstance(g, Mesh):
                                     try:
-                                        bimLayerToNative(layer.features, layer.name, streamBranch, sr)
+                                        meshes = []
+                                        for el in layer.elements: 
+                                            for el_g in el.geometry:
+                                                for el_g.d in el_g.displayValue:
+                                                    if isinstance(el_g.d, Mesh): meshes.append(el_g.d)
+                                        bimLayerToNative(meshes, layer.name, streamBranch, sr, plugin)
                                         meshLayer += 1
                                         break 
                                     except: pass 
             if meshLayer==0:
                 return vectorLayerToNative(layer, streamBranch, project)
-        elif layer.type.endswith("RasterLayer"):
+        elif layer.collectionType.endswith("RasterLayer"):
             return rasterLayerToNative(layer, streamBranch, project)
         return None
     except Exception as e:
@@ -400,6 +417,7 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         #if not "__Structural_Foundations_Mesh" in layerName: return None
         
         active_map = project.activeMap
+        print(active_map.spatialReference.exportToString())
         if sr is None: sr = arcpy.SpatialReference(text = active_map.spatialReference.exportToString())
                 
         if sr.type == "Geographic": 
@@ -677,8 +695,9 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         layerName = layerName + "_" + geomType
         print(layerName)
         
-        sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
         active_map = project.activeMap
+        print(active_map.spatialReference)
+        sr = arcpy.SpatialReference(text = active_map.spatialReference.exportToString())
         path = arcpy.env.workspace #project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
         
         print(path)
@@ -821,7 +840,8 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         layerName = removeSpecialCharacters(layer.name)
 
         print(layerName)
-        sr = arcpy.SpatialReference(text=layer.crs.wkt) 
+        print(layer.crs.wkt)
+        sr = arcpy.SpatialReference(text = layer.crs.wkt) #(text=layer.crs.wkt) 
         active_map = project.activeMap
         path = arcpy.env.workspace #project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
         #if not os.path.exists(path): os.makedirs(path)
@@ -856,7 +876,7 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
 
         # get and set Layer attribute fields
         # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
-        newFields = getLayerAttributes(layer.features)
+        newFields = getLayerAttributes(layer.elements)
         fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid"]
         matrix = []
         all_keys = []
@@ -883,7 +903,7 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         if len(matrix)>0: AddFields(str(f_class), matrix)
 
         fets = []
-        for f in layer.features: 
+        for f in layer.elements: 
             new_feat = featureToNative(f, newFields, geomType, sr)
             if new_feat != "" and new_feat!= None: fets.append(new_feat)
             else: arcpy.AddError(f"Feature skipped due to invalid geometry")
@@ -969,7 +989,8 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         layerName = removeSpecialCharacters(layer.name) + "_Speckle"
 
         print(layerName)
-        sr = arcpy.SpatialReference(text=layer.crs.wkt) 
+        print(layer.crs.wkt)
+        sr = arcpy.SpatialReference(text = layer.crs.wkt) #(text=layer.crs.wkt) 
         print(layer.crs.wkt)
         active_map = project.activeMap
         path = arcpy.env.workspace #project.filePath.replace("aprx","gdb")
@@ -985,7 +1006,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         try: 
             srRasterWkt = str(layer.rasterCrs.wkt)
             print(layer.rasterCrs.wkt)
-            srRaster = arcpy.SpatialReference(text=srRasterWkt) # by native raster SR
+            srRaster = arcpy.SpatialReference(text = srRasterWkt) # by native raster SR
             rasterHasSr = True
         except: 
             srRasterWkt = str(layer.crs.wkt)
@@ -998,7 +1019,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         if "." in newName: newName = '.'.join(newName.split(".")[:-1])
         print(newName)
         
-        feat = layer.features[0]
+        feat = layer.elements[0]
         bandNames = feat["Band names"]
         bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
 

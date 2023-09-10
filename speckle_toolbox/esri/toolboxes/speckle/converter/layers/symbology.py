@@ -280,7 +280,7 @@ def rasterRendererToNative(project: ArcGISProject, active_map, layerGroup,  laye
         rendererNew = None
         print(renderer)
 
-        feat = layer.features[0]
+        feat = layer.elements[0]
         print(feat)
 
         bandNames = feat["Band names"]

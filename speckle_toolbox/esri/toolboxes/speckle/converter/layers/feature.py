@@ -101,7 +101,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
     try:
         try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
         except:  speckle_geom = feature # for created in other software
-        #print(speckle_geom)
+        print(speckle_geom)
 
         arcGisGeom = None
         if isinstance(speckle_geom, list):
@@ -597,10 +597,10 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                             else: 
                                 colorRVal = colorGVal = colorBVal = int( (rasterBandVals[bandIndex][int(count/4)] - min(rasterBandVals[bandIndex])) / valRange * 255 )
                         
-                        print("__pixel color_")
-                        print(colorRVal)
-                        print(colorGVal)
-                        print(colorBVal)
+                        #print("__pixel color_")
+                        #print(colorRVal)
+                        #print(colorGVal)
+                        #print(colorBVal)
                         color =  (colorRVal<<16) + (colorGVal<<8) + colorBVal
 
                     else:
@@ -649,10 +649,10 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
                         else: 
                             colorBVal = int( (rasterBandVals[blueBand][int(count/4)] - float(bbvalMin)) / bvalRange * 255 )
                     else: colorBVal = 0
-                    print("__pixel color_")
-                    print(colorRVal)
-                    print(colorGVal)
-                    print(colorBVal)
+                    #print("__pixel color_")
+                    #print(colorRVal)
+                    #print(colorGVal)
+                    #print(colorBVal)
 
                     color =  (colorRVal<<16) + (colorGVal<<8) + colorBVal
 

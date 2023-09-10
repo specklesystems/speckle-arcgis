@@ -8,7 +8,7 @@ except:
 
 
 
-class Layer(Base, chunkable={"features": 100}):
+class Layer(Base, chunkable={"elements": 100}):
     """A GIS Layer"""
 
     def __init__(
@@ -16,7 +16,7 @@ class Layer(Base, chunkable={"features": 100}):
         name: Optional[str] = None,
         crs: Optional[CRS] = None,
         datum: Optional[CRS] = None,
-        features: List[Base] = [],
+        elements: List[Base] = [],
         layerType: str = "None",
         geomType: str = "None",
         renderer: dict = {},
@@ -26,12 +26,12 @@ class Layer(Base, chunkable={"features": 100}):
         self.name = name
         self.crs = crs
         self.datum = datum
-        self.type = layerType
-        self.features = features
+        self.collectionType = layerType
+        self.elements = elements
         self.geomType = geomType
         self.renderer = renderer 
 
-class VectorLayer(Base, chunkable={"features": 100}):
+class VectorLayer(Base, chunkable={"elements": 100}):
     """A GIS Vector Layer"""
 
     def __init__(
@@ -39,7 +39,7 @@ class VectorLayer(Base, chunkable={"features": 100}):
         name: Optional[str] = None,
         crs: Optional[CRS] = None,
         datum: Optional[CRS] = None,
-        features: List[Base] = [],
+        elements: List[Base] = [],
         layerType: str = "None",
         geomType: str = "None",
         renderer: dict = {},
@@ -49,12 +49,12 @@ class VectorLayer(Base, chunkable={"features": 100}):
         self.name = name
         self.crs = crs
         self.datum = datum
-        self.type = layerType
-        self.features = features
+        self.collectionType = layerType
+        self.elements = elements
         self.geomType = geomType
         self.renderer = renderer 
 
-class RasterLayer(Base, chunkable={"features": 100}):
+class RasterLayer(Base, chunkable={"elements": 100}):
     """A GIS Raster Layer"""
 
     def __init__(
@@ -62,7 +62,7 @@ class RasterLayer(Base, chunkable={"features": 100}):
         name: Optional[str] = None,
         crs: Optional[CRS] =None,
         rasterCrs: Optional[CRS] = None,
-        features: List[Base] = [],
+        elements: List[Base] = [],
         layerType: str = "None",
         geomType: str = "None",
         renderer: dict = {},
@@ -72,8 +72,8 @@ class RasterLayer(Base, chunkable={"features": 100}):
         self.name = name
         self.crs = crs
         self.rasterCrs = rasterCrs
-        self.type = layerType
-        self.features = features
+        self.collectionType = layerType
+        self.elements = elements
         self.geomType = geomType
         self.renderer = renderer 
     
