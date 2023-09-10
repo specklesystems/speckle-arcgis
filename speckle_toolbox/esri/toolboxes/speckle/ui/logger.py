@@ -49,7 +49,7 @@ def addLevelSymbol(msg: str, level: int):
       return msg 
 
 def writeToLog(msg: str = "", level: int = 2):
-      print("write log")
+      print(msg)
       if level == 0: arcpy.AddMessage(msg)
       if level == 1: arcpy.AddWarning(msg)
       if level == 2: arcpy.AddError(msg)

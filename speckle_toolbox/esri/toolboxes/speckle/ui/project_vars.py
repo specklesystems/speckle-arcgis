@@ -277,7 +277,7 @@ def setProjectReferenceSystem(plugin: SpeckleGIS):
 
 def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
     try:
-        path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
+        path = arcpy.env.workspace #project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
     
         if 'speckle_gis' not in arcpy.ListTables():
             try: 

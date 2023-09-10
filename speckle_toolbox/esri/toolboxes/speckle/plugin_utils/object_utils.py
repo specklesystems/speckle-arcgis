@@ -119,12 +119,12 @@ def loopVal(value: Any, name: str, streamBranch: str, plugin=None): # "name" is 
                     # keep traversing infinitely, just don't run repeated conversion for the same list of objects
                     try: 
                         if item["displayValue"] is not None and objectListConverted == 0: 
-                            bimLayerToNative(value, name, streamBranch, plugin)
+                            bimLayerToNative(value, name, streamBranch, None, plugin)
                             objectListConverted += 1
                     except: 
                         try: 
                             if item["@displayValue"] is not None and objectListConverted == 0: 
-                                bimLayerToNative(value, name, streamBranch, plugin)
+                                bimLayerToNative(value, name, streamBranch, None, plugin)
                                 objectListConverted += 1
                         except: pass 
                 elif item.speckle_type and item.speckle_type.endswith(".ModelCurve"): 
@@ -132,10 +132,10 @@ def loopVal(value: Any, name: str, streamBranch: str, plugin=None): # "name" is 
                         cadLayerToNative(value, name, streamBranch, plugin)
                         break
                 elif item.speckle_type and (item.speckle_type == "Objects.Geometry.Mesh" or item.speckle_type == "Objects.Geometry.Brep" or item.speckle_type.startswith("Objects.BuiltElements.")):
-                    bimLayerToNative(value, name, streamBranch, plugin)
+                    bimLayerToNative(value, name, streamBranch, None, plugin)
                     break
                 elif item.speckle_type and item.speckle_type != "Objects.Geometry.Mesh" and item.speckle_type != "Objects.Geometry.Brep" and item.speckle_type.startswith("Objects.Geometry."): # or item.speckle_type == 'Objects.BuiltElements.Alignment'): 
-                    pt, pl = cadLayerToNative(value, name, streamBranch, plugin)
+                    cadLayerToNative(value, name, streamBranch, plugin)
                     #if pt is not None: arcpy.AddMessage("Layer group created: " + str(pt.name))
                     #if pl is not None: arcpy.AddMessage("Layer group created: " + str(pl.name))
                     break

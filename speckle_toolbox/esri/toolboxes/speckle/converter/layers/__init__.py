@@ -424,9 +424,8 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
 
         longName = streamBranch + "\\" + newName 
         newName = validateNewFclassName(newName, all_layer_names, streamBranch + "\\")
+        print(newName)
 
-
-        path = project.filePath.replace("aprx","gdb") #
 
         p: str = os.path.expandvars(r'%LOCALAPPDATA%') + "\\Temp\\Speckle_ArcGIS_temp\\" + datetime.now().strftime("%Y-%m-%d %H-%M")
         #findOrCreatePath(p)
@@ -460,13 +459,22 @@ def bimVectorLayerToNative(geomList: List[Base], layerName: str, geomType: str, 
         validated_class_path = validate_path(class_name)
         #print(validated_class_path)
         validated_class_name = validated_class_path.split("\\")[len(validated_class_path.split("\\"))-1]
+        print(validated_class_name)
         #print(validated_class_name)
+
+        path = arcpy.env.workspace #project.filePath.replace("aprx","gdb") #
+
         f_class = arcpy.conversion.FeatureClassToFeatureClass(shp, path, validated_class_name)
         # later replace with:
         # f_class = path + "\\" + validated_class_name
         # arcpy.conversion.ExportFeatures(shp, f_class)
 
+        # https://pro.arcgis.com/en/pro-app/latest/help/data/geodatabases/manage-file-gdb/create-file-geodatabase.htm#ESRI_SECTION1_3704D3DDE8624C129D86F7B6737F89AA
+        #out_folder_path = "\\".join(project.filePath.split("\\")[:len(project.filePath.split("\\"))-1])
+        #out_name = project.filePath.split("\\")[len(project.filePath.split("\\"))-1].replace("aprx","gdb")
+        #arcpy.CreateFileGDB_management(out_folder_path, out_name)
         print(f_class)
+            
         arcpy.management.DefineProjection(f_class, sr)
         #print(geomList)
 
@@ -671,7 +679,7 @@ def cadVectorLayerToNative(geomList, layerName: str, geomType: str, streamBranch
         
         sr = arcpy.SpatialReference(text = project.activeMap.spatialReference.exportToString())
         active_map = project.activeMap
-        path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
+        path = arcpy.env.workspace #project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
         
         print(path)
         print(streamBranch)
@@ -815,7 +823,7 @@ def vectorLayerToNative(layer: Union[Layer, VectorLayer], streamBranch: str, pro
         print(layerName)
         sr = arcpy.SpatialReference(text=layer.crs.wkt) 
         active_map = project.activeMap
-        path = project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
+        path = arcpy.env.workspace #project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
         #if not os.path.exists(path): os.makedirs(path)
         #print(path) 
 
@@ -964,7 +972,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, project: ArcGISPr
         sr = arcpy.SpatialReference(text=layer.crs.wkt) 
         print(layer.crs.wkt)
         active_map = project.activeMap
-        path = project.filePath.replace("aprx","gdb")
+        path = arcpy.env.workspace #project.filePath.replace("aprx","gdb")
         #path = '.'.join(path.split("\\")[:-1])
         rasterHasSr = False
         print(path)
