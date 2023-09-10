@@ -26,7 +26,7 @@ def logToUser(msg: str, func=None, level: int = 2, plugin = None, url = "", blue
 
             new_msg = splitTextIntoLines(msg, 70)
 
-            dockwidget.msgLog.addButton(new_msg, level=level)
+            dockwidget.msgLog.addButton(new_msg, level=level, url=url, blue=blue)
             
       except Exception as e: print(e); return 
 
