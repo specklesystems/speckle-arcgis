@@ -238,10 +238,10 @@ def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, proj
         if layer_sr.name != projectCRS.name:
             tr0 = tr1 = tr2 = tr_custom = None
             midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
-            print(layer_sr)
+            #print(layer_sr)
             try:
                 transformations = arcpy.ListTransformations(layer_sr, projectCRS)
-                print(transformations)
+                #print(transformations)
                 customTransformName = "layer_sr.name"+"_To_"+ projectCRS.name
                 if len(transformations) == 0:
                     try:

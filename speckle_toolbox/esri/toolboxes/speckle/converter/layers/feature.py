@@ -407,7 +407,7 @@ def rasterFeatureToSpeckle(selectedLayer: arcLayer, projectCRS: arcpy.SpatialRef
             symJson = jsonFromLayerStyle(selectedLayer, path_style)
 
             # read from Json
-            print(symJson["layerDefinitions"][0]["colorizer"])
+            #print(symJson["layerDefinitions"][0]["colorizer"])
             try: greenBand = symJson["layerDefinitions"][0]["colorizer"]["greenBandIndex"]
             except: greenBand = None
             try: blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] 
