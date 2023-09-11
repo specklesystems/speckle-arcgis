@@ -45,23 +45,23 @@ def featureToSpeckle(fieldnames, attr_list, index: int, f_shape, projectCRS: arc
         geomType = data.shapeType #Polygon, Point, Polyline, Multipoint, MultiPatch
         featureType = data.featureType # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem 
         print(geomType)
-        print(hasattr(data, "isRevit")) 
-        print(hasattr(data, "isIFC")) 
-        print(hasattr(data, "bimLevels")) 
-        print(hasattr(data, "hasSpatialIndex")) 
+        #print(hasattr(data, "isRevit")) 
+        #print(hasattr(data, "isIFC")) 
+        #print(hasattr(data, "bimLevels")) 
+        #print(hasattr(data, "hasSpatialIndex")) 
         if hasattr(data, "isRevit") or hasattr(data, "isIFC") or hasattr(data, "bimLevels"): 
-            print(f"Layer {selectedLayer.name} has unsupported data type")
+            #print(f"Layer {selectedLayer.name} has unsupported data type")
             logToUser(f"Layer {selectedLayer.name} has unsupported data type", level=1, func = inspect.stack()[0][3])
             return None 
-        #print(layer_sr.name)
-        #print(projectCRS.name)
+        print(layer_sr.name)
+        print(projectCRS.name)
         f_shape = findTransformation(f_shape, geomType, layer_sr, projectCRS, selectedLayer)
         if f_shape is None: return None
 
         ######################################### Convert geometry ##########################################
         try:
             geom = convertToSpeckle(f_shape, index, selectedLayer, geomType, featureType) 
-            
+            print(geom)
             b["geometry"] = []
             if geom is not None and geom!="None": 
                 if isinstance(geom, List):
@@ -101,7 +101,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
     try:
         try: speckle_geom = feature["geometry"] # for created in QGIS / ArcGIS Layer type
         except:  speckle_geom = feature # for created in other software
-        print(speckle_geom)
+        #print(speckle_geom)
 
         arcGisGeom = None
         if isinstance(speckle_geom, list):
@@ -114,18 +114,25 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
             feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
         else:
             return None
-
+        print(arcGisGeom)
+        print(feat)
         for key, variant in fields.items(): 
+            value = None
             try: value = feature[key]
             except: 
                 if key == 'Speckle_ID': 
                     try: 
                         value = str(feature["speckle_id"]) # if GIS already generated this field
-                    except:
+                    except Exception as e:
+                        print(e)
                         value = str(feature["id"])
                 else: 
-                    arcpy.AddWarning(f'Field {key} not found')
-                    return None 
+                    print(key)
+                    #arcpy.AddWarning(f'Field {key} not found')
+                    try: value = feature.attributes[key]
+                    except: 
+                        try: value = feature.attributes[key.replace("attributes_","")]
+                        except: pass
 
             if variant == "TEXT": 
                 value = str(value)
@@ -140,7 +147,7 @@ def featureToNative(feature: Base, fields: dict, geomType: str, sr: arcpy.Spatia
                 if variant == "FLOAT": feat.update({key: None})
                 if variant == "LONG": feat.update({key: None})
                 if variant == "SHORT": feat.update({key: None})
-                
+        print(feat)
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
     return feat

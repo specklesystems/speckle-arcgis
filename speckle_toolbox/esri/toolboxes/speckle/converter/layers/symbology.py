@@ -151,17 +151,21 @@ def vectorRendererToNative(project: ArcGISProject, active_map, layerGroup, layer
                 elif renderer['type']  == 'categorizedSymbol':
                     print("RENDERER CATEGORIZED")
                     print(renderer)
+                    print(existingAttrs)
 
                     cats = renderer['properties']['categories']
                     attribute = renderer['properties']['attribute']
-                    if attribute not in existingAttrs: return layerArcgis 
+                    if attribute not in existingAttrs:
+                        attribute = "attributes_"+ attribute 
+                        if attribute not in existingAttrs: 
+                            return layerArcgis 
 
                     #vl2 = active_map.addLayer(layerArcgis)[0]
                     #sym = layerArcgis.symbology
                     sym.updateRenderer('UniqueValueRenderer')
                     print(sym.renderer.type)
-                    print(existingAttrs)
-                    print(attribute)
+                    #print(existingAttrs)
+                    #print(attribute)
 
                     sym.renderer.fields = [attribute]
                     for k, grp in enumerate(sym.renderer.groups):
@@ -280,7 +284,10 @@ def rasterRendererToNative(project: ArcGISProject, active_map, layerGroup,  laye
         rendererNew = None
         print(renderer)
 
-        feat = layer.elements[0]
+        layer_elements = layer.elements
+        if layer_elements is None or len(layer_elements)==0:
+            layer_elements = layer.features
+        feat = layer_elements[0]
         print(feat)
 
         bandNames = feat["Band names"]

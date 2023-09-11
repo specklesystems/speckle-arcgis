@@ -237,12 +237,13 @@ def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, proj
     try:
         if layer_sr.name != projectCRS.name:
             tr0 = tr1 = tr2 = tr_custom = None
+            midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
             print(layer_sr)
             try:
                 transformations = arcpy.ListTransformations(layer_sr, projectCRS)
+                print(transformations)
                 customTransformName = "layer_sr.name"+"_To_"+ projectCRS.name
                 if len(transformations) == 0:
-                    midSr = arcpy.SpatialReference("WGS 1984") # GCS_WGS_1984
                     try:
                         tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
                         tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
@@ -264,7 +265,7 @@ def findTransformation(f_shape, geomType, layer_sr: arcpy.SpatialReference, proj
                     selecterTr = dict(sorted(selecterTr.items(), key=lambda item: item[1]))
                     tr0 = list(selecterTr.keys())[0]
 
-                if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint":
+                if geomType != "Point" and geomType != "Polyline" and geomType != "Polygon" and geomType != "Multipoint" and geomType != "MultiPatch":
                     try: logToUser("Unsupported or invalid geometry in layer " + selectedLayer.name, level=2, func = inspect.stack()[0][3])
                     except: logToUser("Unsupported or invalid geometry", level=2, func = inspect.stack()[0][3])
 

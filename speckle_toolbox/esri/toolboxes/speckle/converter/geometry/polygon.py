@@ -39,9 +39,9 @@ import math
 from panda3d.core import Triangulator
 
 
-def polygonToSpeckleMesh(feature, index: int, layer, multitype: bool):
+def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool):
     print("________polygonToSpeckleMesh_____")
-    print(feature)
+    print(geom)
     polygon = Base(units = "m")
     try:
 
@@ -50,10 +50,10 @@ def polygonToSpeckleMesh(feature, index: int, layer, multitype: bool):
         colors = []
         existing_vert = 0
         
-        for i, p in enumerate(feature): 
+        for i, p in enumerate(geom): 
             #print("____start enumerate feature")
             #print(p) #<geoprocessing array object object at 0x0000026796C77110>
-            
+            print(p)
             boundary, voids = getPolyBoundaryVoids(p, layer, multitype)
             #print(boundary)
             #print(voids)
@@ -92,8 +92,8 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
     boundary = None
     pointList = []
     try:
-        partsBoundaries = []
-        partsVoids = []
+        #partsBoundaries = []
+        #partsVoids = []
         if multiType is False: # Multipolygon
             try: # might be no property "has curves"
                 if geom.hasCurves: 
@@ -110,19 +110,19 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                     boundary = polylineFromVerticesToSpeckle(pointList, True, geom, layer) 
                     print(boundary)
             except: # for multipatches, no property "has curves" 
-                #print(geom)
+                #print("multipatch")
                 for pt in geom: 
                     #print(pt)
                     if pt != None: pointList.append(pt) 
                 boundary = polylineFromVerticesToSpeckle(pointList, True, geom, layer) 
-
-            partsBoundaries.append(boundary)
-            partsVoids.append([])
+                #print(boundary)
+            #partsBoundaries.append(boundary)
+            #partsVoids.append([])
             
         else: 
             print("multi type")
             for i, p in enumerate(geom):
-                #print(p)
+                print(p)
                 for pt in p:  
                     #print(pt) # 284394.58100903 5710688.11602606 NaN NaN
                     if pt == None and boundary == None:  # first break 
@@ -310,6 +310,9 @@ def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
     print("_______Drawing polygons____")
     polygon = None
     try: 
+        try:
+            poly = poly["geometry"]
+        except: pass
         #pts = [pointToCoord(pt) for pt in poly["boundary"].as_points()]
         pointsSpeckle = []
         if isinstance(poly["boundary"], Circle) or isinstance(poly["boundary"], Arc): 

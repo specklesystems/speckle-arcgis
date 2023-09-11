@@ -129,7 +129,7 @@ def getLayers(plugin, bySelection = False ) -> List[arcLayer]:
 def convertSelectedLayers(layers: List[arcLayer], project: ArcGISProject) -> List[Union[VectorLayer,Layer]]:
     """Converts the current selected layers to Speckle"""
     print("________Convert Layers_________")
-    result = []
+    result: List[Any] = []
     try:
         r'''
         for layer in selected_layers:
@@ -148,7 +148,12 @@ def convertSelectedLayers(layers: List[arcLayer], project: ArcGISProject) -> Lis
                 print(result)
         '''
         for i, layer in enumerate(layers):
-            result.append(layerToSpeckle(layer, project))
+            new_layer = None
+            try:
+                new_layer = layerToSpeckle(layer, project)
+            except: pass
+            if new_layer is not None:
+                result.append(new_layer)
         
     except Exception as e:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
@@ -284,7 +289,7 @@ def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
         if layer_elements is None or len(layer_elements)==0:
             layer_elements = layer.features
 
-        #print(layer.crs.wkt)
+        print(layer_elements)
         sr = arcpy.SpatialReference(text = layer.crs.wkt)
         print(sr)
 
@@ -316,20 +321,20 @@ def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
                     except: 
                         # skip the value if invalid
                         print(f["geometry"])
-                        print(f["geometry"].displayValue)
-                        try: d = f["geometry"].displayValue
+                        try: 
+                            for g in f["geometry"].displayValue:
+                                if isinstance(g, Mesh):
+                                    print(g)
+                                    try:
+                                        bimLayerToNative(layer_elements, layer.name, streamBranch, sr, plugin)
+                                        meshLayer += 1
+                                        break 
+                                    except: pass 
                         except: 
-                            arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
-                            continue
+                            pass 
+                            #arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
+                            #continue
 
-                        for g in f["geometry"].displayValue:
-                            if isinstance(g, Mesh):
-                                print(g)
-                                try:
-                                    bimLayerToNative(layer_elements, layer.name, streamBranch, sr, plugin)
-                                    meshLayer += 1
-                                    break 
-                                except: pass 
                 elif isinstance (f["geometry"], List):
                     for v in f["geometry"]:
                         try:
@@ -340,23 +345,23 @@ def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
                             break 
                         except: 
                             # skip the value if invalid
-                            try: d = v.displayValue
+                            try: 
+                                for g in v.displayValue:
+                                    if isinstance(g, Mesh):
+                                        try:
+                                            meshes = []
+                                            for el in layer_elements: 
+                                                for el_g in el.geometry:
+                                                    for el_g.d in el_g.displayValue:
+                                                        if isinstance(el_g.d, Mesh): meshes.append(el_g.d)
+                                            bimLayerToNative(meshes, layer.name, streamBranch, sr, plugin)
+                                            meshLayer += 1
+                                            break 
+                                        except: pass 
                             except: 
-                                arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
-                                continue
-                            print(d)
-                            for g in v.displayValue:
-                                if isinstance(g, Mesh):
-                                    try:
-                                        meshes = []
-                                        for el in layer_elements: 
-                                            for el_g in el.geometry:
-                                                for el_g.d in el_g.displayValue:
-                                                    if isinstance(el_g.d, Mesh): meshes.append(el_g.d)
-                                        bimLayerToNative(meshes, layer.name, streamBranch, sr, plugin)
-                                        meshLayer += 1
-                                        break 
-                                    except: pass 
+                                pass 
+                                #arcpy.AddError(f"Feature \"{f.id}\" skipped due to invalid geometry")
+                                #continue
             if meshLayer==0:
                 return vectorLayerToNative(layer, streamBranch, project)
         elif collectionType.endswith("RasterLayer"):
@@ -856,8 +861,8 @@ def vectorLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
         layer_elements = layer.elements
         if layer_elements is None or len(layer_elements)==0:
             layer_elements = layer.features
-        print(layer.elements)
-        print(layer.features)
+        #print(layer.elements)
+        #print(layer.features)
         print(layerName)
         #print(layer.crs.wkt)
         sr = arcpy.SpatialReference(text = layer.crs.wkt) #(text=layer.crs.wkt) 
@@ -898,7 +903,7 @@ def vectorLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
         newFields = getLayerAttributes(layer_elements)
         
         print(newFields)
-        fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid"]
+        fields_to_ignore = ["arcgisgeomfromspeckle", 'arcGisGeomFromSpeckle',"shape", "objectid", "OBJECTID"]
         matrix = []
         all_keys = []
         all_key_types = []
@@ -930,7 +935,7 @@ def vectorLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
             if new_feat != "" and new_feat!= None: fets.append(new_feat)
             else: arcpy.AddError(f"Feature skipped due to invalid geometry")
         
-        #print(fets)
+        print(fets)
         if len(fets) == 0: return None
         count = 0
         rowValues = []
@@ -949,6 +954,8 @@ def vectorLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
                     row.append(value)
             rowValues.append(row)
             count += 1
+            print(heads)
+            print(row)
         cur = arcpy.da.InsertCursor(str(f_class), tuple(heads) )
         for row in rowValues: 
             #print(tuple(heads))
@@ -957,11 +964,12 @@ def vectorLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
         del cur 
 
         vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+        print(vl)
 
         #adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
         
         try: active_map.addLayerToGroup(layerGroup, vl)
-        except Exception as e: logToUser("Layer not added: "+str(e), level=2, func = inspect.stack()[0][3], plugin = plugin.dockwidget)
+        except Exception as e: logToUser("Layer not added: "+str(e), level=2, func = inspect.stack()[0][3])
         vl2 = None
         print(newName)
         for l in project.activeMap.listLayers(): 
@@ -1045,14 +1053,25 @@ def rasterLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
         #print(newName)
         
         feat = layer_elements[0]
-        bandNames = feat["Band names"]
-        bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
+        try:
+            bandNames = feat["Band names"]
+            bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
 
-        xsize= int(feat["X pixels"])
-        ysize= int(feat["Y pixels"])
-        xres = float(feat["X resolution"])
-        yres = float(feat["Y resolution"])
-        bandsCount=int(feat["Band count"])
+            xsize= int(feat["X pixels"])
+            ysize= int(feat["Y pixels"])
+            xres = float(feat["X resolution"])
+            yres = float(feat["Y resolution"])
+            bandsCount=int(feat["Band count"])
+        except:
+            bandNames = feat.band_names
+            bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
+
+            xsize= int(feat.x_size)
+            ysize= int(feat.y_size)
+            xres = float(feat.x_resolution)
+            yres = float(feat.y_resolution)
+            bandsCount = int(feat.band_count)
+
         print(feat['displayValue'])
         try: originPt = arcpy.Point(feat['displayValue'][0].x, feat['displayValue'][0].y, 0)
         except: originPt = arcpy.Point(feat['displayValue'][0].vertices[0], feat['displayValue'][0].vertices[1], 0) 
