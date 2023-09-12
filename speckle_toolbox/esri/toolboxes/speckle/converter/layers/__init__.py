@@ -1073,8 +1073,8 @@ def rasterLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
             bandsCount = int(feat.band_count)
 
         print(feat['displayValue'])
-        try: originPt = arcpy.Point(feat['displayValue'][0].x, feat['displayValue'][0].y, 0)
-        except: originPt = arcpy.Point(feat['displayValue'][0].vertices[0], feat['displayValue'][0].vertices[1], 0) 
+        try: originPt = arcpy.Point(feat.x_origin, feat.y_origin, 0) 
+        except: originPt = arcpy.Point(feat['displayValue'][0].x, feat['displayValue'][0].y, 0)
         print(originPt)
         #if source projection is different from layer display projection, convert display OriginPt to raster source projection 
         if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
