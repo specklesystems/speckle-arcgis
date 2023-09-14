@@ -1,4 +1,4 @@
-from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis import Toolbox, Speckle   # The code to test
+from speckle_toolbox.esri.toolboxes.speckle.speckle.speckle_arcgis import Toolbox, Speckle   # The code to test
 from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import speckleInputsClass, toolboxInputsClass
 
 import arcpy 
