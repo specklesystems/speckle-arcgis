@@ -21,15 +21,15 @@ from osgeo import osr
 import inspect 
 
 try: 
-    from speckle.ui.validation import tryGetStream
-    from speckle.speckle_arcgis import SpeckleGIS
-    from speckle.converter.layers import getAllProjLayers
-    from speckle.ui.logger import logToUser
+    from speckle.speckle.ui.validation import tryGetStream
+    from speckle.speckle.speckle_arcgis import SpeckleGIS
+    from speckle.speckle.converter.layers import getAllProjLayers
+    from speckle.speckle.ui.logger import logToUser
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.ui.validation import tryGetStream
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.validation import tryGetStream
     from speckle_toolbox.esri.toolboxes.speckle.speckle.speckle_arcgis import SpeckleGIS
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getAllProjLayers
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers import getAllProjLayers
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
 
 FIELDS = ["project_streams","project_layer_selection", "lat_lon"]
 

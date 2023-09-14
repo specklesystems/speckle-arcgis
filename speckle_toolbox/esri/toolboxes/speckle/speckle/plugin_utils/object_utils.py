@@ -6,13 +6,13 @@ import inspect
 from specklepy.objects import Base
 
 try:
-    from speckle.ui.logger import logToUser
-    from speckle.converter.layers.Layer import VectorLayer, RasterLayer, Layer
-    from speckle.converter.layers import bimLayerToNative, cadLayerToNative, layerToNative
+    from speckle.speckle.ui.logger import logToUser
+    from speckle.speckle.converter.layers.Layer import VectorLayer, RasterLayer, Layer
+    from speckle.speckle.converter.layers import bimLayerToNative, cadLayerToNative, layerToNative
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import VectorLayer, RasterLayer, Layer
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers import bimLayerToNative, cadLayerToNative, layerToNative
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.Layer import VectorLayer, RasterLayer, Layer
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers import bimLayerToNative, cadLayerToNative, layerToNative
 
 import arcpy
 

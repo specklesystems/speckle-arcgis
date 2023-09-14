@@ -9,19 +9,19 @@ from typing import Any, List, Union, Sequence
 import inspect 
 
 try:
-    from speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
-    from speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
-    from speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
-    from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
-    from speckle.ui.logger import logToUser
-    from speckle.converter.geometry.mesh import meshToNative
+    from speckle.speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
+    from speckle.speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
+    from speckle.speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
+    from speckle.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
+    from speckle.speckle.ui.logger import logToUser
+    from speckle.speckle.converter.geometry.mesh import meshToNative
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import meshToNative
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.polygon import polygonToNative, polygonToSpeckle, multiPolygonToSpeckle, polygonToSpeckleMesh
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.polyline import arcToNative, ellipseToNative, circleToNative, curveToNative, lineToNative, polycurveToNative, polylineFromVerticesToSpeckle, polylineToNative, polylineToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.point import pointToCoord, pointToNative, pointToSpeckle, multiPointToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints, multiPolylineToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.mesh import meshToNative
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
 
 import numpy as np
 

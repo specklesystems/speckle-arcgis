@@ -17,13 +17,13 @@ from specklepy.objects import Base
 from specklepy.objects.other import RenderMaterial
 
 try:
-    from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
-    from speckle.ui.logger import logToUser
-    from speckle.plugin_utils.helpers import findOrCreatePath
+    from speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
+    from speckle.speckle.ui.logger import logToUser
+    from speckle.speckle.plugin_utils.helpers import findOrCreatePath
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import findOrCreatePath
 
 def jsonFromLayerStyle(layerArcgis, path_style):
     # write updated renderer to file and get layerStyle variable 

@@ -2,9 +2,9 @@ from typing import List, Optional
 from specklepy.objects.base import Base
 
 try: 
-    from speckle.converter.layers.CRS import CRS
+    from speckle.speckle.converter.layers.CRS import CRS
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.CRS import CRS
 
 
 

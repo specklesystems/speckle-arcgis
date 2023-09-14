@@ -13,30 +13,30 @@ from typing import Any, List, Tuple, Union
 import inspect
 
 try:
-    from speckle.converter.layers.CRS import CRS
-    from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-    from speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
-    from speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
-    from speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors
+    from speckle.speckle.converter.layers.CRS import CRS
+    from speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from speckle.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
+    from speckle.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+    from speckle.speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors
 
-    from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
-    from speckle.converter.layers.utils import findTransformation
-    from speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
-    from speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
-    from speckle.ui.logger import logToUser
+    from speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
+    from speckle.speckle.converter.layers.utils import findTransformation
+    from speckle.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
+    from speckle.speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
+    from speckle.speckle.ui.logger import logToUser
 
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.CRS import CRS
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors 
 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findTransformation
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import findTransformation
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
 
 from specklepy.objects import Base
 from specklepy.objects.geometry import Mesh

@@ -9,30 +9,30 @@ from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, 
 import inspect 
 
 try:
-    from speckle.converter.geometry.mesh import constructMesh, constructMeshFromRaster, meshPartsFromPolygon
-    from speckle.converter.geometry.point import pointToCoord, pointToNative
-    from speckle.converter.layers.symbology import featureColorfromNativeRenderer
-    from speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
+    from speckle.speckle.converter.geometry.mesh import constructMesh, constructMeshFromRaster, meshPartsFromPolygon
+    from speckle.speckle.converter.geometry.point import pointToCoord, pointToNative
+    from speckle.speckle.converter.layers.symbology import featureColorfromNativeRenderer
+    from speckle.speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
                                                     circleToSpeckle, 
                                                     speckleArcCircleToPoints, 
                                                     curveToSpeckle, 
                                                     specklePolycurveToPoints
                                                     )
-    from speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
-    from speckle.ui.logger import logToUser
+    from speckle.speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
+    from speckle.speckle.ui.logger import logToUser
 
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, constructMesh, meshPartsFromPolygon
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToCoord, pointToNative
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, constructMesh, meshPartsFromPolygon
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.point import pointToCoord, pointToNative
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.symbology import featureColorfromNativeRenderer
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.polyline import (polylineFromVerticesToSpeckle, 
                                                     circleToSpeckle, 
                                                     speckleArcCircleToPoints, 
                                                     curveToSpeckle, 
                                                     specklePolycurveToPoints
                                                     )
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.utils import speckleBoundaryToSpecklePts
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
 
 
 import math

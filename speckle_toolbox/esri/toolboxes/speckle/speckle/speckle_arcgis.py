@@ -29,31 +29,31 @@ from arcpy._mp import ArcGISProject, Map
 from arcpy._mp import Layer as arcLayer
 
 try: 
-    from speckle.plugin_utils.object_utils import callback, traverseObject
-    from speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer) 
-    from speckle.converter.layers import convertSelectedLayers, getLayers
-    from speckle.converter.layers.utils import findAndClearLayerGroup
-    from speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
-    from speckle.ui.add_stream_modal import AddStreamModalDialog
-    from speckle.ui.create_stream import CreateStreamModalDialog
-    from speckle.ui.create_branch import CreateBranchModalDialog
-    from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-    from speckle.ui.logger import logToUser, logToUserWithAction
-    from speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
+    from speckle.speckle.plugin_utils.object_utils import callback, traverseObject
+    from speckle.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer) 
+    from speckle.speckle.converter.layers import convertSelectedLayers, getLayers
+    from speckle.speckle.converter.layers.utils import findAndClearLayerGroup
+    from speckle.speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
+    from speckle.speckle.ui.add_stream_modal import AddStreamModalDialog
+    from speckle.speckle.ui.create_stream import CreateStreamModalDialog
+    from speckle.speckle.ui.create_branch import CreateBranchModalDialog
+    from speckle.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
+    from speckle.speckle.ui.logger import logToUser, logToUserWithAction
+    from speckle.speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
 
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.object_utils import callback, traverseObject
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers import convertSelectedLayers, getLayers
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import findAndClearLayerGroup
-    from speckle_toolbox.esri.toolboxes.speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
-    from speckle_toolbox.esri.toolboxes.speckle.ui.add_stream_modal import AddStreamModalDialog
-    from speckle_toolbox.esri.toolboxes.speckle.ui.create_stream import CreateStreamModalDialog
-    from speckle_toolbox.esri.toolboxes.speckle.ui.create_branch import CreateBranchModalDialog
-    from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser, logToUserWithAction
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.object_utils import callback, traverseObject
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer)
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers import convertSelectedLayers, getLayers
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import findAndClearLayerGroup
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.add_stream_modal import AddStreamModalDialog
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.create_stream import CreateStreamModalDialog
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.create_branch import CreateBranchModalDialog
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser, logToUserWithAction
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
 
 # Import the code for the dialog
 

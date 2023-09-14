@@ -31,14 +31,14 @@ import inspect
 
 try:
     #from speckle.speckle_arcgis_new import Speckle
-    from speckle.converter.layers import getLayers, getAllProjLayers
-    from speckle.ui.logger import logToUser
-    from speckle.ui.LogWidget import LogWidget
+    from speckle.speckle.converter.layers import getLayers, getAllProjLayers
+    from speckle.speckle.ui.logger import logToUser
+    from speckle.speckle.ui.LogWidget import LogWidget
 except:
     #from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis_new import Speckle
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers import getLayers, getAllProjLayers
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
-    from speckle_toolbox.esri.toolboxes.speckle.ui.LogWidget import LogWidget
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers import getLayers, getAllProjLayers
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.LogWidget import LogWidget
 
 #from ui.validation import tryGetStream
 

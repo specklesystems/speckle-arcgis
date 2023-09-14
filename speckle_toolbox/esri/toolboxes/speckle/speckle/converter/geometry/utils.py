@@ -6,11 +6,11 @@ from typing import List, Union
 import inspect 
 
 try:
-    from speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
-    from speckle.ui.logger import logToUser
+    from speckle.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
+    from speckle.speckle.ui.logger import logToUser
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.polyline import speckleArcCircleToPoints, specklePolycurveToPoints
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
 
 
 def speckleBoundaryToSpecklePts(boundary: Union[None, Polyline, Arc, Line, Polycurve]) -> List[Point]:

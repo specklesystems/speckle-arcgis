@@ -12,9 +12,9 @@ from specklepy.api.credentials import Account
 import inspect 
 
 try:
-    from speckle.ui.logger import logToUser
+    from speckle.speckle.ui.logger import logToUser
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
 
 SPECKLE_COLOR = (59,130,246)
 SPECKLE_COLOR_LIGHT = (69,140,255)

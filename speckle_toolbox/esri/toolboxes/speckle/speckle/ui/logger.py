@@ -3,9 +3,9 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtCore
 import arcpy 
 try: 
-    from speckle.plugin_utils.helpers import splitTextIntoLines
+    from speckle.speckle.plugin_utils.helpers import splitTextIntoLines
 except:
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import splitTextIntoLines
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import splitTextIntoLines
 
 import inspect 
 

@@ -13,19 +13,19 @@ import shapefile
 from shapefile import TRIANGLE_STRIP, TRIANGLE_FAN, OUTER_RING
 
 try: 
-    from speckle.converter.layers.utils import get_scale_factor
-    from speckle.converter.geometry.point import pointToNative
-    from speckle.converter.layers.symbology import featureColorfromNativeRenderer
-    from speckle.converter.layers.utils import get_scale_factor
-    from speckle.ui.logger import logToUser
-    from speckle.plugin_utils.helpers import findOrCreatePath
+    from speckle.speckle.converter.layers.utils import get_scale_factor
+    from speckle.speckle.converter.geometry.point import pointToNative
+    from speckle.speckle.converter.layers.symbology import featureColorfromNativeRenderer
+    from speckle.speckle.converter.layers.utils import get_scale_factor
+    from speckle.speckle.ui.logger import logToUser
+    from speckle.speckle.plugin_utils.helpers import findOrCreatePath
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToNative
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import featureColorfromNativeRenderer
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import get_scale_factor
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.point import pointToNative
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.symbology import featureColorfromNativeRenderer
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import get_scale_factor
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import findOrCreatePath
 
 from panda3d.core import Triangulator
 

@@ -14,23 +14,23 @@ from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import inspect
 
 try: 
-    from speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
-    from speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
+    from speckle.speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
+    from speckle.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
                                                 traverseDictByKey, hsv_to_rgb)
-    from speckle.converter.geometry.point import pointToSpeckle
-    from speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
-    from speckle.converter.layers.symbology import jsonFromLayerStyle
-    from speckle.ui.logger import logToUser
-    from speckle.plugin_utils.helpers import findOrCreatePath 
+    from speckle.speckle.converter.geometry.point import pointToSpeckle
+    from speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
+    from speckle.speckle.converter.layers.symbology import jsonFromLayerStyle
+    from speckle.speckle.ui.logger import logToUser
+    from speckle.speckle.plugin_utils.helpers import findOrCreatePath 
 except: 
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry import convertToSpeckle, convertToNative, convertToNativeMulti
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import (findTransformation, getVariantFromValue, traverseDict, 
                                                 traverseDictByKey, hsv_to_rgb)
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.point import pointToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
-    from speckle_toolbox.esri.toolboxes.speckle.converter.layers.symbology import jsonFromLayerStyle
-    from speckle_toolbox.esri.toolboxes.speckle.ui.logger import logToUser
-    from speckle_toolbox.esri.toolboxes.speckle.plugin_utils.helpers import findOrCreatePath 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.point import pointToSpeckle
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.symbology import jsonFromLayerStyle
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import findOrCreatePath 
 
 import numpy as np
 import colorsys
