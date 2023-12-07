@@ -429,9 +429,9 @@ class SpeckleGISDialog(QMainWindow):
         print("populate layer dropdown / clicked save selection")
         if not self: return
         try: 
-            from speckle.ui.project_vars import set_project_layer_selection
+            from speckle.speckle.ui.project_vars import set_project_layer_selection
         except: 
-            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import set_project_layer_selection
+            from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.project_vars import set_project_layer_selection
         
         try:
             self.layersWidget.clear()
@@ -531,9 +531,9 @@ class SpeckleGISDialog(QMainWindow):
     def populateProjectStreams(self, plugin):
 
         try:   
-            from speckle.ui.project_vars import set_project_streams
+            from speckle.speckle.ui.project_vars import set_project_streams
         except: 
-            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import set_project_streams
+            from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.project_vars import set_project_streams
         
         try:
             if not self: return

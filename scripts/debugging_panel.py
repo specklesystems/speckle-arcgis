@@ -5,8 +5,8 @@ import json
 import os
 
 try: 
-    from speckle.converter.layers.CRS import CRS
-    from speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from speckle.speckle.converter.layers.CRS import CRS
+    from speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
@@ -73,7 +73,7 @@ for k, grp in enumerate(sym.renderer.groups):
 
 
 
-from speckle.converter.layers.symbology import get_polygon_simpleRenderer 
+from speckle.speckle.converter.layers.symbology import get_polygon_simpleRenderer 
 from arcpy._mp import ArcGISProject
 
 aprx = ArcGISProject('CURRENT')

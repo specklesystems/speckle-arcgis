@@ -33,13 +33,14 @@ try:
     from speckle.speckle.converter.layers.Layer import (Layer, VectorLayer, RasterLayer) 
     from speckle.speckle.converter.layers import convertSelectedLayers, getLayers
     from speckle.speckle.converter.layers.utils import findAndClearLayerGroup
-    from speckle.speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
+    from speckle.speckle.ui.validation import tryGetStream, tryGetClient, validateBranch, validateCommit, validateStream, validateTransport 
     from speckle.speckle.ui.add_stream_modal import AddStreamModalDialog
     from speckle.speckle.ui.create_stream import CreateStreamModalDialog
     from speckle.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle.speckle.ui.logger import logToUser, logToUserWithAction
     from speckle.speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
+    from speckle.specklepy_qt_ui.qt_ui.DataStorage import DataStorage
 
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.object_utils import callback, traverseObject
@@ -47,13 +48,14 @@ except:
     from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers import convertSelectedLayers, getLayers
     from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.emptyLayerTemplates import createGroupLayer
     from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import findAndClearLayerGroup
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.validation import tryGetStream, validateBranch, validateCommit, validateStream, validateTransport 
+    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.validation import tryGetStream, tryGetClient, validateBranch, validateCommit, validateStream, validateTransport 
     from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.add_stream_modal import AddStreamModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.create_stream import CreateStreamModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.create_branch import CreateBranchModalDialog
     from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
     from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser, logToUserWithAction
     from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import removeSpecialCharacters, getAppName
+    from speckle_toolbox.esri.toolboxes.speckle.specklepy_qt_ui.qt_ui.DataStorage import DataStorage
 
 # Import the code for the dialog
 
@@ -138,6 +140,7 @@ class SpeckleGIS:
 
     version: str
     gis_version: str
+    dataStorage: DataStorage
     dockwidget: Optional[SpeckleGISDialog]
     add_stream_modal: AddStreamModalDialog
     create_stream_modal: CreateStreamModalDialog
@@ -168,6 +171,7 @@ class SpeckleGIS:
 
         self.gis_version = full_version
         # Save reference to the QGIS interface
+        self.dataStorage = None
         self.dockwidget = None
         #self.iface = None
         self.gis_project = ArcGISProject('CURRENT') #QgsProject.instance()
@@ -385,9 +389,13 @@ class SpeckleGIS:
             streamWrapper = self.active_stream[0]
             streamName = self.active_stream[1].name
             streamId = streamWrapper.stream_id
-            client = streamWrapper.get_client()
+            
+            # client = streamWrapper.get_client()
+            client, stream = tryGetClient(
+                    streamWrapper, self.dataStorage, False, self.dockwidget
+                )
 
-            stream = validateStream(streamWrapper)
+            stream = validateStream(stream, self.dockwidget)
             if stream == None: return
             
             branchName = str(self.dockwidget.streamBranchDropdown.currentText())
@@ -472,14 +480,19 @@ class SpeckleGIS:
             # Get the stream wrapper
             streamWrapper = self.active_stream[0]
             streamId = streamWrapper.stream_id
-            client = streamWrapper.get_client()
+            #client = streamWrapper.get_client()
+            
+            client, stream = tryGetClient(
+                    streamWrapper, self.dataStorage, False, self.dockwidget
+                )
             # Ensure the stream actually exists
             print("ON RECEIVE 2")
         except Exception as e: 
             logToUser(str(e), level=2, func = inspect.stack()[0][3], plugin = self.dockwidget) 
             return
         try:
-            stream = validateStream(streamWrapper)
+
+            stream = validateStream(stream, self.dockwidget)
             if stream == None: return
             
             branchName = str(self.dockwidget.streamBranchDropdown.currentText())
@@ -559,9 +572,12 @@ class SpeckleGIS:
         try:
             from speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
         except: 
-            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
+            from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
         
-        self.is_setup = self.check_for_accounts()
+        self.dataStorage = DataStorage()
+        self.dataStorage.plugin_version = self.version
+
+        self.is_setup = self.dataStorage.check_for_accounts()
         if self.dockwidget is not None:
             self.active_stream = None
             get_project_streams(self)
@@ -593,11 +609,11 @@ class SpeckleGIS:
         """Run method that performs all the real work"""
         print("run plugin")
         try:
-            from speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-            from speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
+            from speckle.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
+            from speckle.speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
         except: 
-            from speckle_toolbox.esri.toolboxes.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
-            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
+            from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.speckle_qgis_dialog import SpeckleGISDialog
+            from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.project_vars import get_project_streams, get_survey_point, get_project_layer_selection
         try: 
             # Create the dialog with elements (after translation) and keep reference
             # Only create GUI ONCE in callback, so that it will only load when the plugin is started
@@ -606,6 +622,11 @@ class SpeckleGIS:
             if self.pluginIsActive:
                 self.reloadUI()
             else:
+                
+                self.dataStorage = DataStorage()
+                self.dataStorage.plugin_version = self.version
+                self.is_setup = self.dataStorage.check_for_accounts()
+
                 self.pluginIsActive = True
                 if self.dockwidget is None:
                     self.dockwidget = SpeckleGISDialog()
@@ -639,7 +660,7 @@ class SpeckleGIS:
         try:
             from speckle.ui.project_vars import set_survey_point
         except: 
-            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import set_survey_point
+            from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.project_vars import set_survey_point
         set_survey_point(self)
 
     def onStreamCreateClicked(self):
@@ -693,7 +714,7 @@ class SpeckleGIS:
             if isinstance(br_id, GraphQLException):
                 logToUser(br_id.message, level=2, func = inspect.stack()[0][3])
 
-            self.active_stream = (sw, tryGetStream(sw))
+            self.active_stream = (sw, tryGetStream(sw, self.dataStorage))
             self.current_streams[0] = self.active_stream
 
             self.dockwidget.populateActiveStreamBranchDropdown(self)
@@ -706,14 +727,14 @@ class SpeckleGIS:
 
     def handleStreamAdd(self, sw: StreamWrapper):
         try:
-            from speckle.ui.project_vars import set_project_streams
+            from speckle.speckle.ui.project_vars import set_project_streams
         except:
-            from speckle_toolbox.esri.toolboxes.speckle.ui.project_vars import set_project_streams
+            from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.project_vars import set_project_streams
            
         streamExists = 0
         index = 0
         try: 
-            stream = tryGetStream(sw)
+            stream = tryGetStream(sw, self.dataStorage)
             
             for st in self.current_streams: 
                 if isinstance(stream, Stream) and st[0].stream_id == stream.id: 

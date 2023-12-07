@@ -10,38 +10,42 @@ from subprocess_call import subprocess_call
 
 import sys
 
+ENV_NEW_NAME = "arcgispro-py3-speckle"
+
 def setup():
     pythonExec = get_python_path() # import numpy; import os; print(os.path.abspath(numpy.__file__)) 
     return pythonExec # None if not successful 
     
-def get_python_path(): # create a full copy of default env 
-    #print("Get Python path")
-    # or: import site; site.getsitepackages()[0]
-    # import specklepy; import os; print(os.path.abspath(specklepy.__file__)) ##currentPythonExec = sysconfig.get_paths()['data'] + r"\python.exe"
-
+def get_default_python():
     pythonExec = os.environ["ProgramFiles"] + r'\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe' #(r"%PROGRAMFILES%\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe") #os.path.dirname(sys.executable) + "\\python.exe" # default python.exe
     #print(pythonExec)
     if not os.path.exists(pythonExec):
         pythonExec = os.getenv('APPDATA').replace("Roaming", "Local") + r'\Programs\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe'
         if not os.path.exists(pythonExec): return None
+    return pythonExec
+
+def get_python_path(): # create a full copy of default env 
+    #print("Get Python path")
+    # or: import site; site.getsitepackages()[0]
+    # import specklepy; import os; print(os.path.abspath(specklepy.__file__)) ##currentPythonExec = sysconfig.get_paths()['data'] + r"\python.exe"
+    def_exec = get_default_python()
     #print(os.getenv('APPDATA') + r'\Programs\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe')
 
     if sys.platform == "win32":
-        env_new_name = "arcgispro-py3-speckle"
-        newExec = clone_env(pythonExec, env_new_name) # only if doesn't exist yet 
+        newExec = clone_env(def_exec) # only if doesn't exist yet 
         if not os.path.exists(newExec): return None
         
-        activate_env(env_new_name)
+        activate_env()
         return newExec
     else: return None
 
-def clone_env(pythonExec_old: str, env_new_name: str): 
+def clone_env(pythonExec_old: str): 
     install_folder = os.getenv('APPDATA').replace("\\Roaming","") + r"\Local\ESRI\conda\envs"   #r"%LOCALAPPDATA%\ESRI\conda\envs" 
     if not os.path.exists(install_folder): os.makedirs(install_folder)
     
     default_env = pythonExec_old.replace("Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe","Pro\\bin\\Python\\envs\\arcgispro-py3") # + "\\" + 'arcgispro-py3'
     conda_exe = pythonExec_old.replace("Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe","Pro\\bin\\Python\\Scripts\\conda.exe") #%PROGRAMFILES%\ArcGIS\Pro\bin\Python\Scripts\conda.exe #base: %PROGRAMDATA%\Anaconda3\condabin\conda.bat
-    new_env = install_folder + "\\" + env_new_name # %LOCALAPPDATA%\ESRI\conda\envs\...
+    new_env = install_folder + "\\" + ENV_NEW_NAME # %LOCALAPPDATA%\ESRI\conda\envs\...
 
     if os.path.exists(conda_exe) and os.path.exists(default_env) and os.path.exists(new_env) and not os.path.exists(new_env + "\\python.exe"): 
         # conda environment invalid: delete it's folder 
@@ -60,9 +64,9 @@ def clone_env(pythonExec_old: str, env_new_name: str):
     print(new_env + "\\python.exe")
     return new_env + "\\python.exe"
 
-def activate_env(env_new_name: str):
+def activate_env():
     # using Popen, because process does not return result; subprocess.run will hang indefinitely 
-    variable = subprocess.Popen((f'proswap {env_new_name}'),stdout = subprocess.PIPE,stderr = subprocess.PIPE,text = True,shell = True)
+    variable = subprocess.Popen((f'proswap {ENV_NEW_NAME}'),stdout = subprocess.PIPE,stderr = subprocess.PIPE,text = True,shell = True)
     # activate new env : https://support.esri.com/en/technical-article/000024206
 
 
@@ -152,10 +156,16 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
     return True
     
 pythonPath = setup()
+print(pythonPath)
 if pythonPath is not None:
+
+    #def_exec = get_default_python()
+    #conda_exe = def_exec.replace("Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe","Pro\\bin\\Python\\Scripts\\conda.exe") #%PROGRAMFILES%\ArcGIS\Pro\bin\Python\Scripts\conda.exe #base: %PROGRAMDATA%\Anaconda3\condabin\conda.bat
+    #subprocess_call([conda_exe, 'proup','-n', ENV_NEW_NAME])
+    
     clearToolbox(pythonPath)
     installToolbox(pythonPath)
-    installDependencies(pythonPath, "specklepy", "2.9.0"  )
+    installDependencies(pythonPath, "specklepy", "2.17.12"  )
     installDependencies(pythonPath, "panda3d", "1.10.11" )
     installDependencies(pythonPath, "PyQt5", "5.15.9" )
 

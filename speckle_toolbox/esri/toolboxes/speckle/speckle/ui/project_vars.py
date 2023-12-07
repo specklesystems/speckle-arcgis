@@ -33,50 +33,51 @@ except:
 
 FIELDS = ["project_streams","project_layer_selection", "lat_lon"]
 
-def get_project_streams(self: SpeckleGIS, content: str = None):
+def get_project_streams(plugin: SpeckleGIS, content: str = None):
     try:
-        print("get proj streams")
-        
         print("GET proj streams")
-        project = self.gis_project
+        project = plugin.gis_project
         table = findOrCreateSpeckleTable(project)
-        if table is None: return 
+        logToUser(table, level=0, func = inspect.stack()[0][3])
 
         rows = arcpy.da.SearchCursor(table, "project_streams") 
         saved_streams = []
         for x in rows:
+            logToUser(x, level=0, func = inspect.stack()[0][3])
             saved_streams.append(x[0])
 
         temp = []
         ######### need to check whether saved streams are available (account reachable)
         if len(saved_streams) > 0:
             for url in saved_streams:
+                if url=="": continue
                 try:
                     sw = StreamWrapper(url)
                     try: 
-                        stream = tryGetStream(sw)
+                        stream = tryGetStream(sw, plugin.dataStorage)
                     except SpeckleException as e:
                         logToUser(e.message, level=2, func = inspect.stack()[0][3])
                         stream = None
                     #strId = stream.id # will cause exception if invalid
                     temp.append((sw, stream))
                 except SpeckleException as e:
-                    logToUser(e.message, 2)
+                    logToUser(e.message, level=2, func = inspect.stack()[0][3])
                 #except GraphQLException as e:
                 #    logger.logToUser(e.message, Qgis.Warning)
-        self.current_streams = temp
+        plugin.current_streams = temp
     except Exception as e: 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
     
-def set_project_streams(self: SpeckleGIS):
+def set_project_streams(plugin: SpeckleGIS):
     try:
         print("SET proj streams")
-        project = self.gis_project
+        project = plugin.gis_project
         table = findOrCreateSpeckleTable(project)
         print("SET proj streams 2")
         
-        value = [stream[0].stream_url for stream in self.current_streams] #",".join()
+        value = [stream[0].stream_url for stream in plugin.current_streams] #",".join()
         print(value)
+        logToUser(value, level=0, func = inspect.stack()[0][3])
 
         if table is not None:
             proj_layers = []
@@ -106,10 +107,10 @@ def set_project_streams(self: SpeckleGIS):
     except Exception as e: 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
   
-def get_project_layer_selection(self: SpeckleGIS):
+def get_project_layer_selection(plugin: SpeckleGIS):
     try:
         print("GET project layer selection from the table")
-        project = self.gis_project
+        project = plugin.gis_project
         table = findOrCreateSpeckleTable(project)
         if table is None: return 
         
@@ -134,7 +135,7 @@ def get_project_layer_selection(self: SpeckleGIS):
                         break
                 if found == 0: 
                     logToUser(f'Saved layer not found: "{layerPath}"', level=1, func = inspect.stack()[0][3])
-        self.current_layers = temp
+        plugin.current_layers = temp
     except Exception as e: 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
 
@@ -287,12 +288,12 @@ def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
                 arcpy.management.AddField(table, "lat_lon", "TEXT")
 
                 cursor = arcpy.da.InsertCursor(table, FIELDS )
-                cursor.insertRow(["",""])
+                cursor.insertRow(["","",""])
                 del cursor
             
             except Exception as e:
                 logToUser("Error creating a table: " + str(e), level=1, func = inspect.stack()[0][3])
-                return None
+                raise e
         else: 
             #print("table already exists")
             # make sure fileds exist 
@@ -354,266 +355,3 @@ def findOrCreateRow(table:str, fields: List[str]):
     
     except Exception as e: 
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
-
-r'''
-class speckleInputsClass:
-    #def __init__(self):
-    print("CREATING speckle inputs first time________")
-    instances = []
-    accounts: List[Account] = get_local_accounts()
-    account = None
-    streams_default: Optional[List[Stream]] = None
-
-    project = None
-    active_map = None
-    saved_streams: List[Optional[Tuple[StreamWrapper, Stream]]] = []
-    stream_file_path: str = ""
-    all_layers: List[arcLayer] = []
-    clients: List[SpeckleClient] = []
-
-    for acc in accounts:
-        if acc.isDefault: account = acc
-        new_client = SpeckleClient(
-            acc.serverInfo.url,
-            acc.serverInfo.url.startswith("https")
-        )
-        new_client.authenticate_with_token(token=acc.token)
-        clients.append(new_client)
-
-    speckle_client = None
-    if account:
-        speckle_client = SpeckleClient(
-            account.serverInfo.url,
-            account.serverInfo.url.startswith("https")
-    )
-        speckle_client.authenticate_with_token(token=account.token)
-        streams_default = speckle_client.stream.search("")
-
-    def __init__(self) -> None:
-        print("___start speckle inputs________")
-        self.all_layers = []
-        try:
-            aprx = ArcGISProject('CURRENT')
-            self.project = aprx
-            # following will fail if no project found 
-            self.active_map = aprx.activeMap
-            
-            if self.active_map is not None and isinstance(self.active_map, Map): # if project loaded
-                for layer in self.active_map.listLayers(): 
-                    try: geomType = arcpy.Describe(layer.dataSource).shapeType.lower()
-                    except: geomType = '' #print(arcpy.Describe(layer.dataSource)) #and arcpy.Describe(layer.dataSource).shapeType.lower() != "multipatch")
-                    if (layer.isFeatureLayer and geomType != "multipatch") or layer.isRasterLayer: self.all_layers.append(layer) #type: 'arcpy._mp.Layer'
-            self.stream_file_path: str = aprx.filePath.replace("aprx","gdb") + "\\speckle_streams.txt"
-
-            if os.path.exists(self.stream_file_path): 
-                try: 
-                    f = open(self.stream_file_path, "r")
-                    content = f.read()
-                    self.saved_streams = self.getProjectStreams(content)
-                    f.close()
-                except: pass
-                
-            elif len(self.stream_file_path) >10: 
-                f = open(self.stream_file_path, "x")
-                f.close()
-                f = open(self.stream_file_path, "w")
-                content = ""
-                f.write(content)
-                f.close()
-        except: self.project = None; print("Project not found")
-        self.instances.append(self)
-
-    def getProjectStreams(self, content: str = None):
-        print("get proj streams")
-        if not content: 
-            content = self.stream_file_path
-            try: 
-                f = open(self.stream_file_path, "r")
-                content = f.read()
-                f.close()
-            except: pass
-
-        ######### need to check whether saved streams are available (account reachable)
-        if content:
-            streamsTuples = []
-            for i, url in enumerate(content.split(",")):
-
-                streamExists = 0
-                index = 0
-                try:
-                    #print(url)
-                    sw = StreamWrapper(url)
-                    stream = self.tryGetStream(sw)
-
-                    for st in streamsTuples: 
-                        if isinstance(stream, Stream) and st[0].stream_id == stream.id: 
-                            streamExists = 1; 
-                            break 
-                        index += 1
-                    if streamExists == 1: del streamsTuples[index]
-                    streamsTuples.insert(0,(sw, stream))
-
-                except SpeckleException as e:
-                    arcpy.AddMessage(str(e.args))
-            return streamsTuples
-        else: return []
-
-    def tryGetStream (self,sw: StreamWrapper) -> Stream:
-        if isinstance(sw, StreamWrapper):
-            steamId = sw.stream_id
-            try: steamId = sw.stream_id.split("/streams/")[1].split("/")[0] 
-            except: pass
-
-            client = sw.get_client()
-            stream = client.stream.get(id = steamId, branch_limit = 100, commit_limit = 100)
-            if isinstance(stream, GraphQLException):
-                raise SpeckleException(stream.errors[0]['message'])
-            return stream
-        else: 
-            raise SpeckleException('Invalid StreamWrapper provided')
-
-class toolboxInputsClass:
-
-    print("CREATING UI inputs first time________")
-    instances = []
-    lat: float = 0.0
-    lon: float = 0.0
-    active_stream: Optional[Stream] = None
-    active_stream_wrapper: Optional[StreamWrapper] = None
-    active_branch: Optional[Branch] = None
-    active_commit = None
-    selected_layers: List[Any] = []
-    messageSpeckle: str = ""
-    action: int = 1 #send
-    project = None
-    stream_file_path: str = ""
-    # Get the target item's Metadata object
-    
-    def __init__(self) -> None:
-        print("___start UI inputs________")
-        try:
-            aprx = ArcGISProject('CURRENT')
-            project = aprx
-            self.stream_file_path: str = aprx.filePath.replace("aprx","gdb") + "\\speckle_streams.txt"
-            if os.path.exists(self.stream_file_path): 
-                try: 
-                    f = open(self.stream_file_path, "r")
-                    content = f.read()
-                    self.lat, self.lon = self.get_survey_point(content)
-                    f.close()
-                except: pass
-        except: print("Project not found")
-        try:
-            aprx = ArcGISProject('CURRENT')
-            self.project = aprx
-        except: self.project = None; print("Project not found"); arcpy.AddWarning("Project not found")
-        self.instances.append(self)
-
-    def setProjectStreams(self, wr: StreamWrapper, add = True): 
-        # ERROR 032659 Error queueing metrics request: 
-        print("SET proj streams")
-
-        if os.path.exists(self.stream_file_path) and ".gdb\\speckle_streams.txt" in self.stream_file_path: 
-
-            new_content = ""
-
-            f = open(self.stream_file_path, "r")
-            existing_content = f.read()
-            f.close()
-
-            f = open(self.stream_file_path, "w")
-            if str(wr.stream_url) in existing_content: 
-                new_content = existing_content.replace(str(wr.stream_url) + "," , "")
-            else: 
-                new_content = existing_content 
-            
-            if add == True: new_content += str(wr.stream_url) + "," # add stream
-            else: pass # remove stream
-
-            f.write(new_content)
-            f.close()
-        elif ".gdb\\speckle_streams.txt" in self.stream_file_path: 
-            f = open(self.stream_file_path, "x")
-            f.close()
-            f = open(self.stream_file_path, "w")
-            f.write(str(wr.stream_url) + ",")
-            f.close()
- 
-    def get_survey_point(self, content = None) -> Tuple[float]:
-        # get from saved project 
-        print("get survey point")
-        x = y = 0
-        if not content: 
-            content = None 
-            if os.path.exists(self.stream_file_path) and ".gdb\\speckle_streams.txt" in self.stream_file_path: 
-                try: 
-                    f = open(self.stream_file_path, "r")
-                    content = f.read()
-                    f.close()
-                except: pass
-        if content:
-            for i, coords in enumerate(content.split(",")):
-                if "speckle_sr_origin_" in coords: 
-                    try:
-                        x, y = [float(c) for c in coords.replace("speckle_sr_origin_","").split(";")]
-                    except: pass
-        return (x, y) 
-
-    def set_survey_point(self, coords: List[float]):
-        # from widget (2 strings) to local vars + update SR of the map
-        print("SET survey point")
-
-        if len(coords) == 2: 
-            pt = "speckle_sr_origin_" + str(coords[0]) + ";" + str(coords[1]) 
-            if os.path.exists(self.stream_file_path) and ".gdb\\speckle_streams.txt" in self.stream_file_path: 
-
-                new_content = ""
-                f = open(self.stream_file_path, "r")
-                existing_content = f.read()
-                f.close()
-
-                f = open(self.stream_file_path, "w")
-                if pt in existing_content: 
-                    new_content = existing_content.replace( pt , "")
-                else: 
-                    new_content = existing_content 
-                
-                new_content += pt + "," # add point
-                f.write(new_content)
-                f.close()
-            elif ".gdb\\speckle_streams.txt" in self.stream_file_path: 
-                f = open(self.stream_file_path, "x")
-                f.close()
-                f = open(self.stream_file_path, "w")
-                f.write(pt + ",")
-                f.close()
-            
-            # save to project; crearte SR
-            self.lat, self.lon = coords[0], coords[1]
-            newCrsString = "+proj=tmerc +ellps=WGS84 +datum=WGS84 +units=m +no_defs +lon_0=" + str(self.lon) + " lat_0=" + str(self.lat) + " +x_0=0 +y_0=0 +k_0=1"
-            newCrs = osr.SpatialReference()
-            newCrs.ImportFromProj4(newCrsString)
-            newCrs.MorphToESRI() # converts the WKT to an ESRI-compatible format
-            
-
-            validate = True if len(newCrs.ExportToWkt())>10 else False
-
-            if validate: 
-                newProjSR = arcpy.SpatialReference()
-                newProjSR.loadFromString(newCrs.ExportToWkt())
-
-                #source = osr.SpatialReference() 
-                #source.ImportFromWkt(self.project.activeMap.spatialReference.exportToString())
-                #transform = osr.CoordinateTransformation(source, newCrs)
-
-                self.project.activeMap.spatialReference =  newProjSR
-                arcpy.AddMessage("Custom project CRS successfully applied")
-            else:
-                arcpy.AddWarning("Custom CRS could not be created")
-        
-        else:
-            arcpy.AddWarning("Custom CRS could not be created: not enough coordinates provided")
-
-        return True
-'''
-    
