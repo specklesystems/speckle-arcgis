@@ -4,13 +4,13 @@ from specklepy.objects.geometry import Point
 import arcpy
 
 import inspect 
+from speckle.speckle.converter.geometry.utils import (
+    transform_speckle_pt_on_receive,
+    apply_pt_transform_matrix,
+)
 
-try: 
-    from speckle.speckle.converter.layers.utils import get_scale_factor
-    from speckle.speckle.ui.logger import logToUser
-except: 
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import get_scale_factor
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
+from speckle.speckle.converter.layers.utils import get_scale_factor
+from speckle.speckle.utils.panel_logging import logToUser
 
 
 def multiPointToSpeckle(geom, feature, layer, multiType: bool):
@@ -56,10 +56,13 @@ def pointToSpeckle(pt, feature, layer):
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
-def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
+def pointToNative(pt: Point, sr: arcpy.SpatialReference, dataStorage) -> arcpy.PointGeometry:
     """Converts a Speckle Point to QgsPoint"""
     try:
-        pt = scalePointToNative(pt, pt.units)
+        pt = scalePointToNative(pt, pt.units)        
+        new_pt = apply_pt_transform_matrix(new_pt, dataStorage)
+        newPt = transform_speckle_pt_on_receive(new_pt, dataStorage)
+
         geom = arcpy.PointGeometry(arcpy.Point(pt.x, pt.y, pt.z), sr, has_z = True)
         #print(geom)
         return geom
@@ -68,6 +71,20 @@ def pointToNative(pt: Point, sr: arcpy.SpatialReference) -> arcpy.PointGeometry:
         logToUser(str(e), level=2, func = inspect.stack()[0][3])
         return None
 
+def pointToNativeWithoutTransforms(pt: Point, sr: arcpy.SpatialReference, dataStorage):
+    """Converts a Speckle Point to QgsPoint"""
+    try:
+        new_pt = scalePointToNative(pt, pt.units, dataStorage)
+        new_pt = apply_pt_transform_matrix(new_pt, dataStorage)
+
+        geom = arcpy.PointGeometry(arcpy.Point(pt.x, pt.y, pt.z), sr, has_z = True)
+        #print(geom)
+        return geom
+    
+    except Exception as e:
+        logToUser(e, level=2, func=inspect.stack()[0][3])
+        return None
+    
 def pointToCoord(point: Point) -> List[float]:
     """Converts a Speckle Point to QgsPoint"""
     try:

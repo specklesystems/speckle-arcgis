@@ -11,32 +11,19 @@ from typing import Any, List, Tuple, Union
 #from regex import D
 
 import inspect
+from specklepy.objects.GIS.CRS import CRS
+from specklepy.objects.GIS.layers import VectorLayer, RasterLayer, Layer
 
-try:
-    from speckle.speckle.converter.layers.CRS import CRS
-    from speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-    from speckle.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
-    from speckle.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
-    from speckle.speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors
+from speckle.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
+from speckle.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
+from speckle.speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors
 
-    from speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
-    from speckle.speckle.converter.layers.utils import findTransformation
-    from speckle.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
-    from speckle.speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
-    from speckle.speckle.ui.logger import logToUser
+from speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
+from speckle.speckle.converter.layers.utils import findTransformation
+from speckle.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
+from speckle.speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
+from speckle.speckle.utils.panel_logging import logToUser
 
-except: 
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.CRS import CRS
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.symbology import vectorRendererToNative, rasterRendererToNative, rendererToSpeckle, cadBimRendererToNative 
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.feature import featureToNative, featureToSpeckle, cadFeatureToNative, bimFeatureToNative, rasterFeatureToSpeckle
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import findOrCreatePath, findFeatColors 
-
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.geometry.mesh import constructMeshFromRaster, meshToNative, writeMeshToShp
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import findTransformation
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.utils import getLayerAttributes, newLayerGroupAndName, validate_path
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import validateNewFclassName, removeSpecialCharacters
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
 
 from specklepy.objects import Base
 from specklepy.objects.geometry import Mesh
@@ -84,7 +71,7 @@ def getLayers(plugin, bySelection = False ) -> List[arcLayer]:
         # issue with getting selected layers: https://community.esri.com/t5/python-questions/determining-selected-layers-in-the-table-of/td-p/252098
 
         self = plugin.dockwidget
-        project = plugin.gis_project
+        project = plugin.project
         all_layers = getAllProjLayers(project)
         
         if bySelection is True: # by selection 
@@ -167,6 +154,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
     try:
 
         projectCRS = project.activeMap.spatialReference
+        logToUser(str(projectCRS.xy_units()), level=2, func = inspect.stack()[0][3])
         try: data = arcpy.Describe(layer.dataSource)
         except OSError as e: 
             logToUser(str(e.args[0]), level=2, func = inspect.stack()[0][3])
@@ -192,8 +180,6 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
             speckleLayer.name = layerName
             speckleLayer.crs = speckleReprojectedCrs
             speckleLayer.renderer = rendererToSpeckle(project, project.activeMap, layer, None)
-            #speckleLayer.datum = datum
-
 
             try: # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
                 
@@ -283,7 +269,7 @@ def layerToSpeckle(layer: arcLayer, project: ArcGISProject) -> Union[VectorLayer
 def layerToNative(layer: Any, streamBranch: str, plugin=None) -> arcLayer:
     print("________________________________________Layer to Native")
     try:
-        project = plugin.gis_project
+        project = plugin.project
         
         layer_elements = layer.elements
         if layer_elements is None or len(layer_elements)==0:
@@ -379,7 +365,7 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
         
         layerName = removeSpecialCharacters(layerName)
 
-        project = plugin.gis_project
+        project = plugin.project
         geom_meshes = []
         layer_meshes = None
         #filter speckle objects by type within each layer, create sub-layer for each type (points, lines, polygons, mesh?)
@@ -391,7 +377,6 @@ def bimLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
                 for p in geom_old.get_dynamic_member_names():
                     if p not in fields_to_ignore:
                         geom[p] = geom_old[p]
-
             except: geom = geom_old
 
             if isinstance(geom, List): 
@@ -682,7 +667,7 @@ def cadLayerToNative(layerContentList: List[Base], layerName: str, streamBranch:
     try:
         geom_points = []
         geom_polylines = []
-        project = plugin.gis_project
+        project = plugin.project
         print(layerName)
         geom_polygones = []
         geom_meshes = []

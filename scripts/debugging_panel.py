@@ -6,7 +6,7 @@ import os
 
 try: 
     from speckle.speckle.converter.layers.CRS import CRS
-    from speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer
+    from specklepy.objects.GIS.layers import Layer, VectorLayer, RasterLayer
 except: 
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.CRS import CRS
     from speckle_toolbox.esri.toolboxes.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer

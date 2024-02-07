@@ -16,14 +16,9 @@ from arcpy.management import (CreateFeatureclass, MakeFeatureLayer,
 from specklepy.objects import Base
 from specklepy.objects.other import RenderMaterial
 
-try:
-    from speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
-    from speckle.speckle.ui.logger import logToUser
-    from speckle.speckle.plugin_utils.helpers import findOrCreatePath
-except:
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers.Layer import Layer, VectorLayer, RasterLayer 
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.ui.logger import logToUser
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.plugin_utils.helpers import findOrCreatePath
+from specklepy.objects.GIS.layers import Layer, VectorLayer, RasterLayer 
+from speckle.speckle.utils.panel_logging import logToUser
+from speckle.speckle.plugin_utils.helpers import findOrCreatePath
 
 def jsonFromLayerStyle(layerArcgis, path_style):
     # write updated renderer to file and get layerStyle variable 
