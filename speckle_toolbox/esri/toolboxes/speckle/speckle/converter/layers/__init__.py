@@ -230,7 +230,7 @@ def layerToSpeckle(
     try:
 
         projectCRS = project.activeMap.spatialReference
-        logToUser(str(projectCRS.xy_units()), level=2, func=inspect.stack()[0][3])
+        # logToUser(str(projectCRS.xy_units()), level=2, func=inspect.stack()[0][3])
         try:
             data = arcpy.Describe(layer.dataSource)
         except OSError as e:
@@ -239,7 +239,7 @@ def layerToSpeckle(
 
         layerName = layer.name
         crs = data.SpatialReference
-        units = "m"
+        units = str(project.activeMap.spatialReference.linearUnitName) #"m"
         layerObjs = []
 
         # Convert CRS to speckle, use the projectCRS

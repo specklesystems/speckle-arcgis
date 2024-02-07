@@ -405,7 +405,7 @@ class SpeckleGIS:
                 )
                 return
             print(layers)
-            self.dataStorage.latestActionLayers = [l.name() for l in layers]
+            self.dataStorage.latestActionLayers = [l.name for l in layers]
 
             # TODO: get layer tree
             # root = self.dataStorage.project.layerTreeRoot()
