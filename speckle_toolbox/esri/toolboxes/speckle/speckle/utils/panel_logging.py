@@ -19,7 +19,7 @@ def logToUser(
     from speckle.specklepy_qt_ui.qt_ui.utils.logger import logToUser as logToUser_UI
 
     msg = str(msg)
-    print(msg)
+    print(msg + "::" + str(func))
     logToUser_UI(msg, func, level, plugin, url, blue, report)
     logger.writeToLog(msg.replace("\n", ". ") + " " + url, level, func)
 

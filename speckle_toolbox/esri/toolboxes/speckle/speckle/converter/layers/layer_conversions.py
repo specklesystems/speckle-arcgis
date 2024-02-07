@@ -100,7 +100,6 @@ from speckle.speckle.utils.project_vars import (
     findOrCreateTableField,
     findOrCreateRow,
     findOrCreateRowInFeatureTable,
-    FIELDS,
 )
 
 GEOM_LINE_TYPES = [

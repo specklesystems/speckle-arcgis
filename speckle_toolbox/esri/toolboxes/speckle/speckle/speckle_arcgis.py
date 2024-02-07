@@ -394,7 +394,9 @@ class SpeckleGIS:
             current_active_stream = copy(self.active_stream)
 
             # Check if no layers are selected
-            if len(layers) == 0:  # len(selectedLayerNames) == 0:
+            if layers is None or (
+                isinstance(layers, list) and len(layers) == 0
+            ):  # len(selectedLayerNames) == 0:
                 logToUser(
                     "No layers selected",
                     level=1,
@@ -413,7 +415,7 @@ class SpeckleGIS:
             # self.project = ArcGISProject("CURRENT")
             if self.project.activeMap is None:
                 logToUser(
-                    "No active Map",
+                    "Project Active Map not loaded or not selected",
                     level=1,
                     func=inspect.stack()[0][3],
                     plugin=self.dockwidget,
@@ -790,18 +792,12 @@ class SpeckleGIS:
 
     def reloadUI(self):
 
-        try:
-            from speckle.speckle.utils.project_vars import (
-                get_project_streams,
-                get_survey_point,
-                get_project_layer_selection,
-            )
-        except:
-            from speckle_toolbox.esri.toolboxes.speckle.speckle.utils.project_vars import (
-                get_project_streams,
-                get_survey_point,
-                get_project_layer_selection,
-            )
+        from speckle.speckle.utils.project_vars import (
+            get_project_streams,
+            get_survey_point,
+            get_project_layer_selection,
+            get_project_saved_layers,
+        )
 
         self.dataStorage = DataStorage()
         self.dataStorage.plugin_version = self.version
@@ -811,9 +807,12 @@ class SpeckleGIS:
             self.active_stream = None
             get_project_streams(self)
             get_survey_point(self)
-            get_project_layer_selection(self)
+            # get_project_saved_layers(self)
+            # get_project_layer_selection(self)
 
             self.dockwidget.reloadDialogUI(self)
+            get_project_saved_layers(self)
+            self.dockwidget.populateSavedLayerDropdown(self, False)
 
     def run(self):
         """Run method that performs all the real work"""
@@ -871,17 +870,19 @@ class SpeckleGIS:
                     self.dockwidget.addDataStorage(self)
 
             get_project_streams(self)
-            get_rotation(self.dataStorage)
+            get_rotation(self)
             get_survey_point(self)
-            get_crs_offsets(self.dataStorage)
-            get_project_saved_layers(self)
-            self.dockwidget.populateSavedLayerDropdown(self)
+            get_crs_offsets(self)
 
             self.dockwidget.run(self)
             self.dockwidget.saveLayerSelection.clicked.connect(
-                lambda: self.populateSelectedLayerDropdown()
+                lambda: self.dockwidget.populateSavedLayerDropdown(self, True)
             )
             self.dockwidget.enableElements(self)
+
+            # move to the end to display warning if needed
+            get_project_saved_layers(self)
+            self.dockwidget.populateSavedLayerDropdown(self, False)
 
         except Exception as e:
             logToUser(str(e), level=2, func=inspect.stack()[0][3])
@@ -895,15 +896,6 @@ class SpeckleGIS:
             self.add_stream_modal.show()
         except Exception as e:
             logToUser(str(e), level=2, func=inspect.stack()[0][3])
-
-    def set_survey_point(self):
-        try:
-            from speckle.speckle.utils.project_vars import set_survey_point
-        except:
-            from speckle_toolbox.esri.toolboxes.speckle.speckle.utils.project_vars import (
-                set_survey_point,
-            )
-        set_survey_point(self)
 
     def onStreamCreateClicked(self):
         self.create_stream_modal = CreateStreamModalDialog(None)
@@ -1057,6 +1049,15 @@ class SpeckleGIS:
 
     def customCRSDialogCreate(self):
         try:
+            if self.dataStorage.project.activeMap is None:
+                logToUser(
+                    "Project Active Map not loaded or not selected",
+                    level=1,
+                    func=inspect.stack()[0][3],
+                    plugin=self.dockwidget,
+                )
+                return 
+
             self.dataStorage.currentCRS = (
                 self.dataStorage.project.activeMap.spatialReference
             )
@@ -1190,7 +1191,7 @@ class SpeckleGIS:
                     except Exception as e:
                         logToUser(e, level=2, func=inspect.stack()[0][3])
 
-            set_rotation(self.dockwidget.dataStorage, self.dockwidget)
+            set_rotation(self)
 
         except Exception as e:
             logToUser(e, level=2, func=inspect.stack()[0][3], plugin=self.dockwidget)
@@ -1260,7 +1261,7 @@ class SpeckleGIS:
                     except Exception as e:
                         logToUser(e, level=2, func=inspect.stack()[0][3])
 
-            set_crs_offsets(self.dataStorage, self.dockwidget)
+            set_crs_offsets(self)
 
         except Exception as e:
             logToUser(e, level=2, func=inspect.stack()[0][3], plugin=self.dockwidget)
@@ -1296,10 +1297,8 @@ class SpeckleGIS:
                     self.dockwidget.dataStorage.custom_lat = custom_lat
                     self.dockwidget.dataStorage.custom_lon = custom_lon
 
-                    set_survey_point(self.dockwidget.dataStorage, self.dockwidget)
-                    setProjectReferenceSystem(
-                        self.dockwidget.dataStorage, self.dockwidget
-                    )
+                    set_survey_point(self)
+                    setProjectReferenceSystem(self)
 
                     # remove offsets if custom crs applied
                     if (
@@ -1313,7 +1312,7 @@ class SpeckleGIS:
                         self.dataStorage.crs_offset_y = None
                         self.dockwidget.custom_crs_modal.offsetX.setText("")
                         self.dockwidget.custom_crs_modal.offsetY.setText("")
-                        set_crs_offsets(self.dataStorage, self.dockwidget)
+                        set_crs_offsets(self)
                         logToUser(
                             "X and Y offsets removed", level=0, plugin=self.dockwidget
                         )
@@ -1332,7 +1331,7 @@ class SpeckleGIS:
                     except Exception as e:
                         logToUser(e, level=2, func=inspect.stack()[0][3])
 
-            except:
+            except Exception as e:
                 logToUser("Invalid Lat/Lon values", level=2, plugin=self.dockwidget)
 
         except Exception as e:

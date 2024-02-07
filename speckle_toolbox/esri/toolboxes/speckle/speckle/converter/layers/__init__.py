@@ -12,6 +12,7 @@ from specklepy.objects.GIS.geometry import (
     GisNonGeometryElement,
     GisTopography,
 )
+
 # from speckle_toolbox.esri.toolboxes.speckle.speckle_arcgis import SpeckleGIS
 
 # from regex import D
@@ -83,8 +84,6 @@ GEOM_LINE_TYPES = [
 
 def getAllProjLayers(plugin) -> List[arcLayer]:
     print("get all project layers")
-    # print(project)
-    # print(project.activeMap)
     layers = []
     try:
         project: ArcGISProject = plugin.project
@@ -92,21 +91,18 @@ def getAllProjLayers(plugin) -> List[arcLayer]:
             project.activeMap, Map
         ):  # if project loaded
             print(type(project.activeMap))
-            # print(project.activeMap.listLayers())
             for layer in project.activeMap.listLayers():
                 if (layer.isFeatureLayer) or layer.isRasterLayer:
                     layers.append(layer)  # type: 'arcpy._mp.Layer'
-                    # print(layers)
-                    # path = layer.dataSource
         else:
             print(type(project.activeMap))
             logToUser(
                 "Cannot get Project layers, Project Active Map not loaded or not selected",
                 level=1,
                 func=inspect.stack()[0][3],
-                plugin = plugin.dockwidget,
+                plugin=plugin.dockwidget,
             )
-            return []
+            return None
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return layers
@@ -122,7 +118,14 @@ def getLayers(plugin, bySelection=False) -> List[arcLayer]:
 
         self = plugin.dockwidget
         project = plugin.project
-        all_layers = getAllProjLayers(plugin)
+        map = project.activeMap
+        if map is None:
+            logToUser(
+                "Project Active Map not loaded or not selected",
+                level=2,
+                func=inspect.stack()[0][3],
+            )
+            return None
 
         if bySelection is True:  # by selection
             print("get selected layers")
@@ -145,11 +148,15 @@ def getLayers(plugin, bySelection=False) -> List[arcLayer]:
             print("layers selected and saved")
         else:  # from project data
             # all_layers_ids = [l.id() for l in project.mapLayers().values()]
-            for item in plugin.current_layers:
+            for item in plugin.dataStorage.current_layers:
                 try:
                     layerPath = item[1].dataSource
 
                     found = 0
+
+                    all_layers = getAllProjLayers(plugin)
+                    if all_layers is None:
+                        return None
                     for l in all_layers:
                         if l.dataSource == layerPath:
                             layers.append(l)
@@ -1450,7 +1457,9 @@ def rasterLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
                     rasterband, leftLowerCorner, abs(xres), abs(yres)
                 )
 
-            rasterbandPath = validate_path(rasterbandPath, plugin)  # solved file saving issue
+            rasterbandPath = validate_path(
+                rasterbandPath, plugin
+            )  # solved file saving issue
             print(rasterbandPath)
             # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
             myRaster.save(rasterbandPath)
@@ -1464,7 +1473,9 @@ def rasterLayerToNative(layer: Any, streamBranch: str, project: ArcGISProject):
 
         # mergedRaster.setProperty("spatialReference", crsRaster)
 
-        full_path = validate_path(path + "\\" + newName, plugin)  # solved file saving issue
+        full_path = validate_path(
+            path + "\\" + newName, plugin
+        )  # solved file saving issue
         print("RASTER FULL PATH")
         print(full_path)
         if os.path.exists(full_path):
