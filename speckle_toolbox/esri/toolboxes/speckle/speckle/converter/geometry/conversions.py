@@ -16,7 +16,9 @@ import arcpy
 from typing import Any, List, Union, Sequence
 
 import inspect
+from specklepy.objects.GIS.geometry import GisPolygonGeometry
 
+from speckle.speckle.converter.geometry.mesh import meshToNative
 from speckle.speckle.converter.geometry.polygon import (
     polygonToNative,
     polygonToSpeckle,
@@ -99,7 +101,9 @@ def convertToSpeckle(
         return None
 
 
-def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
+def convertToNative(
+    base: Base, sr: arcpy.SpatialReference, dataStorage
+) -> Union[Any, None]:
     """Converts any given base object to QgsGeometry."""
     print("___Convert to Native SingleType___")
     converted = None
@@ -122,17 +126,67 @@ def convertToNative(base: Base, sr: arcpy.SpatialReference) -> Union[Any, None]:
         ]
 
         for conversion in conversions:
-            if isinstance(base, conversion[0]):
-                # print(conversion[0])
-                converted = conversion[1](base, sr)
-                break
+
+            # distinguish normal QGIS polygons and the ones sent as Mesh only
+            try:
+                if isinstance(base, GisPolygonGeometry):
+                    if base.boundary is None:
+                        try:
+                            converted = meshToNative(base.displayValue, sr, dataStorage)
+                        except:
+                            converted = meshToNative(
+                                base["@displayValue"], sr, dataStorage
+                            )
+                        break
+                    elif isinstance(base, conversion[0]):
+                        converted = conversion[1](base, dataStorage)
+                        break
+                else:
+                    # for older commits
+                    boundary = base.boundary  # will throw exception if not polygon
+                    if boundary is None:
+                        try:
+                            converted = meshToNative(base.displayValue, sr, dataStorage)
+                        except:
+                            converted = meshToNative(
+                                base["@displayValue"], sr, dataStorage
+                            )
+                        break
+                    elif boundary is not None and isinstance(base, conversion[0]):
+                        converted = conversion[1](base, dataStorage)
+                        break
+
+            except (
+                Exception
+            ) as e:  # if no "boundary" found (either old Mesh from QGIS or other object)
+                try:  # check for a QGIS Mesh
+                    try:
+                        # if sent as Mesh
+                        colors = base.displayValue[0].colors  # will throw exception
+                        if isinstance(base.displayValue[0], Mesh):
+                            converted = meshToNative(
+                                base.displayValue, sr, dataStorage
+                            )  # only called for Meshes created in QGIS before
+                    except:
+                        # if sent as Mesh
+                        colors = base["@displayValue"][0].colors  # will throw exception
+                        if isinstance(base["@displayValue"][0], Mesh):
+                            converted = meshToNative(
+                                base["@displayValue"], sr, dataStorage
+                            )  # only called for Meshes created in QGIS before
+
+                except:  # any other object
+                    if isinstance(base, conversion[0]):
+                        # print(conversion[0])
+                        converted = conversion[1](base, sr, dataStorage)
+                        break
         # print(converted)
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return converted
 
 
-def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference):
+def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference, dataStorage):
     print("___Create MultiPoint")
     features = None
     try:
@@ -149,7 +203,9 @@ def multiPointToNative(items: List[Point], sr: arcpy.SpatialReference):
     return features
 
 
-def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
+def multiPolylineToNative(
+    items: List[Polyline], sr: arcpy.SpatialReference, dataStorage
+):
     print("_______Drawing Multipolylines____")
     poly = None
     try:
@@ -177,7 +233,7 @@ def multiPolylineToNative(items: List[Polyline], sr: arcpy.SpatialReference):
 
 
 def multiPolygonToNative(
-    items: List[Base], sr: arcpy.SpatialReference
+    items: List[Base], sr: arcpy.SpatialReference, dataStorage
 ):  # TODO fix multi features
 
     print("_______Drawing Multipolygons____")
@@ -185,7 +241,7 @@ def multiPolygonToNative(
     if not isinstance(items, List):
         items = [items]
     try:
-        print(items)
+        # print(items)
         full_array_list = []
 
         for item_geom in items:  # will be 1 item
@@ -216,12 +272,15 @@ def multiPolygonToNative(
                 # print(pts)
 
                 outer_arr = [arcpy.Point(*coords) for coords in pts]
-                outer_arr.append(outer_arr[0])
+                if pts[0] != pts[-1]:
+                    outer_arr.append(outer_arr[0])
+                # print("outer border")
                 # print(outer_arr)
                 geomPart = []
                 try:
                     for void in item["voids"]:
-                        # print(void)
+                        print("void")
+                        print(void)
                         # pts = [pointToCoord(pt) for pt in void.as_points()]
                         pointsSpeckle = []
                         if isinstance(void, Circle) or isinstance(void, Arc):
@@ -238,16 +297,17 @@ def multiPolygonToNative(
                         pts = [pointToCoord(pt) for pt in pointsSpeckle]
 
                         inner_arr = [arcpy.Point(*coords) for coords in pts]
-                        inner_arr.append(inner_arr[0])
+                        if pts[0] != pts[-1]:
+                            inner_arr.append(inner_arr[0])
                         geomPart.append(arcpy.Array(inner_arr))
                 except Exception as e:
                     print(e)
-                geomPart.insert(0, arcpy.Array(outer_arr))
 
-                # print(geomPart)
+                geomPart.insert(0, arcpy.Array(outer_arr))
                 full_array_list.extend(
                     geomPart
                 )  # outlines are written one by one, with no separation to "parts"
+                print(full_array_list)  # array of points
             # print("end of loop1")
         print("end of loop2")
         geomPartArray = arcpy.Array(full_array_list)
@@ -260,18 +320,18 @@ def multiPolygonToNative(
     return polygon
 
 
-def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference):
+def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference, dataStorage):
     print("___Convert to Native MultiType___")
     try:
         first = items[0]
         if isinstance(first, Point):
-            return multiPointToNative(items, sr)
+            return multiPointToNative(items, sr, dataStorage)
         elif isinstance(first, Line) or isinstance(first, Polyline):
-            return multiPolylineToNative(items, sr)
+            return multiPolylineToNative(items, sr, dataStorage)
         elif isinstance(first, Base):
             try:
                 if first["boundary"] is not None and first["voids"] is not None:
-                    return multiPolygonToNative(items, sr)
+                    return multiPolygonToNative(items, sr, dataStorage)
             except:
                 return None
     except Exception as e:

@@ -189,7 +189,7 @@ def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
     return polygon
 
 
-def polygonToSpeckle(geom, index: int, layer, multitype: bool):
+def polygonToSpeckle(geom, index: int, layer, multitype: bool, dataStorage):
     """Converts a Polygon to Speckle"""
     polygon = Base(units="m")
     try:
@@ -231,7 +231,7 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
             if len(voids) == 0:  # if there is a mesh with no voids
                 for pt in polyBorder:
                     if isinstance(pt, Point):
-                        pt = pointToNative(pt, sr).getPart()  # SR unknown
+                        pt = pointToNative(pt, sr, dataStorage).getPart()  # SR unknown
                     x = pt.X
                     y = pt.Y
                     z = 0 if math.isnan(pt.Z) else pt.Z
@@ -337,7 +337,7 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool):
         return None
 
 
-def polygonToNative(poly: Base, sr: arcpy.SpatialReference) -> arcpy.Polygon:
+def polygonToNative(poly: Base, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polygon:
     """Converts a Speckle Polygon base object to QgsPolygon.
     This object must have a 'boundary' and 'voids' properties.
     Each being a Speckle Polyline and List of polylines respectively."""

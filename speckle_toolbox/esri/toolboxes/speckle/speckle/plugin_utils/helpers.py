@@ -89,8 +89,10 @@ def removeSpecialCharacters(text: str) -> str:
     new_text = (
         text.replace("[", "_")
         .replace("]", "_")
+        .replace(".", "_")
         .replace(" ", "_")
         .replace("-", "_")
+        .replace("—", "_")
         .replace("(", "_")
         .replace(")", "_")
         .replace(":", "_")

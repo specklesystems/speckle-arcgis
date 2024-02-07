@@ -3,6 +3,7 @@ import inspect
 import math
 import os
 from typing import List, Union
+import arcpy
 
 import numpy as np
 
@@ -10,6 +11,11 @@ import scipy as sp
 from speckle.speckle.plugin_utils.helpers import (
     findOrCreatePath,
     get_scale_factor_to_meter,
+)
+from speckle.speckle.converter.layers.utils import (
+    findTransformation,
+    getVariantFromValue,
+    traverseDict,
 )
 
 # from speckle.speckle.converter.geometry.conversions import transform
@@ -30,30 +36,6 @@ from specklepy.objects.GIS.geometry import (
 )
 
 from specklepy.objects import Base
-
-try:
-    from qgis._core import (
-        QgsCoordinateTransform,
-        Qgis,
-        QgsPointXY,
-        QgsGeometry,
-        QgsRasterBandStats,
-        QgsFeature,
-        QgsFields,
-        QgsField,
-        QgsVectorLayer,
-        QgsRasterLayer,
-        QgsCoordinateReferenceSystem,
-        QgsProject,
-        QgsUnitTypes,
-    )
-    from osgeo import (  # # C:\Program Files\QGIS 3.20.2\apps\Python39\Lib\site-packages\osgeo
-        gdal,
-        osr,
-    )
-    from PyQt5.QtCore import QVariant, QDate, QDateTime
-except ModuleNotFoundError:
-    pass
 
 
 def featureToSpeckle(
@@ -985,6 +967,88 @@ def rasterFeatureToSpeckle(
         return None
 
 
+def featureToNative(
+    feature: Base, fields: dict, geomType: str, sr: arcpy.SpatialReference, dataStorage
+):
+    print("04_____Feature To Native correct____________")
+    feat = {}
+    try:
+        try:
+            speckle_geom = feature[
+                "geometry"
+            ]  # for created in QGIS / ArcGIS Layer type
+        except:
+            speckle_geom = feature  # for created in other software
+
+        arcGisGeom = None
+        if isinstance(speckle_geom, list):
+            if len(speckle_geom) > 1 or geomType == "Multipoint":
+                arcGisGeom = convertToNativeMulti(speckle_geom, sr, dataStorage)
+            else:
+                arcGisGeom = convertToNative(speckle_geom[0], sr, dataStorage)
+        else:
+            arcGisGeom = convertToNative(speckle_geom, sr, dataStorage)
+
+        if arcGisGeom is not None:
+            feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
+        else:
+            return None
+        print(arcGisGeom)
+        print(feat)
+        for key, variant in fields.items():
+            value = None
+            try:
+                value = feature[key]
+            except:
+                if key == "Speckle_ID":
+                    try:
+                        value = str(
+                            feature["speckle_id"]
+                        )  # if GIS already generated this field
+                    except Exception as e:
+                        print(e)
+                        value = str(feature["id"])
+                else:
+                    print(key)
+                    # arcpy.AddWarning(f'Field {key} not found')
+                    try:
+                        value = feature.attributes[key]
+                    except:
+                        try:
+                            value = feature.attributes[key.replace("attributes_", "")]
+                        except:
+                            pass
+
+            if variant == "TEXT":
+                value = str(value)
+                if len(value) > 255:
+                    print(len(value))
+                    value = value[:255]
+                    arcpy.AddWarning(
+                        f'Field "{key}" values are trimmed at 255 characters'
+                    )
+            if (
+                variant == getVariantFromValue(value)
+                and value != "NULL"
+                and value != "None"
+            ):
+                feat.update({key: value})
+            else:
+                if variant == "TEXT":
+                    feat.update({key: None})
+                if variant == "FLOAT":
+                    feat.update({key: None})
+                if variant == "LONG":
+                    feat.update({key: None})
+                if variant == "SHORT":
+                    feat.update({key: None})
+        print(feat)
+    except Exception as e:
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+    return feat
+
+
+r"""
 def featureToNative(feature: Base, fields: "QgsFields", dataStorage):
     feat = QgsFeature()
     # print("___featureToNative")
@@ -1074,6 +1138,7 @@ def featureToNative(feature: Base, fields: "QgsFields", dataStorage):
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3])
         return feat
+"""
 
 
 def bimFeatureToNative(
@@ -1120,9 +1185,9 @@ def cadFeatureToNative(feature: Base, fields: "QgsFields", dataStorage):
             speckle_geom = feature  # for created in other software
 
         if isinstance(speckle_geom, list):
-            qgsGeom = convertToNativeMulti(speckle_geom, dataStorage)
+            qgsGeom = convertToNativeMulti(speckle_geom, sr, dataStorage)
         else:
-            qgsGeom = convertToNative(speckle_geom, dataStorage)
+            qgsGeom = convertToNative(speckle_geom, sr, dataStorage)
 
         if qgsGeom is not None:
             exist_feat.setGeometry(qgsGeom)

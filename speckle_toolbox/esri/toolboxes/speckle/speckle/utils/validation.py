@@ -118,7 +118,6 @@ def validateBranch(
         return branch
     except Exception as e:
         logToUser(e, level=2, plugin=dockwidget)
-        return
 
 
 def validateCommit(

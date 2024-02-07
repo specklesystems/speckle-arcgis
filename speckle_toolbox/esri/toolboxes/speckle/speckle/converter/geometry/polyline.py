@@ -451,7 +451,7 @@ def lineFrom2pt(pt1: List[float], pt2: List[float]):
     return line
 
 
-def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyline:
+def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
     """Converts a Speckle Polyline to QgsLineString"""
     print("__ convert polyline to native __")
     polyline = None
@@ -481,7 +481,7 @@ def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference) -> arcpy.Polyli
     return polyline
 
 
-def lineToNative(line: Line, sr: arcpy.SpatialReference) -> arcpy.Polyline:
+def lineToNative(line: Line, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
     """Converts a Speckle Line to Native"""
     print("___Line to Native___")
     try:
@@ -496,35 +496,35 @@ def lineToNative(line: Line, sr: arcpy.SpatialReference) -> arcpy.Polyline:
         return None
 
 
-def curveToNative(poly: Curve, sr: arcpy.SpatialReference) -> arcpy.Polyline:
+def curveToNative(poly: Curve, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
     """Converts a Speckle Curve to Native"""
     try:
         display = poly.displayValue
-        curve = polylineToNative(display, sr)
+        curve = polylineToNative(display, sr, dataStorage)
         return curve
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
         return None
 
 
-def arcToNative(poly: Arc, sr: arcpy.SpatialReference) -> arcpy.Polyline:
+def arcToNative(poly: Arc, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
     """Converts a Speckle Arc to Native"""
     try:
         arc = arcToNativePolyline(
             poly, sr
-        )  # QgsCircularString(pointToNative(poly.startPoint), pointToNative(poly.midPoint), pointToNative(poly.endPoint))
+        )  
         return arc
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
         return None
 
 
-def ellipseToNative(poly: Ellipse, sr: arcpy.SpatialReference):
+def ellipseToNative(poly: Ellipse, sr: arcpy.SpatialReference, dataStorage):
     logToUser("Ellipse geometry is not supported yet", level=1)
     return
 
 
-def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
+def circleToNative(poly: Circle, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
     """Converts a Speckle Circle to QgsLineString"""
     print("___Convert Circle to Native___")
     curve = None
@@ -567,7 +567,7 @@ def circleToNative(poly: Circle, sr: arcpy.SpatialReference) -> arcpy.Polyline:
     return curve
 
 
-def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Polyline:
+def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
     points = []
     curve = None
     print("___Polycurve to native___")
@@ -576,15 +576,15 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference) -> arcpy.Poly
         for i, segm in enumerate(poly.segments):  # Line, Polyline, Curve, Arc, Circle
             print("___start segment")
             if isinstance(segm, Line):
-                converted = lineToNative(segm, sr)  # QgsLineString
+                converted = lineToNative(segm, sr, dataStorage)  # QgsLineString
             elif isinstance(segm, Polyline):
-                converted = polylineToNative(segm, sr)  # QgsLineString
+                converted = polylineToNative(segm, sr, dataStorage)  # QgsLineString
             elif isinstance(segm, Curve):
-                converted = curveToNative(segm, sr)  # QgsLineString
+                converted = curveToNative(segm, sr, dataStorage)  # QgsLineString
             elif isinstance(segm, Circle):
-                converted = circleToNative(segm, sr)  # QgsLineString
+                converted = circleToNative(segm, sr, dataStorage)  # QgsLineString
             elif isinstance(segm, Arc):
-                converted = arcToNativePolyline(segm, sr)  # QgsLineString
+                converted = arcToNativePolyline(segm, sr, dataStorage)  # QgsLineString
             else:  # either return a part of the curve, of skip this segment and try next
                 logToUser(
                     f"Part of the polycurve cannot be converted",

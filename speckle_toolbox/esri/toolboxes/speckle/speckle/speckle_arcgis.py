@@ -9,6 +9,7 @@ import threading
 import inspect
 
 from PyQt5.QtWidgets import QApplication
+from PyQt5 import QtWidgets
 
 
 from specklepy.api import operations
@@ -151,6 +152,7 @@ Report issues at https://speckle.community/"""
 class SpeckleGIS:
     """Speckle Connector Plugin for ArcGIS"""
 
+    workspace: Any
     version: str
     gis_version: str
     dataStorage: DataStorage
@@ -182,6 +184,7 @@ class SpeckleGIS:
         except:
             full_version = arcpy.GetInstallInfo()["Version"]
 
+        self.workspace = arcpy.env.workspace
         self.gis_version = full_version
         # Save reference to the QGIS interface
         self.dataStorage = None
@@ -337,9 +340,7 @@ class SpeckleGIS:
                     # If group exists, remove layers inside
                     newGroupName = streamId + "_" + branch.name + "_" + commit.id
                     newGroupName = removeSpecialCharacters(newGroupName)
-                    findAndClearLayerGroup(
-                        self.project.layerTreeRoot(), newGroupName, self
-                    )
+                    findAndClearLayerGroup(self.project, newGroupName, self)
 
                 except Exception as e:
                     logToUser(
@@ -409,7 +410,7 @@ class SpeckleGIS:
             # self.dataStorage.all_layers = getAllLayers(root)
             self.dataStorage.all_layers = layers
 
-            self.project = ArcGISProject("CURRENT")
+            # self.project = ArcGISProject("CURRENT")
             if self.project.activeMap is None:
                 logToUser(
                     "No active Map",
@@ -633,7 +634,7 @@ class SpeckleGIS:
                 )
                 return
 
-            self.project = ArcGISProject("CURRENT")
+            # self.project = ArcGISProject("CURRENT")
             if self.project.activeMap is None:
                 logToUser("No active Map", level=1, func=inspect.stack()[0][3])
                 return
@@ -660,18 +661,18 @@ class SpeckleGIS:
                 return
 
             branchName = str(self.dockwidget.streamBranchDropdown.currentText())
-            branch = validateBranch(stream, branchName, True)
+            branch = validateBranch(stream, branchName, True, self.dockwidget)
             if branch == None:
                 return
 
             commitId = str(self.dockwidget.commitDropdown.currentText())
-            commit = validateCommit(branch, commitId)
+            commit = validateCommit(branch, commitId, self.dockwidget)
             if commit == None:
                 return
 
         except SpeckleException as e:
             logToUser(
-                str(e.message),
+                str(e),
                 level=2,
                 func=inspect.stack()[0][3],
                 plugin=self.dockwidget,
@@ -694,6 +695,7 @@ class SpeckleGIS:
             client_id = client.account.userInfo.id
 
             commitObj = operations._untracked_receive(objId, transport, None)
+            self.dockwidget.signal_remove_btn_url.emit("cancel")
 
             try:
                 crs_lat = self.project.activeMap.spatialReference.latitudeOfOrigin
@@ -722,7 +724,7 @@ class SpeckleGIS:
                 )
                 metrics.track(
                     metrics.RECEIVE,
-                    self.active_account,
+                    self.dataStorage.active_account,
                     {
                         "hostAppFullVersion": self.gis_version,
                         "pythonVersion": python_version,
@@ -735,7 +737,7 @@ class SpeckleGIS:
                     },
                 )
             except:
-                metrics.track(metrics.RECEIVE, self.active_account)
+                metrics.track(metrics.RECEIVE, self.dataStorage.active_account)
 
             client.commit.received(
                 streamId,
@@ -760,7 +762,7 @@ class SpeckleGIS:
             # If group exists, remove layers inside
             newGroupName = streamId + "_" + branch.name + "_" + commit.id
             newGroupName = removeSpecialCharacters(newGroupName)
-            findAndClearLayerGroup(self.project, newGroupName)
+            findAndClearLayerGroup(self.project, newGroupName, self)
 
             print("after create group")
             if app.lower() == "qgis" or app.lower() == "arcgis":
@@ -773,8 +775,7 @@ class SpeckleGIS:
                 check: Callable[[Base], bool] = lambda base: (
                     base.speckle_type and base.speckle_type.endswith("Base")
                 )
-            traverseObject(commitObj, callback, check, str(newGroupName), self)
-
+            traverseObject(self, commitObj, callback, check, str(newGroupName), "")
             logToUser("👌 Data received", level=0, plugin=self.dockwidget, blue=True)
             return
 
@@ -814,31 +815,6 @@ class SpeckleGIS:
 
             self.dockwidget.reloadDialogUI(self)
 
-    def check_for_accounts(self):
-        def go_to_manager():
-            webbrowser.open("https://speckle-releases.netlify.app/")
-
-        try:
-            accounts = get_local_accounts()
-            self.accounts = accounts
-            if len(accounts) == 0:
-                logToUser(
-                    "No accounts were found. Please remember to install the Speckle Manager and setup at least one account",
-                    level=1,
-                    url="https://speckle-releases.netlify.app/",
-                    func=inspect.stack()[0][3],
-                )
-                return False
-            for acc in accounts:
-                if acc.isDefault:
-                    self.default_account = acc
-                    self.active_account = acc
-                    break
-            return True
-        except Exception as e:
-            logToUser(str(e), level=2, func=inspect.stack()[0][3])
-            return False
-
     def run(self):
         """Run method that performs all the real work"""
         print("run plugin")
@@ -865,6 +841,7 @@ class SpeckleGIS:
                 self.reloadUI()
             else:
                 print("Plugin inactive, launch")
+                self.workspace = arcpy.env.workspace
                 self.pluginIsActive = True
                 print("run plugin 100")
                 if self.dockwidget is None:
@@ -895,7 +872,7 @@ class SpeckleGIS:
 
             get_project_streams(self)
             get_rotation(self.dataStorage)
-            get_survey_point(self.dataStorage)
+            get_survey_point(self)
             get_crs_offsets(self.dataStorage)
             get_project_saved_layers(self)
             self.dockwidget.populateSavedLayerDropdown(self)
@@ -936,27 +913,52 @@ class SpeckleGIS:
 
     def handleStreamCreate(self, account, str_name, description, is_public):
         try:
-            # if len(str_name)<3 and len(str_name)!=0:
-            #    logger.logToUser("Stream Name should be at least 3 characters", Qgis.Warning)
             new_client = SpeckleClient(
                 account.serverInfo.url, account.serverInfo.url.startswith("https")
             )
-            new_client.authenticate_with_token(token=account.token)
+            try:
+                new_client.authenticate_with_token(token=account.token)
+            except SpeckleException as ex:
+                if "already connected" in ex.message:
+                    logToUser(
+                        "Dependencies versioning error.\nClick here for details.",
+                        url="dependencies_error",
+                        level=2,
+                        plugin=self.dockwidget,
+                    )
+                    return
+                else:
+                    raise ex
 
             str_id = new_client.stream.create(
                 name=str_name, description=description, is_public=is_public
             )
+
+            try:
+                metrics.track(
+                    "Connector Action",
+                    self.dataStorage.active_account,
+                    {
+                        "name": "Stream Create",
+                        "connector_version": str(self.dataStorage.plugin_version),
+                    },
+                )
+            except Exception as e:
+                logToUser(
+                    e, level=2, func=inspect.stack()[0][3], plugin=self.dockwidget
+                )
+
             if isinstance(str_id, GraphQLException) or isinstance(
                 str_id, SpeckleException
             ):
-                logToUser(str_id.message, level=2, func=inspect.stack()[0][3])
+                logToUser(str_id.message, level=2, plugin=self.dockwidget)
                 return
             else:
                 sw = StreamWrapper(account.serverInfo.url + "/streams/" + str_id)
-                self.handleStreamAdd(sw)
+                self.handleStreamAdd((sw, None, None))
             return
         except Exception as e:
-            logToUser(str(e), level=2, func=inspect.stack()[0][3])
+            logToUser(e, level=2, func=inspect.stack()[0][3], plugin=self.dockwidget)
             return
 
     def onBranchCreateClicked(self):
@@ -1055,7 +1057,9 @@ class SpeckleGIS:
 
     def customCRSDialogCreate(self):
         try:
-            self.dataStorage.currentCRS = self.dataStorage.project.crs()
+            self.dataStorage.currentCRS = (
+                self.dataStorage.project.activeMap.spatialReference
+            )
             units = str(self.project.activeMap.spatialReference.linearUnitName)
             self.dataStorage.currentOriginalUnits = units
 
@@ -1113,3 +1117,224 @@ class SpeckleGIS:
 
         if url is not None and url != "":
             webbrowser.open(url, new=0, autoraise=True)
+
+    def customCRSApply(self):
+        index = self.dockwidget.custom_crs_modal.modeDropdown.currentIndex()
+        if index == 1:  # add offsets
+            self.customCRSCreate()
+        if index == 0:  # create custom CRS
+            self.crsOffsetsApply()
+        self.applyRotation()
+        self.dockwidget.custom_crs_modal.close()
+
+    def applyRotation(self):
+        try:
+            from speckle.speckle.utils.project_vars import set_crs_offsets, set_rotation
+
+            rotate = self.dockwidget.custom_crs_modal.rotation.text()
+            if rotate is not None and rotate != "":
+                try:
+                    rotate = float(rotate)
+                    if not -360 <= rotate <= 360:
+                        logToUser(
+                            "Angle value must be within the range (-360, 360)",
+                            level=1,
+                            plugin=self.dockwidget,
+                        )
+                    else:
+                        # warning only if the value changed
+                        if self.dataStorage.crs_rotation != float(rotate):
+                            self.dataStorage.crs_rotation = float(rotate)
+                            logToUser(
+                                "Rotation successfully applied",
+                                level=0,
+                                plugin=self.dockwidget,
+                            )
+
+                            try:
+                                metrics.track(
+                                    "Connector Action",
+                                    self.dataStorage.active_account,
+                                    {
+                                        "name": "CRS Rotation Add",
+                                        "connector_version": str(
+                                            self.dataStorage.plugin_version
+                                        ),
+                                    },
+                                )
+                            except Exception as e:
+                                logToUser(e, level=2, func=inspect.stack()[0][3])
+
+                except:
+                    logToUser("Invalid Angle value", level=2, plugin=self.dockwidget)
+
+            else:
+                # warning only if the value changed
+                if self.dataStorage.crs_rotation is not None:
+                    self.dataStorage.crs_rotation = None
+                    logToUser(
+                        "Rotation successfully removed", level=0, plugin=self.dockwidget
+                    )
+
+                    try:
+                        metrics.track(
+                            "Connector Action",
+                            self.dataStorage.active_account,
+                            {
+                                "name": "CRS Rotation Remove",
+                                "connector_version": str(
+                                    self.dataStorage.plugin_version
+                                ),
+                            },
+                        )
+                    except Exception as e:
+                        logToUser(e, level=2, func=inspect.stack()[0][3])
+
+            set_rotation(self.dockwidget.dataStorage, self.dockwidget)
+
+        except Exception as e:
+            logToUser(e, level=2, func=inspect.stack()[0][3], plugin=self.dockwidget)
+
+    def crsOffsetsApply(self):
+        try:
+            from speckle.speckle.utils.project_vars import set_crs_offsets, set_rotation
+
+            offX = self.dockwidget.custom_crs_modal.offsetX.text()
+            offY = self.dockwidget.custom_crs_modal.offsetY.text()
+            if offX is not None and offX != "" and offY is not None and offY != "":
+                try:
+                    # warning only if the value changed
+                    if self.dataStorage.crs_offset_x != float(
+                        offX
+                    ) or self.dataStorage.crs_offset_y != float(offY):
+                        self.dataStorage.crs_offset_x = float(offX)
+                        self.dataStorage.crs_offset_y = float(offY)
+                        logToUser(
+                            "X and Y offsets successfully applied",
+                            level=0,
+                            plugin=self.dockwidget,
+                        )
+
+                        try:
+                            metrics.track(
+                                "Connector Action",
+                                self.dataStorage.active_account,
+                                {
+                                    "name": "CRS Offset Add",
+                                    "connector_version": str(
+                                        self.dataStorage.plugin_version
+                                    ),
+                                },
+                            )
+                        except Exception as e:
+                            logToUser(e, level=2, func=inspect.stack()[0][3])
+
+                except:
+                    logToUser("Invalid Offset values", level=2, plugin=self.dockwidget)
+
+            else:
+                # warning only if the value changed
+                if (
+                    self.dataStorage.crs_offset_x != None
+                    or self.dataStorage.crs_offset_y != None
+                ):
+                    self.dataStorage.crs_offset_x = None
+                    self.dataStorage.crs_offset_y = None
+                    logToUser(
+                        "X and Y offsets successfully removed",
+                        level=0,
+                        plugin=self.dockwidget,
+                    )
+
+                    try:
+                        metrics.track(
+                            "Connector Action",
+                            self.dataStorage.active_account,
+                            {
+                                "name": "CRS Offset Remove",
+                                "connector_version": str(
+                                    self.dataStorage.plugin_version
+                                ),
+                            },
+                        )
+                    except Exception as e:
+                        logToUser(e, level=2, func=inspect.stack()[0][3])
+
+            set_crs_offsets(self.dataStorage, self.dockwidget)
+
+        except Exception as e:
+            logToUser(e, level=2, func=inspect.stack()[0][3], plugin=self.dockwidget)
+
+    def customCRSCreate(self):
+        try:
+            from speckle.speckle.utils.project_vars import (
+                set_survey_point,
+                set_crs_offsets,
+                setProjectReferenceSystem,
+            )
+
+            vals = [
+                str(self.dockwidget.custom_crs_modal.surveyPointLat.text()),
+                str(self.dockwidget.custom_crs_modal.surveyPointLon.text()),
+            ]
+            try:
+                custom_lat, custom_lon = [float(i.replace(" ", "")) for i in vals]
+
+                if (
+                    custom_lat > 180
+                    or custom_lat < -180
+                    or custom_lon > 180
+                    or custom_lon < -180
+                ):
+                    logToUser(
+                        "LAT LON values must be within (-180, 180). You can right-click on the canvas location to copy coordinates in WGS 84",
+                        level=1,
+                        plugin=self.dockwidget,
+                    )
+                    return
+                else:
+                    self.dockwidget.dataStorage.custom_lat = custom_lat
+                    self.dockwidget.dataStorage.custom_lon = custom_lon
+
+                    set_survey_point(self.dockwidget.dataStorage, self.dockwidget)
+                    setProjectReferenceSystem(
+                        self.dockwidget.dataStorage, self.dockwidget
+                    )
+
+                    # remove offsets if custom crs applied
+                    if (
+                        self.dataStorage.crs_offset_x != None
+                        and self.dataStorage.crs_offset_x != 0
+                    ) or (
+                        self.dataStorage.crs_offset_y != None
+                        and self.dataStorage.crs_offset_y != 0
+                    ):
+                        self.dataStorage.crs_offset_x = None
+                        self.dataStorage.crs_offset_y = None
+                        self.dockwidget.custom_crs_modal.offsetX.setText("")
+                        self.dockwidget.custom_crs_modal.offsetY.setText("")
+                        set_crs_offsets(self.dataStorage, self.dockwidget)
+                        logToUser(
+                            "X and Y offsets removed", level=0, plugin=self.dockwidget
+                        )
+
+                    try:
+                        metrics.track(
+                            "Connector Action",
+                            self.dataStorage.active_account,
+                            {
+                                "name": "CRS Custom Create",
+                                "connector_version": str(
+                                    self.dataStorage.plugin_version
+                                ),
+                            },
+                        )
+                    except Exception as e:
+                        logToUser(e, level=2, func=inspect.stack()[0][3])
+
+            except:
+                logToUser("Invalid Lat/Lon values", level=2, plugin=self.dockwidget)
+
+        except Exception as e:
+            logToUser(e, level=2, func=inspect.stack()[0][3], plugin=self.dockwidget)
+            return

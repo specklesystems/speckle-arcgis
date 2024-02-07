@@ -1,3 +1,4 @@
+import copy
 from datetime import datetime
 from typing import Dict, Any, List, Union
 import json
@@ -86,6 +87,52 @@ def generate_qgis_raster_app_id(rasterLayer):
         return ""
 
 
+def findUpdateJsonItemPath(tree: Dict, full_path_str: str):
+    try:
+        new_tree = copy.deepcopy(tree)
+
+        path_list_original = full_path_str.split(SYMBOL)
+        path_list = []
+        for x in path_list_original:
+            if len(x) > 0:
+                path_list.append(x)
+        attr_found = False
+
+        for i, item in enumerate(new_tree.items()):
+            attr, val_dict = item
+
+            if attr == path_list[0]:
+                attr_found = True
+                path_list.pop(0)
+                if len(path_list) > 0:  # if the path is not finished:
+                    all_names = val_dict.keys()
+                    if (
+                        len(path_list) == 1 and path_list[0] in all_names
+                    ):  # already in a tree
+                        return new_tree
+                    else:
+                        branch = findUpdateJsonItemPath(
+                            val_dict, SYMBOL.join(path_list)
+                        )
+                        new_tree.update({attr: branch})
+
+        if (
+            attr_found is False and len(path_list) > 0
+        ):  # create a new branch at the top level
+            if len(path_list) == 1:
+                new_tree.update({path_list[0]: {}})
+                return new_tree
+            else:
+                branch = findUpdateJsonItemPath(
+                    {path_list[0]: {}}, SYMBOL.join(path_list)
+                )
+                new_tree.update(branch)
+        return new_tree
+    except Exception as e:
+        print(e)
+        return tree
+
+
 def collectionsFromJson(
     jsonObj: dict, levels: list, layerConverted, baseCollection: Collection
 ):
@@ -122,7 +169,7 @@ def collectionsFromJson(
     return baseCollection
 
 
-def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = ""):
+def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugin=None):
     print("find And Clear LayerGroup")
     try:
         groupExists = 0
@@ -183,7 +230,7 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = ""):
                     )
                     return
     except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+        logToUser(str(e), level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
@@ -337,15 +384,21 @@ def getLayerAttributes(
             features = [featuresList]
         else:
             features = featuresList[:]
-
+        #print(features)
         all_props = []
         for feature in features:
             # get object properties to add as attributes
-            dynamicProps = feature.get_dynamic_member_names()
+            try:
+                dynamicProps = (
+                    feature.attributes.get_dynamic_member_names()
+                )  # for 2.14 onwards
+            except:
+                dynamicProps = feature.get_dynamic_member_names()
+
             for att in ATTRS_REMOVE:
                 try:
                     dynamicProps.remove(att)
-                except:
+                except ValueError:
                     pass
 
             dynamicProps.sort()
@@ -354,7 +407,10 @@ def getLayerAttributes(
             for name in dynamicProps:
                 # if name not in all_props: all_props.append(name)
 
-                value = feature[name]
+                try:
+                    value = feature.attributes[name]
+                except:
+                    value = feature[name]
                 variant = getVariantFromValue(value)
                 # if name == 'area': print(value); print(variant)
                 if not variant:
@@ -406,7 +462,7 @@ def getLayerAttributes(
         for name in all_props:
             if name not in fields.keys():
                 fields.update({name: "TEXT"})
-        print(fields)
+        # print(fields)
         # fields_sorted = {k: v for k, v in sorted(fields.items(), key=lambda item: item[0])}
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
@@ -704,7 +760,7 @@ def curvedFeatureClassToSegments(layer) -> str:
         return None
 
 
-def validate_path(path: str):
+def validate_path(path: str, plugin):
     """If our path contains a DB name, make sure we have a valid DB name and not a standard file name."""
     try:
         # https://github.com/EsriOceans/btm/commit/a9c0529485c9b0baa78c1f094372c0f9d83c0aaf
@@ -714,7 +770,7 @@ def validate_path(path: str):
         file_base = os.path.splitext(file_name)[0]
         if dirname == "":
             # a relative path only, relying on the workspace
-            dirname = arcpy.env.workspace
+            dirname = plugin.workspace
         path_ext = os.path.splitext(dirname)[1].lower()
         if path_ext in [".mdb", ".gdb", ".sde"]:
             # we're working in a database

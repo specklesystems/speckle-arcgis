@@ -19,31 +19,20 @@ from osgeo import osr
 
 import inspect
 
-try:
-    from speckle.speckle.utils.validation import tryGetStream
-    from speckle.speckle.speckle_arcgis import SpeckleGIS
-    from speckle.speckle.converter.layers import getAllProjLayers
-    from speckle.speckle.utils.panel_logging import logToUser
-except:
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.utils.validation import (
-        tryGetStream,
-    )
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.speckle_arcgis import SpeckleGIS
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.converter.layers import (
-        getAllProjLayers,
-    )
-    from speckle_toolbox.esri.toolboxes.speckle.speckle.utils.panel_logging import (
-        logToUser,
-    )
+from speckle.speckle.utils.validation import tryGetStream
+
+# from speckle.speckle.speckle_arcgis import SpeckleGIS
+from speckle.speckle.converter.layers import getAllProjLayers
+from speckle.speckle.utils.panel_logging import logToUser
 
 FIELDS = ["project_streams", "project_layer_selection", "lat_lon"]
 
 
-def get_project_streams(plugin: SpeckleGIS, content: str = None):
+def get_project_streams(plugin: "SpeckleGIS", content: str = None):
     try:
         print("GET proj streams")
         project = plugin.project
-        table = findOrCreateSpeckleTable(project)
+        table = findOrCreateSpeckleTable(project, plugin)
         logToUser(table, level=0, func=inspect.stack()[0][3])
 
         rows = arcpy.da.SearchCursor(table, "project_streams")
@@ -76,11 +65,11 @@ def get_project_streams(plugin: SpeckleGIS, content: str = None):
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
 
-def set_project_streams(plugin: SpeckleGIS):
+def set_project_streams(plugin: "SpeckleGIS"):
     try:
         print("SET proj streams")
         project = plugin.project
-        table = findOrCreateSpeckleTable(project)
+        table = findOrCreateSpeckleTable(project, plugin)
         print("SET proj streams 2")
 
         value = [
@@ -124,11 +113,11 @@ def set_project_streams(plugin: SpeckleGIS):
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
 
-def get_project_layer_selection(plugin: SpeckleGIS):
+def get_project_layer_selection(plugin: "SpeckleGIS"):
     try:
         print("GET project layer selection from the table")
         project = plugin.project
-        table = findOrCreateSpeckleTable(project)
+        table = findOrCreateSpeckleTable(project, plugin)
         if table is None:
             return
 
@@ -138,7 +127,7 @@ def get_project_layer_selection(plugin: SpeckleGIS):
             saved_layers.append(x[0])
 
         temp = []
-        proj_layers = getAllProjLayers(project)
+        proj_layers = getAllProjLayers(plugin)
         ######### need to check whether saved streams are available (account reachable)
         if len(saved_layers) > 0:
             for layerPath in saved_layers:
@@ -162,7 +151,7 @@ def get_project_layer_selection(plugin: SpeckleGIS):
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
 
-def set_project_layer_selection(plugin: SpeckleGIS):
+def set_project_layer_selection(plugin: "SpeckleGIS"):
     try:
         print("SET project layer selection function")
         project = plugin.project
@@ -171,7 +160,7 @@ def set_project_layer_selection(plugin: SpeckleGIS):
         ]  # ",".join([layer[1].dataSource for layer in plugin.current_layers])
         print(value)
 
-        table = findOrCreateSpeckleTable(project)
+        table = findOrCreateSpeckleTable(project, plugin)
         # print(table)
         if table is not None:
             lan_lot = ""
@@ -260,8 +249,9 @@ def set_rotation(dataStorage, dockwidget=None):
         logToUser("Lat, Lon values invalid: " + str(e), level=2)
         return False
 
+
 def get_crs_offsets(dataStorage):
-    dataStorage.crs_offset_x, dataStorage.crs_offset_y = (0,0)
+    dataStorage.crs_offset_x, dataStorage.crs_offset_y = (0, 0)
     return
     try:
         # get from saved project, set to local vars
@@ -278,7 +268,7 @@ def get_crs_offsets(dataStorage):
 
 
 def set_crs_offsets(dataStorage, dockwidget=None):
-    return 
+    return
     try:
         # from widget (3 strings) to local vars AND memory (1 string)
         proj = dataStorage.project
@@ -331,7 +321,7 @@ def get_project_saved_layers(plugin):
 
 
 def set_project_layer_selection(plugin):
-    return 
+    return
     try:
         proj = plugin.project
         # value = ",".join([x.id() for x in self.iface.layerTreeView().selectedLayers()]) #'points_qgis2_b22ed3d0_0ff9_40d2_97f2_bd17a350d698' <qgis._core.QgsVectorDataProvider object at 0x000002627D9D4790>
@@ -355,11 +345,12 @@ def set_project_layer_selection(plugin):
         logToUser(e, level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
         return
 
-def get_survey_point(plugin: SpeckleGIS, content=None):
+
+def get_survey_point(plugin: "SpeckleGIS", content=None):
     try:
         print("get survey point")
         project = plugin.project
-        table = findOrCreateSpeckleTable(project)
+        table = findOrCreateSpeckleTable(project, plugin)
         if table is None:
             return
 
@@ -377,7 +368,7 @@ def get_survey_point(plugin: SpeckleGIS, content=None):
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
 
-def set_survey_point(plugin: SpeckleGIS):
+def set_survey_point(plugin: "SpeckleGIS"):
 
     try:
         # from widget (2 strings) to local vars + update SR of the map
@@ -405,7 +396,7 @@ def set_survey_point(plugin: SpeckleGIS):
             return True
         pt = str(plugin.lat) + ";" + str(plugin.lon)
 
-        table = findOrCreateSpeckleTable(project)
+        table = findOrCreateSpeckleTable(project, plugin)
         if table is not None:
             with arcpy.da.UpdateCursor(table, ["lat_lon"]) as cursor:
                 for row in cursor:  # just one row
@@ -438,7 +429,7 @@ def set_survey_point(plugin: SpeckleGIS):
         return False
 
 
-def setProjectReferenceSystem(plugin: SpeckleGIS):
+def setProjectReferenceSystem(plugin: "SpeckleGIS"):
     try:
         # save to project; create SR
         newCrsString = (
@@ -481,10 +472,10 @@ def setProjectReferenceSystem(plugin: SpeckleGIS):
         return False
 
 
-def findOrCreateSpeckleTable(project: ArcGISProject) -> Union[str, None]:
+def findOrCreateSpeckleTable(project: ArcGISProject, plugin) -> Union[str, None]:
     try:
         path = (
-            arcpy.env.workspace
+            plugin.workspace
         )  # project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
 
         if "speckle_gis" not in arcpy.ListTables():
@@ -538,7 +529,7 @@ def findOrCreateTableField(table: str, field: str):
         #    cursor.insertRow([""])
         #    del cursor
 
-    except:  # if field doesn't exist
+    except Exception as e:  # if field doesn't exist
         arcpy.management.AddField(table, field, "TEXT")
         # cursor = arcpy.da.InsertCursor(table, [field] )
         # cursor.insertRow([""])
@@ -546,27 +537,36 @@ def findOrCreateTableField(table: str, field: str):
 
 
 def findOrCreateRow(table: str, fields: List[str]):
-    try:
-        # check if the row exists
-        cursor = arcpy.da.SearchCursor(table, fields)
-        k = -1
-        for k, row in enumerate(cursor):
-            # print(row)
-            break
+
+    # check if the row exists
+    cursor = arcpy.da.SearchCursor(table, fields)
+    k = -1
+    for k, row in enumerate(cursor):
+        # print(row)
+        break
+    del cursor
+
+    # if no rows
+    if k == -1:
+        cursor = arcpy.da.InsertCursor(table, fields)
+        cursor.insertRow(["", "", ""])
+        del cursor
+    else:
+        with arcpy.da.UpdateCursor(table, fields) as cursor:
+            for row in cursor:
+                if None in row:
+                    cursor.updateRow(["", "", ""])
+                break  # look at the 1st row only
         del cursor
 
-        # if no rows
-        if k == -1:
-            cursor = arcpy.da.InsertCursor(table, fields)
-            cursor.insertRow(["", "", ""])
-            del cursor
-        else:
-            with arcpy.da.UpdateCursor(table, fields) as cursor:
-                for row in cursor:
-                    if None in row:
-                        cursor.updateRow(["", "", ""])
-                    break  # look at the 1st row only
-            del cursor
 
-    except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+def findOrCreateRowInFeatureTable(table: str, fields: List[str], values=None):
+
+    with arcpy.da.UpdateCursor(table, fields) as cursor:
+        for row in cursor:
+            cursor.deleteRow()
+    del cursor
+
+    cursor = arcpy.da.InsertCursor(table, fields)
+    cursor.insertRow([str(v) for v in values])
+    del cursor
