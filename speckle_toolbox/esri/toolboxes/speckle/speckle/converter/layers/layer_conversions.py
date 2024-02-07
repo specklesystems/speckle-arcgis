@@ -87,6 +87,7 @@ from speckle.speckle.converter.layers.utils import (
     getLayerAttributes,
     newLayerGroupAndName,
     validate_path,
+    findTransformation,
 )
 
 from speckle.speckle.converter.layers.symbology import (
@@ -1818,41 +1819,38 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
 
 def rasterLayerToNative(layer: RasterLayer, streamBranch: str, nameBase: str, plugin):
     try:
-        # project = plugin.project
-        # layerName = removeSpecialCharacters(layer.name) + "_Speckle"
-        layerName = removeSpecialCharacters(nameBase + SYMBOL + layer.name) + "_Speckle"
-
-        newName = layerName  # f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
-
         plugin.dockwidget.signal_4.emit(
             {
-                "plugin": plugin,
-                "layerName": layerName,
-                "newName": newName,
-                "streamBranch": streamBranch,
                 "layer": layer,
+                "streamBranch": streamBranch,
+                "nameBase": nameBase,
+                "plugin": plugin,
             }
         )
-
-        return
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
-        return
 
 
 def addRasterMainThread(obj: Tuple):
     try:
-        finalName = ""
-        plugin = obj["plugin"]
-        layerName = obj["layerName"]
-        newName = obj["newName"]
-        streamBranch = obj["streamBranch"]
+
         layer = obj["layer"]
-        plugin.dockwidget.msgLog.removeBtnUrl("cancel")
+        streamBranch = obj["streamBranch"]
+        nameBase = obj["nameBase"]
+        plugin = obj["plugin"]
 
-        project: QgsProject = plugin.dataStorage.project
+        project = plugin.dataStorage.project
         dataStorage = plugin.dataStorage
+        path = plugin.workspace
 
+        active_map = project.activeMap
+        sr = arcpy.SpatialReference(text=layer.crs.wkt)
+
+        newName, layerGroup = newLayerGroupAndName(layer.name, streamBranch, project)
+        if "." in newName:
+            newName = ".".join(newName.split(".")[:-1])
+
+        ###
         plugin.dataStorage.currentUnits = layer.crs.units
         if (
             plugin.dataStorage.currentUnits is None
@@ -1866,7 +1864,201 @@ def addRasterMainThread(obj: Tuple):
             plugin.dataStorage.current_layer_crs_rotation = layer.crs.rotation
         except AttributeError as e:
             print(e)
+        # report on receive:
 
+        try:
+            layerName = newName.split(shortName)[0] + shortName  # + ("_" + geom_print)
+        except:
+            layerName = newName
+        shortName = newName.split(SYMBOL)[len(newName.split(SYMBOL)) - 1][:50]
+        finalName = shortName  # + ("_" + geom_print)
+        dataStorage.latestActionLayers.append(finalName)
+
+        ###
+
+        layerName = removeSpecialCharacters(layer.name) + "_Speckle"
+
+        print(layerName)
+        rasterHasSr = False
+        print(path)
+
+        p: str = (
+            os.path.expandvars(r"%LOCALAPPDATA%")
+            + "\\Temp\\Speckle_ArcGIS_temp\\"
+            + datetime.now().strftime("%Y-%m-%d_%H-%M")
+        )
+        # findOrCreatePath(p)
+        path_bands = p + "\\Layers_Speckle\\raster_bands\\" + streamBranch
+        findOrCreatePath(path_bands)
+
+        try:
+            srRasterWkt = str(layer.rasterCrs.wkt)
+            srRaster = arcpy.SpatialReference(text=srRasterWkt)  # by native raster SR
+            rasterHasSr = True
+        except:
+            srRasterWkt = str(layer.crs.wkt)
+            srRaster: arcpy.SpatialReference = sr  # by layer
+        print(srRaster)
+
+        layer_elements = layer.elements
+        if layer_elements is None or len(layer_elements) == 0:
+            layer_elements = layer.features
+
+        feat = layer_elements[0]
+        try:
+            bandNames = feat["Band names"]
+            bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
+
+            xsize = int(feat["X pixels"])
+            ysize = int(feat["Y pixels"])
+            xres = float(feat["X resolution"])
+            yres = float(feat["Y resolution"])
+            bandsCount = int(feat["Band count"])
+            noDataVals = [float(feat["NoDataVal"][i]) for i in range(bandsCount)]
+        except:
+            bandNames = feat.band_names
+            bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
+
+            xsize = int(feat.x_size)
+            ysize = int(feat.y_size)
+            xres = float(feat.x_resolution)
+            yres = float(feat.y_resolution)
+            bandsCount = int(feat.band_count)
+            noDataVals = [float(feat.noDataValue[i]) for i in range(bandsCount)]
+
+        try:
+            originPt = arcpy.Point(feat.x_origin, feat.y_origin, 0)
+        except:
+            originPt = arcpy.Point(
+                feat["displayValue"][0].x, feat["displayValue"][0].y, 0
+            )
+        print(originPt)
+        # if source projection is different from layer display projection, convert display OriginPt to raster source projection
+        if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
+            originPt = findTransformation(
+                arcpy.PointGeometry(originPt, sr, has_z=True),
+                "Point",
+                sr,
+                srRaster,
+                None,
+            ).getPart()
+        print(originPt)
+
+        bandDatasets = ""
+        rastersToMerge = []
+        rasterPathsToMerge = []
+
+        arcpy.env.workspace = path
+        arcpy.env.overwriteOutput = True
+        # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/composite-bands.htm
+
+        for i in range(bandsCount):
+            print(i)
+            print(bandNames[i])
+            rasterbandPath = (
+                path_bands + "\\" + newName + "_Band_" + str(i + 1) + ".tif"
+            )
+            bandDatasets += rasterbandPath + ";"
+            rasterband = np.array(bandValues[i])
+            rasterband = np.reshape(rasterband, (ysize, xsize))
+            print(rasterband)
+            print(np.shape(rasterband))
+            print(xsize)
+            print(xres)
+            print(ysize)
+            print(yres)
+            leftLowerCorner = arcpy.Point(
+                originPt.X, originPt.Y + (ysize * yres), originPt.Z
+            )
+            # upperRightCorner = arcpy.Point(originPt.X + (xsize*xres), originPt.Y, originPt.Z)
+            print(leftLowerCorner)
+            # print(upperRightCorner)
+
+            # # Convert array to a geodatabase raster, add to layers
+            try:
+                myRaster = arcpy.NumPyArrayToRaster(
+                    rasterband,
+                    leftLowerCorner,
+                    abs(xres),
+                    abs(yres),
+                    noDataVals[i],
+                )
+            except Exception as e:
+                myRaster = arcpy.NumPyArrayToRaster(
+                    rasterband, leftLowerCorner, abs(xres), abs(yres)
+                )
+
+            rasterbandPath = validate_path(
+                rasterbandPath, plugin
+            )  # solved file saving issue
+            print(rasterbandPath)
+            # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
+            myRaster.save(rasterbandPath)
+
+            print(myRaster.width)
+            print(myRaster.height)
+
+            rastersToMerge.append(myRaster)
+            rasterPathsToMerge.append(rasterbandPath)
+            print(rasterbandPath)
+
+        # mergedRaster.setProperty("spatialReference", crsRaster)
+
+        full_path = validate_path(
+            path + "\\" + newName, plugin
+        )  # solved file saving issue
+        print("RASTER FULL PATH")
+        print(full_path)
+        if os.path.exists(full_path):
+            # print(full_path)
+            for index, letter in enumerate("1234567890abcdefghijklmnopqrstuvwxyz"):
+                print(full_path + letter)
+                if os.path.exists(full_path + letter):
+                    pass
+                else:
+                    full_path += letter
+                    break
+        print("RASTER new PATH")
+        print(full_path)
+        # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
+        # mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
+
+        try:
+            arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+        except:  # if already exists
+            full_path += "_"
+            arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
+        print(path + "\\" + newName)
+        arcpy.management.DefineProjection(full_path, srRaster)
+
+        rasterLayer = arcpy.management.MakeRasterLayer(full_path, newName).getOutput(0)
+        # arcpy.management.SetRasterProperties(
+        #    rasterLayer,
+        #    nodata=[[i, noDataVals[i] for i in range(bandsCount)],
+        # )
+        print(layerGroup)
+        active_map.addLayerToGroup(layerGroup, rasterLayer)
+
+        rl2 = None
+        for l in active_map.listLayers():
+            if l.longName == layerGroup.longName + "\\" + newName:
+                print(l.longName)
+                rl2 = l
+                break
+        rasterLayer = rasterRendererToNative(
+            project, active_map, layerGroup, layer, rl2, rasterPathsToMerge, newName
+        )
+
+        try:
+            os.remove(path_bands)
+        except:
+            pass
+
+    except Exception as e:
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+    return rasterLayer
+
+    r"""
         shortName = newName.split(SYMBOL)[len(newName.split(SYMBOL)) - 1][:50]
         # print(f"Final short name: {shortName}")
         try:
@@ -1875,12 +2067,9 @@ def addRasterMainThread(obj: Tuple):
             layerName = newName
         finalName = shortName  # + ("_" + geom_print)
 
-        # report on receive:
-        dataStorage.latestActionLayers.append(finalName)
 
         ######################## testing, only for receiving layers #################
         source_folder = project.absolutePath()
-
         feat = layer.elements[0]
 
         vl = None
@@ -2102,3 +2291,4 @@ def addRasterMainThread(obj: Tuple):
             }
         )
         dataStorage.latestConversionTime = datetime.now()
+    """

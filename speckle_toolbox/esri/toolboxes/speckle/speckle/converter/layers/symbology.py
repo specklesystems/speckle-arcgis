@@ -356,9 +356,6 @@ def rasterRendererToNative(
         feat = layer_elements[0]
         print(feat)
 
-        bandNames = feat["Band names"]
-        print(bandNames)
-
         sym = arcLayer.symbology
         symJson = None
         path_style = ""
