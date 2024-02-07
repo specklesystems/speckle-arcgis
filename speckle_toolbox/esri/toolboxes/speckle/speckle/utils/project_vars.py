@@ -499,6 +499,7 @@ def setProjectReferenceSystem(plugin: "SpeckleGIS"):
                 "Custom project Spatial Reference successfully applied",
                 level=0,
                 func=inspect.stack()[0][3],
+                plugin=plugin.dockwidget,
             )
         else:
             logToUser(
