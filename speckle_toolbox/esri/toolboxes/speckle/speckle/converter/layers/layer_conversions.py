@@ -1832,6 +1832,7 @@ def rasterLayerToNative(layer: RasterLayer, streamBranch: str, nameBase: str, pl
 
 
 def addRasterMainThread(obj: Tuple):
+    rasterLayer = None
     try:
 
         layer = obj["layer"]
@@ -1914,7 +1915,8 @@ def addRasterMainThread(obj: Tuple):
             xres = float(feat["X resolution"])
             yres = float(feat["Y resolution"])
             bandsCount = int(feat["Band count"])
-            noDataVals = [float(feat["NoDataVal"][i]) for i in range(bandsCount)]
+            print(bandsCount)
+            noDataVals = feat["NoDataVal"]
         except:
             bandNames = feat.band_names
             bandValues = [feat["@(10000)" + name + "_values"] for name in bandNames]
@@ -1924,7 +1926,8 @@ def addRasterMainThread(obj: Tuple):
             xres = float(feat.x_resolution)
             yres = float(feat.y_resolution)
             bandsCount = int(feat.band_count)
-            noDataVals = [float(feat.noDataValue[i]) for i in range(bandsCount)]
+            print(bandsCount)
+            noDataVals = feat.noDataValue
 
         try:
             originPt = arcpy.Point(feat.x_origin, feat.y_origin, 0)
@@ -2055,7 +2058,8 @@ def addRasterMainThread(obj: Tuple):
             pass
 
     except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+        logToUser(str(e), level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
+
     return rasterLayer
 
     r"""
