@@ -451,7 +451,9 @@ def lineFrom2pt(pt1: List[float], pt2: List[float]):
     return line
 
 
-def polylineToNative(poly: Polyline, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
+def polylineToNative(
+    poly: Polyline, sr: arcpy.SpatialReference, dataStorage
+) -> arcpy.Polyline:
     """Converts a Speckle Polyline to QgsLineString"""
     print("__ convert polyline to native __")
     polyline = None
@@ -496,7 +498,9 @@ def lineToNative(line: Line, sr: arcpy.SpatialReference, dataStorage) -> arcpy.P
         return None
 
 
-def curveToNative(poly: Curve, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
+def curveToNative(
+    poly: Curve, sr: arcpy.SpatialReference, dataStorage
+) -> arcpy.Polyline:
     """Converts a Speckle Curve to Native"""
     try:
         display = poly.displayValue
@@ -510,9 +514,7 @@ def curveToNative(poly: Curve, sr: arcpy.SpatialReference, dataStorage) -> arcpy
 def arcToNative(poly: Arc, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
     """Converts a Speckle Arc to Native"""
     try:
-        arc = arcToNativePolyline(
-            poly, sr
-        )  
+        arc = arcToNativePolyline(poly, sr, dataStorage)
         return arc
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
@@ -524,7 +526,9 @@ def ellipseToNative(poly: Ellipse, sr: arcpy.SpatialReference, dataStorage):
     return
 
 
-def circleToNative(poly: Circle, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
+def circleToNative(
+    poly: Circle, sr: arcpy.SpatialReference, dataStorage
+) -> arcpy.Polyline:
     """Converts a Speckle Circle to QgsLineString"""
     print("___Convert Circle to Native___")
     curve = None
@@ -567,7 +571,9 @@ def circleToNative(poly: Circle, sr: arcpy.SpatialReference, dataStorage) -> arc
     return curve
 
 
-def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polyline:
+def polycurveToNative(
+    poly: Polycurve, sr: arcpy.SpatialReference, dataStorage
+) -> arcpy.Polyline:
     points = []
     curve = None
     print("___Polycurve to native___")
@@ -643,7 +649,9 @@ def polycurveToNative(poly: Polycurve, sr: arcpy.SpatialReference, dataStorage) 
     return curve
 
 
-def arcToNativePolyline(poly: Union[Arc, Circle], sr: arcpy.SpatialReference):
+def arcToNativePolyline(
+    poly: Union[Arc, Circle], sr: arcpy.SpatialReference, dataStorage
+):
     print("__Arc/Circle to native polyline__")
     curve = None
     try:

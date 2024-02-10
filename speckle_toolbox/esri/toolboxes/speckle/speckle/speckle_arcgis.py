@@ -774,11 +774,20 @@ class SpeckleGIS:
                     or base.speckle_type.endswith("RasterLayer")
                 )
             else:
-                check: Callable[[Base], bool] = lambda base: (
-                    base.speckle_type and base.speckle_type.endswith("Base")
-                )
+                check: Callable[[Base], bool] = lambda base: (base.speckle_type)
+
+            # self.dataStorage.latestActionFeaturesReport = []
+            self.dataStorage.latestActionLayers = []
+            self.dataStorage.latestActionReport = []
+
             traverseObject(self, commitObj, callback, check, str(newGroupName), "")
-            logToUser("👌 Data received", level=0, plugin=self.dockwidget, blue=True)
+            logToUser(
+                "👌 Data received",
+                level=0,
+                plugin=self.dockwidget,
+                blue=True,
+                report=True,
+            )
             return
 
         except SpeckleException as e:
@@ -1056,7 +1065,7 @@ class SpeckleGIS:
                     func=inspect.stack()[0][3],
                     plugin=self.dockwidget,
                 )
-                return 
+                return
 
             self.dataStorage.currentCRS = (
                 self.dataStorage.project.activeMap.spatialReference

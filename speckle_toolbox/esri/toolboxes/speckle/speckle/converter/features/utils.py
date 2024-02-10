@@ -1,6 +1,6 @@
 import inspect
 import random
-from typing import Any, Union
+from typing import Any, Dict, Union
 from speckle.speckle.converter.layers.utils import getVariantFromValue, traverseDict
 
 from speckle.speckle.utils.panel_logging import logToUser
@@ -36,25 +36,22 @@ def addFeatVariant(key, variant, value, f: "QgsFeature") -> "QgsFeature":
         return feat
 
 
-def updateFeat(feat: "QgsFeature", fields: "QgsFields", feature: Base) -> "QgsFeature":
+def updateFeat(feat: dict, fields: dict, feature: Base) -> Union[Dict[str, Any], None]:
+    feat_sorted = {}
     try:
-        # print("__updateFeat")
-        all_field_names = fields.names()
-        for i, key in enumerate(all_field_names):
-            variant = fields.at(i).type()
+        for key, variant in fields.items():
             try:
                 if key == "Speckle_ID":
                     value = str(feature["id"])
-                    # if key != "parameters": print(value)
+
                     feat[key] = value
 
                     feat = addFeatVariant(key, variant, value, feat)
-
                 else:
                     try:
                         value = feature[key]
+                        # if key == "area": print(feature[key]); print(type(feature[key]))
                         feat = addFeatVariant(key, variant, value, feat)
-
                     except:
                         value = None
                         rootName = key.split("_")[0]
@@ -68,7 +65,6 @@ def updateFeat(feat: "QgsFeature", fields: "QgsFields", feature: Base) -> "QgsFe
                                         {},
                                         rootName + "_" + str(i),
                                         feature[rootName][i],
-                                        1,
                                     )
                                     for i, (key, value) in enumerate(newVals.items()):
                                         for k, (x, y) in enumerate(newF.items()):
@@ -82,7 +78,7 @@ def updateFeat(feat: "QgsFeature", fields: "QgsFields", feature: Base) -> "QgsFe
                         else:
                             try:
                                 newF, newVals = traverseDict(
-                                    {}, {}, rootName, feature[rootName], 1
+                                    {}, {}, rootName, feature[rootName]
                                 )
                                 for i, (key, value) in enumerate(newVals.items()):
                                     for k, (x, y) in enumerate(newF.items()):
@@ -93,14 +89,13 @@ def updateFeat(feat: "QgsFeature", fields: "QgsFields", feature: Base) -> "QgsFe
                             except Exception as e:
                                 feat.update({key: None})
             except Exception as e:
-                feat[key] = None
-        # feat_sorted = {k: v for k, v in sorted(feat.items(), key=lambda item: item[0])}
+                feat.update({key: None})
+        feat_sorted = {k: v for k, v in sorted(feat.items(), key=lambda item: item[0])}
         # print("_________________end of updating a feature_________________________")
+        return feat_sorted
 
     except Exception as e:
-        logToUser(e, level=2, func=inspect.stack()[0][3])
-
-    return feat
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
 
 def getPolygonFeatureHeight(

@@ -1176,28 +1176,40 @@ def nonGeomFeatureToNative(feature: Base, fields: "QgsFields", dataStorage):
         return
 
 
-def cadFeatureToNative(feature: Base, fields: "QgsFields", dataStorage):
+def cadFeatureToNative(
+    feature: Base, fields: dict, sr: arcpy.SpatialReference, dataStorage
+):
+
+    print("04_________CAD Feature To Native____________")
+    feat = {}
     try:
-        exist_feat = QgsFeature()
         try:
             speckle_geom = feature["geometry"]  # for created in QGIS Layer type
         except:
             speckle_geom = feature  # for created in other software
 
         if isinstance(speckle_geom, list):
-            qgsGeom = convertToNativeMulti(speckle_geom, sr, dataStorage)
+            arcGisGeom = convertToNativeMulti(speckle_geom, sr, dataStorage)
         else:
-            qgsGeom = convertToNative(speckle_geom, sr, dataStorage)
+            arcGisGeom = convertToNative(speckle_geom, sr, dataStorage)
 
-        if qgsGeom is not None:
-            exist_feat.setGeometry(qgsGeom)
+        if arcGisGeom is not None:
+            feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
         else:
             return
 
-        exist_feat.setFields(fields)
-        feat_updated = updateFeat(exist_feat, fields, feature)
+        try:
+            if "Speckle_ID" not in fields.keys() and feature["id"]:
+                feat.update("Speckle_ID", "TEXT")
+        except:
+            pass
 
+        #### setting attributes to feature
+        feat_updated = updateFeat(feat, fields, feature)
+        print(feat)
+        print(fields)
         return feat_updated
+
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3])
         return

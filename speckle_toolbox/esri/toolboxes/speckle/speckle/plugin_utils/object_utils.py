@@ -35,19 +35,18 @@ def traverseObject(
     nameBase: str = "",
 ):
     try:
-        # print("___traverseObject")
         if check and check(base):
             res = callback(base, streamBranch, nameBase, plugin) if callback else False
             if res:
                 return
         memberNames = base.get_member_names()
         for name in memberNames:
-            # print("for name in memberNames:")
-            try:
-                if ["id", "applicationId", "units", "speckle_type"].index(name):
-                    continue
-            except ValueError:
-                pass
+            if name in ["id", "applicationId", "units", "speckle_type"]:
+                continue
+            try:  # some of the static members cannot be called via [""]
+                base[name]
+            except KeyError:
+                continue
 
             if nameBase == SYMBOL + "ArcGIS commit":
                 name_pass = getBaseValidName(base, name)
@@ -56,7 +55,7 @@ def traverseObject(
             # check again
             if name_pass == SYMBOL + "ArcGIS commit":
                 name_pass = ""
-            # print(name_pass)
+
             traverseValue(plugin, base[name], callback, check, streamBranch, name_pass)
 
     except Exception as e:
@@ -71,7 +70,6 @@ def traverseValue(
     streamBranch: str,
     name: str,
 ):
-    # print("________traverseValue")
     if isinstance(value, Base):
         traverseObject(plugin, value, callback, check, streamBranch, name)
     if isinstance(value, List):
@@ -80,8 +78,7 @@ def traverseValue(
 
 
 def callback(base: Base, streamBranch: str, nameBase: str, plugin) -> bool:
-    # print("___CALLBACK")
-    # print(nameBase)
+
     try:
         if (
             isinstance(base, VectorLayer)
@@ -94,8 +91,8 @@ def callback(base: Base, streamBranch: str, nameBase: str, plugin) -> bool:
         else:
             loopObj(base, "", streamBranch, plugin, [])
         return True
-    except:
-        return
+    except Exception as e:
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
 
 def getBaseValidName(base: Base, name: str) -> str:
@@ -161,7 +158,8 @@ def getBaseValidName(base: Base, name: str) -> str:
                         except:
                             name_pass = name
     except Exception as e:
-        print(e)
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+
     return name_pass
 
 
@@ -172,15 +170,14 @@ def loopObj(
         # dont loop primitives
         if not isinstance(base, Base):
             return
-
+        print(base)
         memberNames = base.get_member_names()
 
         baseName_pass = removeSpecialCharacters(baseName)
-        # print(plugin.receive_layer_tree)
+
         plugin.receive_layer_tree = findUpdateJsonItemPath(
             plugin.receive_layer_tree, streamBranch + SYMBOL + baseName_pass
         )
-        # print(plugin.receive_layer_tree)
 
         for name in memberNames:
             if name in ["id", "applicationId", "units", "speckle_type"]:
@@ -251,7 +248,7 @@ def loopObj(
                     matrix,
                 )
     except Exception as e:
-        print(e)
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
 
 def loopVal(
@@ -278,7 +275,6 @@ def loopVal(
                 loopObj(value, name, streamBranch, plugin, used_ids, matrix)
 
         elif isinstance(value, List):
-            # print("LOOP VAL - LIST")
             streamBranch = removeSpecialCharacters(streamBranch)
 
             objectListConverted = 0
@@ -357,7 +353,7 @@ def loopVal(
                             )
                             time.sleep(0.3)
                             break
-                    except:
+                    except Exception as e:
                         pass
     except Exception as e:
-        print(e)
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])

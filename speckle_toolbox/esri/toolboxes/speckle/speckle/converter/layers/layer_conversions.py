@@ -27,6 +27,7 @@ from arcpy.management import (
     AlterField,
     DefineProjection,
 )
+from specklepy.logging.exceptions import SpeckleInvalidUnitException
 
 
 from specklepy.objects import Base
@@ -46,6 +47,7 @@ from specklepy.objects.GIS.CRS import CRS
 from specklepy.objects.GIS.layers import VectorLayer, RasterLayer, Layer
 from specklepy.objects.other import Collection
 from specklepy.objects.GIS.geometry import GisPolygonElement, GisNonGeometryElement
+from specklepy.objects.units import get_units_from_string
 
 
 from speckle.speckle.plugin_utils.helpers import (
@@ -94,6 +96,7 @@ from speckle.speckle.converter.layers.symbology import (
     vectorRendererToNative,
     rasterRendererToNative,
     rendererToSpeckle,
+    cadBimRendererToNative,
 )
 
 from speckle.speckle.utils.panel_logging import logToUser
@@ -848,7 +851,7 @@ def geometryLayerToNative(
     plugin,
     matrix=None,
 ):
-    # print("01_____GEOMETRY layer to native")
+    print(f"01_____GEOMETRY layer to native: {layerName}")
     try:
         # print(layerContentList)
         geom_meshes = []
@@ -888,7 +891,8 @@ def geometryLayerToNative(
                 elif geom["baseLine"].speckle_type in GEOM_LINE_TYPES:
                     geom_polylines.append(geom["baseLine"])
                     # don't skip the rest if baseLine is found
-            except:
+            except Exception as e:
+                print(e)
                 pass  # check for the Meshes
 
             # ________________get list of display values for Meshes___________________________
@@ -908,19 +912,37 @@ def geometryLayerToNative(
 
         if len(geom_meshes) > 0:
             bimVectorLayerToNative(
-                geom_meshes, layerName, val_id, "Mesh", streamBranch, plugin, matrix
+                geom_meshes,
+                layerName,
+                val_id,
+                "Mesh",
+                streamBranch.replace(SYMBOL + SYMBOL, SYMBOL).replace(
+                    SYMBOL + SYMBOL, SYMBOL
+                ),
+                plugin,
+                matrix,
             )
         if len(geom_points) > 0:
             cadVectorLayerToNative(
-                geom_points, layerName, val_id, "Points", streamBranch, plugin, matrix
+                geom_points,
+                layerName,
+                val_id,
+                "Point",
+                streamBranch.replace(SYMBOL + SYMBOL, SYMBOL).replace(
+                    SYMBOL + SYMBOL, SYMBOL
+                ),
+                plugin,
+                matrix,
             )
         if len(geom_polylines) > 0:
             cadVectorLayerToNative(
                 geom_polylines,
                 layerName,
                 val_id,
-                "Polylines",
-                streamBranch,
+                "Polyline",
+                streamBranch.replace(SYMBOL + SYMBOL, SYMBOL).replace(
+                    SYMBOL + SYMBOL, SYMBOL
+                ),
                 plugin,
                 matrix,
             )
@@ -941,7 +963,7 @@ def bimVectorLayerToNative(
     plugin,
     matrix: list = None,
 ):
-    # print("02_________BIM vector layer to native_____")
+    print("02_________BIM vector layer to native_____")
     try:
         # project: QgsProject = plugin.project
         # print(layerName_old)
@@ -998,7 +1020,7 @@ def addBimMainThread(obj: Tuple):
         dataStorage.matrix = matrix
         report_features = []
 
-        project: QgsProject = dataStorage.project
+        project = dataStorage.project
 
         geom_print = geomType
         if "MultiPolygonZ" in geom_print:
@@ -1028,7 +1050,9 @@ def addBimMainThread(obj: Tuple):
         # newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
         newName_shp = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}/{finalName[:30]}'
 
-        crs = project.crs()  # QgsCoordinateReferenceSystem.fromWkt(layer.crs.wkt)
+        crs = (
+            project.spatialReference
+        )  # QgsCoordinateReferenceSystem.fromWkt(layer.crs.wkt)
         dataStorage.currentUnits = str(QgsUnitTypes.encodeUnit(crs.mapUnits()))
         if dataStorage.currentUnits is None or dataStorage.currentUnits == "degrees":
             dataStorage.currentUnits = "m"
@@ -1240,32 +1264,9 @@ def cadVectorLayerToNative(
     streamBranch: str,
     plugin,
     matrix=None,
-) -> "QgsVectorLayer":
-    # print("___________cadVectorLayerToNative")
+):
+    print("_______cadVectorLayerToNative__")
     try:
-        project: QgsProject = plugin.project
-
-        # get Project CRS, use it by default for the new received layer
-        vl = None
-
-        layerName = removeSpecialCharacters(layerName)
-
-        # layerName = layerName + "_" + geomType
-        # print(layerName)
-
-        newName = (
-            f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}/{layerName}'
-        )
-
-        if geomType == "Points":
-            geomType = "PointZ"
-        elif geomType == "Polylines":
-            geomType = "LineStringZ"
-
-        newFields = getLayerAttributes(geomList)
-        # print(newFields.toList())
-        # print(geomList)
-
         plugin.dockwidget.signal_3.emit(
             {
                 "plugin": plugin,
@@ -1273,46 +1274,39 @@ def cadVectorLayerToNative(
                 "layerName": layerName,
                 "layer_id": val_id,
                 "streamBranch": streamBranch,
-                "newFields": newFields,
                 "geomList": geomList,
                 "matrix": matrix,
             }
         )
 
-        return
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
         return
 
 
 def addCadMainThread(obj: Tuple):
-    # print("___addCadMainThread")
+    print("___addCadMainThread")
     try:
-        finalName = ""
+
         plugin = obj["plugin"]
         geomType = obj["geomType"]
         layerName = obj["layerName"]
-        layer_id = obj["layer_id"]
+        val_id = obj["layer_id"]
         streamBranch = obj["streamBranch"]
-        newFields = obj["newFields"]
         geomList = obj["geomList"]
         matrix = obj["matrix"]
-        plugin.dockwidget.msgLog.removeBtnUrl("cancel")
 
-        project: QgsProject = plugin.dataStorage.project
+        project = plugin.project
         dataStorage = plugin.dataStorage
         dataStorage.matrix = matrix
 
-        geom_print = geomType
-        if "MultiPolygonZ" in geom_print:
-            geom_print = "Mesh"
-        elif "LineStringZ" in geom_print:
-            geom_print = "Polyline"
-        elif "PointZ" in geom_print:
-            geom_print = "Point"
+        # get Project CRS, use it by default for the new received layer
+        layerName = removeSpecialCharacters(layerName)
+        layerName = layerName + "_" + geomType
+        print(layerName)
 
         shortName = layerName.split(SYMBOL)[len(layerName.split(SYMBOL)) - 1][:50]
-
+        geom_print = geomType
         try:
             layerName = (
                 layerName.split(shortName)[0] + shortName + ("_as_" + geom_print)
@@ -1325,41 +1319,117 @@ def addCadMainThread(obj: Tuple):
             groupName = streamBranch + SYMBOL + layerName.split(finalName)[0]
         except:
             groupName = streamBranch + SYMBOL + layerName
-        layerGroup = tryCreateGroupTree(project.layerTreeRoot(), groupName, plugin)
 
         dataStorage.latestActionLayers.append(finalName)
 
-        crs = project.crs()  # QgsCoordinateReferenceSystem.fromWkt(layer.crs.wkt)
-        plugin.dataStorage.currentUnits = str(QgsUnitTypes.encodeUnit(crs.mapUnits()))
-        if (
-            plugin.dataStorage.currentUnits is None
-            or plugin.dataStorage.currentUnits == "degrees"
-        ):
-            plugin.dataStorage.currentUnits = "m"
-        # authid = trySaveCRS(crs, streamBranch)
+        # map data
+        active_map = project.activeMap
+        print(active_map.spatialReference)
+        sr = arcpy.SpatialReference(text=active_map.spatialReference.exportToString())
+        path = (
+            plugin.workspace
+        )  # project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
 
-        if crs.isGeographic is True:
+        units = str(sr.linearUnitName)  # <Units.m: 'm'>
+        try:
+            units = get_units_from_string(units)
+        except SpeckleInvalidUnitException:
+            units = "none"
+
+        if units is None or units in ["degrees", "none"]:
+            units = "m"
+        plugin.dataStorage.currentUnits = units
+
+        if sr.type == "Geographic":
             logToUser(
                 f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly",
                 level=1,
                 func=inspect.stack()[0][3],
+                plugin=plugin.dockwidget,
             )
 
-        vl = QgsVectorLayer(
-            geomType + "?crs=" + crs.authid(), finalName, "memory"
-        )  # do something to distinguish: stream_id_latest_name
-        vl.setCrs(crs)
-        project.addMapLayer(vl, False)
+        layerGroup = None
+        newGroupName = groupName  # f"{streamBranch}"
+        print(newGroupName)
+        layerGroup = tryCreateGroupTree(project, groupName, plugin)
 
-        pr = vl.dataProvider()
-        vl.startEditing()
+        # find ID of the layer with a matching name in the "latest" group
+        newName = (
+            f'{newGroupName.split("_")[len(newGroupName.split("_"))-1]}_{layerName}'
+        )
+        newName = newName.split(SYMBOL)[-1]
 
-        # create list of Features (fets) and list of Layer fields (fields)
-        attrs = QgsFields()
+        all_layer_names = []
+        for l in project.activeMap.listLayers():
+            if l.longName.startswith(newGroupName + "\\"):
+                all_layer_names.append(l.longName)
+        # print(all_layer_names)
+
+        longName = newGroupName + "\\" + newName
+        newName = validateNewFclassName(newName, all_layer_names, newGroupName + "\\")
+
+        print(geomType)
+        class_name = "f_class_" + newName
+        f_class = CreateFeatureclass(
+            path, class_name, geomType, has_z="ENABLED", spatial_reference=sr
+        )
+        print(f_class)
+        arcpy.management.DefineProjection(f_class, sr)
+
+        newFields = getLayerAttributes(geomList)
+
+        fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid"]
+        matrix = []
+        all_keys = []
+        all_key_types = []
+        max_len = 52
+        for key, value in newFields.items():
+            existingFields = [fl.name for fl in arcpy.ListFields(class_name)]
+            if (
+                key not in existingFields and key.lower() not in fields_to_ignore
+            ):  # exclude geometry and default existing fields
+                # signs that should not be used as field names and table names: https://support.esri.com/en/technical-article/000005588
+                key = (
+                    key.replace(" ", "_")
+                    .replace("-", "_")
+                    .replace("(", "_")
+                    .replace(")", "_")
+                    .replace(":", "_")
+                    .replace("\\", "_")
+                    .replace("/", "_")
+                    .replace('"', "_")
+                    .replace("&", "_")
+                    .replace("@", "_")
+                    .replace("$", "_")
+                    .replace("%", "_")
+                    .replace("^", "_")
+                )
+                if key[0] in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+                    key = "_" + key
+                if len(key) > max_len:
+                    key = key[:max_len]
+                # print(all_keys)
+                if key in all_keys:
+                    for index, letter in enumerate(
+                        "1234567890abcdefghijklmnopqrstuvwxyz"
+                    ):
+                        if len(key) < max_len and (key + letter) not in all_keys:
+                            key += letter
+                            break
+                        if len(key) == max_len and (key[:9] + letter) not in all_keys:
+                            key = key[:9] + letter
+                            break
+                if key not in all_keys:
+                    all_keys.append(key)
+                    all_key_types.append(value)
+                    # print(all_keys)
+                    matrix.append([key, value, key, 255])
+                    # print(matrix)
+        if len(matrix) > 0:
+            AddFields(str(f_class), matrix)
+
         fets = []
-        fetIds = []
         fetColors = []
-
         report_features = []
         all_feature_errors_count = 0
         for f in geomList[:]:
@@ -1367,21 +1437,10 @@ def addCadMainThread(obj: Tuple):
             report_features.append(
                 {"speckle_id": f.id, "obj_type": f.speckle_type, "errors": ""}
             )
-
-            new_feat = cadFeatureToNative(f, newFields, plugin.dataStorage)
-            # update attrs for the next feature (if more fields were added from previous feature)
-
-            # print("________cad feature to add")
-            if new_feat is not None and new_feat != "":
-                fets.append(new_feat)
-                for a in newFields.toList():
-                    attrs.append(a)
-
-                pr.addAttributes(
-                    newFields
-                )  # add new attributes from the current object
-                fetIds.append(f.id)
+            new_feat = cadFeatureToNative(f, newFields, sr, dataStorage)
+            if new_feat != "" and new_feat != None:
                 fetColors = findFeatColors(fetColors, f)
+                fets.append(new_feat)
             else:
                 logToUser(
                     f"Feature skipped due to invalid geometry",
@@ -1395,67 +1454,62 @@ def addCadMainThread(obj: Tuple):
 
         dataStorage.matrix = None
 
-        # add Layer attribute fields
-        pr.addAttributes(newFields)
-        vl.updateFields()
+        print("features created")
+        print(len(fets))
+        print(all_keys)
 
-        # pr = vl.dataProvider()
-        pr.addFeatures(fets)
-        vl.updateExtents()
-        vl.commitChanges()
+        if len(fets) == 0:
+            return None
+        count = 0
+        rowValues = []
+        for feat in fets:
+            try:
+                feat["applicationId"]
+            except:
+                feat.update({"applicationId": count})
 
-        layerGroup.addLayer(vl)
+            row = [feat["arcGisGeomFromSpeckle"], feat["applicationId"]]
+            heads = ["Shape@", "OBJECTID"]
 
-        ################################### RENDERER ###########################################
-        # only set up renderer if the layer is just created
-        attribute = "Speckle_ID"
-        categories = []
-        for i in range(len(fets)):
-            rgb = fetColors[i]
-            if rgb:
-                r = (rgb & 0xFF0000) >> 16
-                g = (rgb & 0xFF00) >> 8
-                b = rgb & 0xFF
-                color = QColor.fromRgb(r, g, b)
-            else:
-                color = QColor.fromRgb(0, 0, 0)
+            for key, value in feat.items():
+                # print(key, str(value))
+                if key in all_keys and key.lower() not in fields_to_ignore:
+                    heads.append(key)
+                    row.append(value)
+            rowValues.append(row)
+            count += 1
+        cur = arcpy.da.InsertCursor(str(f_class), tuple(heads))
+        # print(heads)
+        for row in rowValues:
+            try:
+                # print(row)
+                cur.insertRow(tuple(row))
+            except Exception as e:
+                print(e)
+        del cur
+        vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
-            symbol = QgsSymbol.defaultSymbol(
-                QgsWkbTypes.geometryType(QgsWkbTypes.parseType(geomType))
-            )
-            symbol.setColor(color)
-            categories.append(QgsRendererCategory(fetIds[i], symbol, fetIds[i], True))
-        # create empty category for all other values
-        symbol2 = symbol.clone()
-        symbol2.setColor(QColor.fromRgb(0, 0, 0))
-        cat = QgsRendererCategory()
-        cat.setSymbol(symbol2)
-        cat.setLabel("Other")
-        categories.append(cat)
-        rendererNew = QgsCategorizedSymbolRenderer(attribute, categories)
+        # adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
+        # active_map.addLayer(new_layer)
 
-        try:
-            vl.setRenderer(rendererNew)
-        except:
-            pass
+        active_map.addLayerToGroup(layerGroup, vl)
+        print("Layer created")
 
-        try:
-            ################################### RENDERER 3D ###########################################
-            # rend3d = QgsVectorLayer3DRenderer() # https://qgis.org/pyqgis/3.16/3d/QgsVectorLayer3DRenderer.html?highlight=layer3drenderer#module-QgsVectorLayer3DRenderer
-
-            plugin_dir = os.path.dirname(__file__)
-            renderer3d = os.path.join(plugin_dir, "renderer3d.qml")
-            # print(renderer3d)
-
-            vl.loadNamedStyle(renderer3d)
-            vl.triggerRepaint()
-        except:
-            pass
-
-        try:
-            project.removeMapLayer(dummy)
-        except:
-            pass
+        vl2 = None
+        print(newName)
+        newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
+            SYMBOL + SYMBOL, SYMBOL
+        )
+        print(newGroupName.replace(SYMBOL, "\\") + newName)
+        for l in project.activeMap.listLayers():
+            print(l.longName)
+            if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
+                vl2 = l
+                break
+        print(vl2)
+        path_lyr = cadBimRendererToNative(
+            project, active_map, layerGroup, fetColors, vl2, f_class, heads
+        )
 
         # report
         obj_type = (
@@ -1466,7 +1520,7 @@ def addCadMainThread(obj: Tuple):
         if all_feature_errors_count == 0:
             dataStorage.latestActionReport.append(
                 {
-                    "speckle_id": f"{layer_id} {finalName}",
+                    "layer_name": f"{layerName}",
                     "obj_type": obj_type,
                     "errors": "",
                 }
@@ -1474,7 +1528,7 @@ def addCadMainThread(obj: Tuple):
         else:
             dataStorage.latestActionReport.append(
                 {
-                    "speckle_id": f"{layer_id} {finalName}",
+                    "layer_name": f"{layerName}",
                     "obj_type": obj_type,
                     "errors": f"{all_feature_errors_count} features failed",
                 }
@@ -1485,16 +1539,19 @@ def addCadMainThread(obj: Tuple):
 
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
-        # report
-        obj_type = geom_print + "Vector Layer"
-        dataStorage.latestActionReport.append(
-            {
-                "speckle_id": f"{layer_id} {finalName}",
-                "obj_type": obj_type,
-                "errors": f"{e}",
-            }
-        )
-        dataStorage.latestConversionTime = datetime.now()
+        try:
+            # report
+            obj_type = geom_print + "Vector Layer"
+            dataStorage.latestActionReport.append(
+                {
+                    "layer_name": f"{layerName}",
+                    "obj_type": obj_type,
+                    "errors": f"{e}",
+                }
+            )
+            dataStorage.latestConversionTime = datetime.now()
+        except Exception as e:
+            pass
 
 
 def vectorLayerToNative(
@@ -1521,6 +1578,7 @@ def addVectorMainThread(obj: Tuple):
         streamBranch = obj["streamBranch"]
         nameBase = obj["nameBase"]
         plugin = obj["plugin"]
+        dataStorage = plugin.dataStorage
 
         # particularly if the layer comes from ArcGIS
         geomType = (
@@ -1539,8 +1597,7 @@ def addVectorMainThread(obj: Tuple):
         # print(layer.elements)
         # print(layer.features)
         print(layerName)
-        # print(layer.crs.wkt)
-        sr = arcpy.SpatialReference(text=layer.crs.wkt)  # (text=layer.crs.wkt)
+        sr = arcpy.SpatialReference(text=layer.crs.wkt)
         active_map = project.activeMap
         path = (
             plugin.workspace
@@ -1646,12 +1703,26 @@ def addVectorMainThread(obj: Tuple):
 
         print(layer_elements)
         fets = []
+        report_features = []
+        all_feature_errors_count = 0
         for f in layer_elements:
+            # pre-fill report:
+            report_features.append(
+                {"speckle_id": f.id, "obj_type": f.speckle_type, "errors": ""}
+            )
             new_feat = featureToNative(f, newFields, geomType, sr, plugin.dataStorage)
             if new_feat != "" and new_feat != None:
                 fets.append(new_feat)
             else:
-                arcpy.AddError(f"Feature skipped due to invalid geometry")
+                logToUser(
+                    f"'{geomType}' feature skipped due to invalid data",
+                    level=2,
+                    func=inspect.stack()[0][3],
+                )
+                report_features[len(report_features) - 1].update(
+                    {"errors": f"'{geomType}' feature skipped due to invalid data"}
+                )
+                all_feature_errors_count += 1
 
         print(fets)
         if len(fets) == 0:
@@ -1706,6 +1777,34 @@ def addVectorMainThread(obj: Tuple):
         # if path_lyr is not None:
         #    active_map.removeLayer(path_lyr)
 
+        # report
+        all_feature_errors_count = 0
+        for item in report_features:
+            if item["errors"] != "":
+                all_feature_errors_count += 1
+
+        obj_type = "Vector Layer"
+        if all_feature_errors_count == 0:
+            dataStorage.latestActionReport.append(
+                {
+                    "speckle_id": f"{layer.id} {layerName}",
+                    "obj_type": obj_type,
+                    "errors": "",
+                }
+            )
+        else:
+            dataStorage.latestActionReport.append(
+                {
+                    "speckle_id": f"{layer.id} {layerName}",
+                    "obj_type": obj_type,
+                    "errors": f"{all_feature_errors_count} features failed",
+                }
+            )
+
+        for item in report_features:
+            dataStorage.latestActionReport.append(item)
+        dataStorage.latestConversionTime = datetime.now()
+
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
     return vl
@@ -1717,17 +1816,24 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
         streamBranch = obj["streamBranch"]
         nameBase = obj["nameBase"]
         plugin = obj["plugin"]
+        dataStorage = plugin.dataStorage
 
         vl = None
         project: ArcGISProject = plugin.project
         layerName = removeSpecialCharacters(layer.name)
+
         layer_elements = layer.elements
         if layer_elements is None or len(layer_elements) == 0:
             layer_elements = layer.features
-        # print(layer.elements)
-        # print(layer.features)
+
+        report_features = []
+        all_feature_errors_count = 0
+        for f in layer.elements:
+            # pre-fill report:
+            report_features.append(
+                {"speckle_id": f.id, "obj_type": f.speckle_type, "errors": ""}
+            )
         print(layerName)
-        # print(layer.crs.wkt)
         sr = arcpy.SpatialReference(text=layer.crs.wkt)  # (text=layer.crs.wkt)
         active_map = project.activeMap
         path = (
@@ -1737,19 +1843,27 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
         newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
         newFields = getLayerAttributes(layer_elements)
 
-        print(newFields)
+        keys = list(newFields.keys())
+        fields = [
+            key.replace(" ", "_") for key in keys
+        ]  # spaces will be replaced to underscore anyway
+        table_path = path + "\\" + newName
+        table = None
+
+        print(fields)
 
         if newName not in arcpy.ListTables():
             try:
                 table = CreateTable(path, newName)
-                for field, val in newFields.items():
+                for field in fields:
                     arcpy.management.AddField(table, field, "TEXT")
-
+                r"""
                 cursor = arcpy.da.InsertCursor(
-                    table, [key.replace(" ", "_") for key in list(newFields.keys())]
+                    table, [key.replace(" ", "_") for key in fields]
                 )
-                cursor.insertRow(["" for _ in range(len(newFields))])
+                cursor.insertRow(["" for _ in range(len(fields))])
                 del cursor
+                """
 
             except Exception as e:
                 logToUser(
@@ -1764,38 +1878,42 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
                     table = item
                     print(table)
                     break
-            # print("table already exists")
-            # make sure fileds exist
-            table_path = path + "\\" + newName
-            for field, _ in newFields.items():
-                findOrCreateTableField(table_path, field.replace(" ", "_"))
+        if table is None:
+            logToUser(
+                f"Error creating a table '{newName}'",
+                level=1,
+                func=inspect.stack()[0][3],
+            )
+            return
+        # make sure fields exist
+        for field in fields:
+            findOrCreateTableField(table_path, field)
 
-            keys = list(newFields.keys())
-            all_values = []
-            for feature in layer_elements:
-                feature_vals = []
-                for key in keys:
-                    try:
-                        if key == "Speckle_ID":
-                            feature_vals.append(feature["id"])
-                        else:
-                            feature_vals.append(feature[key])
-                    except:
-                        feature_vals.append(feature["attributes"][key])
-                all_values.append(feature_vals)
+        # delete existing rows:
+        with arcpy.da.UpdateCursor(table_path, fields) as cursor:
+            for row in cursor:
+                cursor.deleteRow()
+        del cursor
 
-            # delete existing rows:
-            fields = [key.replace(" ", "_") for key in keys]
-            with arcpy.da.UpdateCursor(table_path, fields) as cursor:
-                for row in cursor:
-                    cursor.deleteRow()
-            del cursor
+        # put feature attr values to a list
+        all_values = []
+        for feature in layer_elements:
+            feature_vals = []
+            for key in keys:
+                try:
+                    if key == "Speckle_ID":
+                        feature_vals.append(feature["id"])
+                    else:
+                        feature_vals.append(feature[key])
+                except:
+                    feature_vals.append(feature["attributes"][key])
+            all_values.append(feature_vals)
 
-            # add from scratch
-            cursor = arcpy.da.InsertCursor(table_path, fields)
-            for i, feature in enumerate(layer_elements):
-                cursor.insertRow([v for v in all_values[i]])
-            del cursor
+        # add from scratch
+        cursor = arcpy.da.InsertCursor(table_path, fields)
+        for i, feature in enumerate(layer_elements):
+            cursor.insertRow([v for v in all_values[i]])
+        del cursor
 
         try:
             print(table)
@@ -1810,11 +1928,38 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
             plugin=plugin.dockwidget,
         )
 
+        # report
+        all_feature_errors_count = 0
+        for item in report_features:
+            if item["errors"] != "":
+                all_feature_errors_count += 1
+
+        obj_type = "Vector Layer"
+        if all_feature_errors_count == 0:
+            dataStorage.latestActionReport.append(
+                {
+                    "speckle_id": f"{layer.id} {finalName}",
+                    "obj_type": obj_type,
+                    "errors": "",
+                }
+            )
+        else:
+            dataStorage.latestActionReport.append(
+                {
+                    "speckle_id": f"{layer.id} {finalName}",
+                    "obj_type": obj_type,
+                    "errors": f"{all_feature_errors_count} features failed",
+                }
+            )
+
+        for item in report_features:
+            dataStorage.latestActionReport.append(item)
+        dataStorage.latestConversionTime = datetime.now()
+
         return table
 
     except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
-        return None
+        logToUser(str(e), level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
 
 
 def rasterLayerToNative(layer: RasterLayer, streamBranch: str, nameBase: str, plugin):
@@ -2057,8 +2202,30 @@ def addRasterMainThread(obj: Tuple):
         except:
             pass
 
+        # report on receive:
+        dataStorage.latestActionReport.append(
+            {
+                "speckle_id": f"{layer.id} {finalName}",
+                "obj_type": "Raster Layer",
+                "errors": "",
+            }
+        )
+        dataStorage.latestConversionTime = datetime.now()
+
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
+        # report on receive:
+        try:
+            dataStorage.latestActionReport.append(
+                {
+                    "speckle_id": f"{layer.id} {layer.name}",
+                    "obj_type": "Raster Layer",
+                    "errors": f"Receiving layer {layer.name} failed",
+                }
+            )
+            dataStorage.latestConversionTime = datetime.now()
+        except Exception as e:
+            pass
 
     return rasterLayer
 

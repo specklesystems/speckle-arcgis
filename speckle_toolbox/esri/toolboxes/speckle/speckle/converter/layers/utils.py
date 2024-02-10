@@ -129,7 +129,7 @@ def findUpdateJsonItemPath(tree: Dict, full_path_str: str):
                 new_tree.update(branch)
         return new_tree
     except Exception as e:
-        print(e)
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
         return tree
 
 
@@ -195,42 +195,71 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugi
                 groupExists += 1
         print(newGroupName)
         if groupExists == 0:
-            # create empty group layer file "\\Layers_Speckle\\
+            layerGroup = create_layer_group(project, newGroupName, plugin)
 
-            path: str = (
-                os.path.expandvars(r"%LOCALAPPDATA%")
-                + "\\Temp\\Speckle_ArcGIS_temp\\"
-                + datetime.now().strftime("%Y-%m-%d %H-%M")
-            )
-            path += "\\Layers_Speckle\\"
-            findOrCreatePath(path)
-
-            # path = "\\".join(project.filePath.split("\\")[:-1]) + "\\Layers_Speckle\\"
-            # findOrCreatePath(path)
-            lyr_path = path + newGroupName + ".lyrx"
-            print(lyr_path)
-            try:
-                f = open(lyr_path, "w")
-                content = createGroupLayer().replace("TestGroupLayer", newGroupName)
-                f.write(content)
-                f.close()
-                newGroupLayer = arcpy.mp.LayerFile(lyr_path)
-                layerGroup = project.activeMap.addLayer(newGroupLayer)[0]
-                print(layerGroup)
-            except:  # for 3.0.0
-                if project.active_map is not None:
-                    print("try creating the group")
-                    layerGroup = project.activeMap.createGroupLayer(newGroupName)
-                    print(layerGroup)
-                else:
-                    logToUser(
-                        "The map didn't fully load, try selecting the project Map or/and refreshing the plugin.",
-                        level=1,
-                        func=inspect.stack()[0][3],
-                    )
-                    return
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
+
+
+def create_layer_group(project: ArcGISProject, newGroupName: str, plugin):
+    try:
+        path: str = (
+            os.path.expandvars(r"%LOCALAPPDATA%")
+            + "\\Temp\\Speckle_ArcGIS_temp\\"
+            + datetime.now().strftime("%Y-%m-%d_%H-%M")
+        )
+        path += "\\Layers_Speckle\\"
+        findOrCreatePath(path)
+        lyr_path = path + newGroupName + ".lyrx"
+        print(lyr_path)
+        r"""
+        try:
+            f = open(lyr_path, "w")
+            content = createGroupLayer().replace("TestGroupLayer", newGroupName)
+            f.write(content)
+            f.close()
+            newGroupLayer = arcpy.mp.LayerFile(lyr_path)
+            layerGroup = project.activeMap.addLayer(newGroupLayer)[0]
+            print(layerGroup)
+            return layerGroup
+        except:  # for 3.0.0
+        """
+        if project.activeMap is not None:
+            print("try creating the group")
+            # check for full match
+            for l in project.activeMap.listLayers():
+                print(newGroupName + "  __  " + l.longName)
+                if l.longName == newGroupName:
+                    layerGroup = l
+                    return layerGroup
+            # check for parent layer 
+            for l in project.activeMap.listLayers():
+                print(newGroupName + "  __  " + l.longName)
+                if l.longName == "\\".join(newGroupName.split("\\")[:-1]):
+                    short_name = newGroupName.split("\\")[-1]
+                    new_group = project.activeMap.createGroupLayer(short_name)
+                    project.activeMap.addLayerToGroup(l, new_group)
+                    project.activeMap.removeLayer(new_group)
+                    # find the layer again
+                    for sub_group in project.activeMap.listLayers():
+                        print(sub_group.longName)
+                        if sub_group.longName == newGroupName:
+                            new_group = sub_group
+                            break
+                    return new_group
+
+            layerGroup = project.activeMap.createGroupLayer(newGroupName)
+            print(layerGroup)
+            return layerGroup
+        else:
+            logToUser(
+                "The map didn't fully load, try selecting the project Map or/and refreshing the plugin.",
+                level=1,
+                func=inspect.stack()[0][3],
+            )
+            return
+    except Exception as e:
+        print(e)
 
 
 def getVariantFromValue(value: Any) -> Union[str, None]:
@@ -286,18 +315,18 @@ def getDisplayValueList(geom: Any) -> List:
             try:
                 val = geom.displayValue  # list
             except Exception as e:
-                print(e)
+                #print(e)
                 try:
                     val = geom["@displayValue"]  # list
                 except Exception as e:
-                    print(e)
+                    #print(e)
                     try:
                         val = geom.displayMesh
                     except:
                         pass
         return val
     except Exception as e:
-        print(e)
+        #print(e)
         return []
 
 
@@ -305,8 +334,8 @@ def getLayerGeomType(layer) -> str:
     return
 
 
-def tryCreateGroupTree(root, fullGroupName, plugin=None):
-    return
+def tryCreateGroupTree(project: ArcGISProject, fullGroupName, plugin=None):
+
     # CREATE A GROUP "received blabla" with sublayers
     # print("_________CREATE GROUP TREE: " + fullGroupName)
 
@@ -317,21 +346,12 @@ def tryCreateGroupTree(root, fullGroupName, plugin=None):
         if len(x) > 0:
             path_list.append(x)
     group_to_create_name = path_list[0]
-
-    layerGroup = QgsLayerTreeGroup(group_to_create_name)
-    if root.findGroup(group_to_create_name) is not None:
-        layerGroup = root.findGroup(group_to_create_name)  # -> QgsLayerTreeNode
-    else:
-        layerGroup = root.insertGroup(
-            0, group_to_create_name
-        )  # root.addChildNode(layerGroup)
-    layerGroup.setExpanded(True)
-    layerGroup.setItemVisibilityChecked(True)
-
+    layerGroup = create_layer_group(project, group_to_create_name, plugin)
     path_list.pop(0)
 
     if len(path_list) > 0:
-        layerGroup = tryCreateGroupTree(layerGroup, SYMBOL.join(path_list), plugin)
+        path_list[0] = f"{group_to_create_name}\\{path_list[0]}"
+        layerGroup = tryCreateGroupTree(project, SYMBOL.join(path_list), plugin)
 
     return layerGroup
 
@@ -384,7 +404,7 @@ def getLayerAttributes(
             features = [featuresList]
         else:
             features = featuresList[:]
-        #print(features)
+        # print(features)
         all_props = []
         for feature in features:
             # get object properties to add as attributes
