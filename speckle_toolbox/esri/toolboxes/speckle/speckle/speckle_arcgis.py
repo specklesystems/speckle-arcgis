@@ -696,8 +696,19 @@ class SpeckleGIS:
             app = getAppName(commit.sourceApplication)
             client_id = client.account.userInfo.id
 
+            time_start_transfer = datetime.now()
             commitObj = operations._untracked_receive(objId, transport, None)
+            time_end_transfer = datetime.now()
+
             self.dockwidget.signal_remove_btn_url.emit("cancel")
+
+            # add time stats to the report
+            self.dataStorage.latestActionTime = str(
+                datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
+            )
+            self.dataStorage.latestTransferTime = str(
+                time_end_transfer - time_start_transfer
+            )
 
             try:
                 crs_lat = self.project.activeMap.spatialReference.latitudeOfOrigin
