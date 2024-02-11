@@ -21,11 +21,14 @@ from specklepy.logging.exceptions import (
 
 
 # from specklepy.api.credentials import StreamWrapper
-from specklepy.api.models import Stream
-from specklepy.api.wrapper import StreamWrapper
+from specklepy.core.api.models import Stream
+from specklepy.core.api.wrapper import StreamWrapper
 from specklepy.objects import Base
-from specklepy.api.credentials import Account, get_local_accounts  # , StreamWrapper
-from specklepy.api.client import SpeckleClient
+from specklepy.core.api.credentials import (
+    Account,
+    get_local_accounts,
+)  # , StreamWrapper
+from specklepy.core.api.client import SpeckleClient
 from specklepy.logging import metrics
 from specklepy.objects.other import Collection
 import webbrowser
@@ -37,7 +40,10 @@ from specklepy.objects.units import get_units_from_string
 
 from speckle.speckle.plugin_utils.threads import KThread
 from speckle.speckle.plugin_utils.object_utils import callback, traverseObject
-from speckle.speckle.converter.layers import convertSelectedLayers, getLayers
+from speckle.speckle.converter.layers import (
+    convertSelectedLayers,
+    getLayersWithStructure,
+)
 from speckle.speckle.converter.layers.utils import findAndClearLayerGroup
 from speckle.speckle.utils.validation import (
     tryGetStream,
@@ -380,7 +386,9 @@ class SpeckleGIS:
             bySelection = True
             if self.dockwidget.layerSendModeDropdown.currentIndex() == 1:
                 bySelection = False
-            layers = getLayers(self, bySelection)  # List[QgsLayerTreeNode]
+            layers, tree_structure = getLayersWithStructure(
+                self, bySelection
+            )  # List[QgsLayerTreeNode]
 
             # Check if stream id/url is empty
             if self.active_stream is None:
@@ -455,7 +463,7 @@ class SpeckleGIS:
             print("On Send 2")
             # creating our parent base object
             project = self.project
-            # projectCRS = project.Sp
+            projectCRS = project.activeMap.spatialReference
             # layerTreeRoot = project.layerTreeRoot()
 
             self.dataStorage.latestActionReport = []
@@ -470,7 +478,10 @@ class SpeckleGIS:
             print("On Send 3")
             # conversions
             time_start_conversion = datetime.now()
-            base_obj.layers = convertSelectedLayers(layers, project)
+            # base_obj.layers = convertSelectedLayers(layers, project)
+            base_obj = convertSelectedLayersToSpeckle(
+                base_obj, layers, tree_structure, projectCRS, self
+            )
             time_end_conversion = datetime.now()
 
             if (
@@ -490,21 +501,28 @@ class SpeckleGIS:
             client, stream = tryGetClient(
                 streamWrapper, self.dataStorage, True, self.dockwidget
             )
-            if not isinstance(client, SpeckleClient) or not isinstance(stream, Stream):
+            print(client)
+            print(stream)
+            if not isinstance(client, SpeckleClient):
+                logToUser(f"SpeckleClient invalid", level=2, plugin=self.dockwidget)
                 return
 
             stream = validateStream(stream, self.dockwidget)
+            print(stream)
             if not isinstance(stream, Stream):
+                logToUser(f"Stream invalid", level=2, plugin=self.dockwidget)
                 return
 
             branchName = str(self.dockwidget.streamBranchDropdown.currentText())
             branch = validateBranch(stream, branchName, False, self.dockwidget)
             branchId = branch.id
             if branch == None:
+                logToUser(f"Branch invalid", level=2, plugin=self.dockwidget)
                 return
 
             transport = validateTransport(client, streamId)
             if transport == None:
+                logToUser(f"Transport invalid", level=2, plugin=self.dockwidget)
                 return
 
         except Exception as e:
@@ -518,6 +536,7 @@ class SpeckleGIS:
             time_start_transfer = datetime.now()
             # this serialises the block and sends it to the transport
             objId = operations.send(base=base_obj, transports=[transport])
+            time_end_transfer = datetime.now()
         except SpeckleException as e:
             logToUser(
                 "Error sending data: " + str(e),

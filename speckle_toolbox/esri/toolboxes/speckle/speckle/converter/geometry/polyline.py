@@ -28,7 +28,7 @@ from speckle.speckle.converter.geometry.point import (
     addZtoPoint,
 )
 from speckle.speckle.converter.geometry.utils import speckleArcCircleToPoints
-from speckle.speckle.converter.layers.utils import get_scale_factor
+from speckle.speckle.converter.layers.utils import get_scale_factor, findTransformation
 from speckle.speckle.utils.panel_logging import logToUser
 
 
@@ -60,7 +60,9 @@ def circleToSpeckle(center, point):
         return None
 
 
-def multiPolylineToSpeckle(geom, feature, layer, multiType: bool):
+def multiPolylineToSpeckle(
+    geom, feature, layer, multiType: bool, dataStorage, xform_vars=None
+):
 
     print("___MultiPolyline to Speckle____")
     polyline = []
@@ -71,14 +73,57 @@ def multiPolylineToSpeckle(geom, feature, layer, multiType: bool):
                 x, arcpy.Describe(layer.dataSource).SpatialReference, has_z=True
             )
             print(poly)
-            polyline.append(polylineToSpeckle(poly, feature, layer, poly.isMultipart))
+            polyline.append(
+                polylineToSpeckle(poly, feature, layer, poly.isMultipart, dataStorage)
+            )
 
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return polyline
 
 
-def polylineToSpeckle(geom, feature, layer, multiType: bool):
+def anyLineToSpeckle(geom, feature, layer, dataStorage, xform_vars=None):
+    print("___Any line to Speckle____")
+    polyline = None
+    try:
+        pointList = []
+        print(geom.hasCurves)
+        # multiType = feature.isMultipart
+
+        # if multiType is False:
+        if geom.hasCurves:
+            print("has curves")
+            # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
+            # print(geom.JSON)
+            new_geom = geom.densify("GEODESIC", 0.1)
+            f_shape = findTransformation(new_geom, *xform_vars)
+            if f_shape is None:
+                return None
+        else:
+            new_geom = geom
+        print(new_geom)  # describe geometry object
+        for p in new_geom:
+            print(p)  # array
+            for pt in p:
+                # print(pt)
+                if pt != None:
+                    pointList.append(pt)  # ; print(pt.Z)
+        closed = False
+        if pointList[0] == pointList[len(pointList) - 1]:
+            closed = True
+            pointList = pointList[:-1]
+        polyline = polylineFromVerticesToSpeckle(
+            pointList, closed, feature, layer, dataStorage
+        )
+
+    except Exception as e:
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+    return polyline
+
+
+def polylineToSpeckle(
+    geom, feature, layer, multiType: bool, dataStorage, xform_vars=None
+):
     print("___Polyline to Speckle____")
     polyline = None
     try:
@@ -90,7 +135,7 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
                 print("has curves")
                 # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
                 print(geom.JSON)
-                polyline = curveToSpeckle(geom, "Polyline", feature, layer)
+                polyline = curveToSpeckle(geom, "Polyline", feature, layer, dataStorage)
             else:
                 for p in geom:
                     for pt in p:
@@ -101,7 +146,7 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
                     closed = True
                     pointList = pointList[:-1]
                 polyline = polylineFromVerticesToSpeckle(
-                    pointList, closed, feature, layer
+                    pointList, closed, feature, layer, dataStorage
                 )
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
@@ -109,7 +154,7 @@ def polylineToSpeckle(geom, feature, layer, multiType: bool):
 
 
 def polylineFromVerticesToSpeckle(
-    vertices: List[Point], closed: bool, feature, layer
+    vertices: List[Point], closed: bool, feature, layer, dataStorage
 ) -> Polyline:
     """Converts a Polyline to Speckle"""
     polyline = Polyline(units="m")
@@ -120,7 +165,7 @@ def polylineFromVerticesToSpeckle(
                 specklePts = vertices
             else:
                 specklePts = [
-                    pointToSpeckle(pt, feature, layer) for pt in vertices
+                    pointToSpeckle(pt, feature, layer, dataStorage) for pt in vertices
                 ]  # breaks unexplainably
         # elif isinstance(vertices, QgsVertexIterator):
         #    specklePts = [pointToSpeckle(pt, feature, layer) for pt in vertices]
@@ -129,7 +174,7 @@ def polylineFromVerticesToSpeckle(
 
         specklePts = []
         for pt in vertices:
-            newPt = pointToSpeckle(pt, feature, layer)
+            newPt = pointToSpeckle(pt, feature, layer, dataStorage)
             specklePts.append(newPt)
 
         # TODO: Replace with `from_points` function when fix is pushed.
@@ -153,9 +198,9 @@ def arc3ptToSpeckle(p0: List, p1: List, p2: List, feature, layer) -> Arc:
         p0 = addZtoPoint(p0)
         p1 = addZtoPoint(p1)
         p2 = addZtoPoint(p2)
-        arc.startPoint = pointToSpeckle(arcpy.Point(*p0), feature, layer)
-        arc.midPoint = pointToSpeckle(arcpy.Point(*p1), feature, layer)
-        arc.endPoint = pointToSpeckle(arcpy.Point(*p2), feature, layer)
+        arc.startPoint = pointToSpeckle(arcpy.Point(*p0), feature, layer, dataStorage)
+        arc.midPoint = pointToSpeckle(arcpy.Point(*p1), feature, layer, dataStorage)
+        arc.endPoint = pointToSpeckle(arcpy.Point(*p2), feature, layer, dataStorage)
         center, radius = getArcCenter(
             Point.from_list(p0), Point.from_list(p1), Point.from_list(p2)
         )
@@ -229,7 +274,7 @@ def curveBezierToSpeckle(segmStartCoord, segmEndCoord, knots, feature, layer):
 
 
 def curveToSpeckle(
-    geom, geomType, feature, layer
+    geom, geomType, feature, layer, dataStorage
 ) -> Union[Circle, Arc, Polyline, Polycurve]:
     print("____curve to Speckle____")
     boundary = Polycurve(units="m")

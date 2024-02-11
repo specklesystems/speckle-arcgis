@@ -39,12 +39,12 @@ def get_project_streams(plugin: "SpeckleGIS", content: str = None):
         print("GET proj streams")
         project = plugin.project
         table = findOrCreateSpeckleTable(project, plugin)
-        logToUser(table, level=0, func=inspect.stack()[0][3])
+        #logToUser(table, level=0, func=inspect.stack()[0][3])
 
         rows = arcpy.da.SearchCursor(table, "project_streams")
         saved_streams = []
         for x in rows:
-            logToUser(x[0], level=0, func=inspect.stack()[0][3])
+            # logToUser(x[0], level=0, func=inspect.stack()[0][3])
             saved_streams.append(x[0])
 
         temp = []
@@ -121,7 +121,7 @@ def set_project_streams(plugin: "SpeckleGIS"):
 
 def get_project_layer_selection(plugin: "SpeckleGIS"):
     try:
-        print("GET project layer selection from the table")
+        #print("GET project layer selection from the table")
         project = plugin.project
         table = findOrCreateSpeckleTable(project, plugin)
         if table is None:
@@ -143,7 +143,7 @@ def get_project_layer_selection(plugin: "SpeckleGIS"):
                     continue
                 found = 0
                 for layer in proj_layers:
-                    print(layer.dataSource)
+                    #print(layer.dataSource)
                     if layer.dataSource == layerPath:
                         temp.append((layer.name, layer))
                         found += 1
@@ -166,7 +166,7 @@ def set_project_layer_selection(plugin: "SpeckleGIS"):
         value: List[str] = [
             layer[1].dataSource for layer in plugin.dataStorage.current_layers
         ]  # ",".join([layer[1].dataSource for layer in plugin.dataStorage.current_layers])
-        print(value)
+        #print(value)
 
         table = findOrCreateSpeckleTable(project, plugin)
         # print(table)
@@ -193,7 +193,7 @@ def set_project_layer_selection(plugin: "SpeckleGIS"):
             for i in range(length):
                 if i == 0:
                     cursor.insertRow([proj_streams[i], value[i], lan_lot])
-                    print(i)
+                    #print(i)
                 else:
                     try:
                         cursor.insertRow([proj_streams[i], value[i], ""])
@@ -327,7 +327,7 @@ def set_crs_offsets(plugin):
 def get_project_saved_layers(plugin):
 
     try:
-        print("GET project layer selection from the table")
+        #print("GET project layer selection from the table")
         project = plugin.project
         table = findOrCreateSpeckleTable(project, plugin)
         if table is None:
@@ -349,7 +349,7 @@ def get_project_saved_layers(plugin):
                     continue
                 found = 0
                 for layer in proj_layers:
-                    print(layer.dataSource)
+                    #print(layer.dataSource)
                     if layer.dataSource == layerPath:
                         temp.append((layer.name, layer))
                         found += 1

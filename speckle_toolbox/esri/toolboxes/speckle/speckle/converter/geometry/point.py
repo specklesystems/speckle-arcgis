@@ -5,6 +5,7 @@ import arcpy
 
 import inspect
 from speckle.speckle.converter.geometry.utils import (
+    apply_pt_offsets_rotation_on_send,
     transform_speckle_pt_on_receive,
     apply_pt_transform_matrix,
 )
@@ -13,7 +14,7 @@ from speckle.speckle.converter.layers.utils import get_scale_factor
 from speckle.speckle.utils.panel_logging import logToUser
 
 
-def multiPointToSpeckle(geom, feature, layer, multiType: bool):
+def multiPointToSpeckle(geom, feature, layer, multiType: bool, dataStorage):
     """Converts a Point to Speckle"""
 
     pointList = []
@@ -24,35 +25,50 @@ def multiPointToSpeckle(geom, feature, layer, multiType: bool):
                 # print(pt) # 284394.58100903 5710688.11602606 NaN NaN <class 'arcpy.arcobjects.arcobjects.Point'>
                 # print(type(pt))
                 if pt != None:
-                    pointList.append(pointToSpeckle(pt, feature, layer))
+                    pointList.append(pointToSpeckle(pt, feature, layer, dataStorage))
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return pointList
 
 
-def pointToSpeckle(pt, feature, layer):
+def pointToSpeckle(pt, feature, layer, dataStorage):
     """Converts a Point to Speckle"""
     # print("___Point to Speckle____")
     # when unset, z() returns "nan"
     # print(pt) # 4.9046319 52.3592043 NaN NaN
     # print("____Point to Speckle___")
     try:
+        r"""
+        if isinstance(pt, arcpy.PointGeometry):
+            x = pt[0]
+            y = pt[1]
+            if len(pt) > 2:
+                z = pt[2]
+            else:
+                z = 0
+        """
         x = pt.X
         y = pt.Y
         if pt.Z:
             z = pt.Z
         else:
             z = 0
+
         specklePoint = Point(units="m")
         specklePoint.x = x
         specklePoint.y = y
         specklePoint.z = z
+        specklePoint.units = "m"
         """
         if feature is not None and layer is not None: # can be if it's a point from raster layer 
             col = featureColorfromNativeRenderer(feature, layer)
             specklePoint['displayStyle'] = {}
             specklePoint['displayStyle']['color'] = col
         """
+        specklePoint.x, specklePoint.y = apply_pt_offsets_rotation_on_send(
+            x, y, dataStorage
+        )
+
         # print(specklePoint)
         return specklePoint
     except Exception as e:
@@ -96,7 +112,8 @@ def pointToNativeWithoutTransforms(pt: Point, sr: arcpy.SpatialReference, dataSt
 def pointToCoord(point: Point) -> List[float]:
     """Converts a Speckle Point to QgsPoint"""
     try:
-        pt = scalePointToNative(point, point.units)
+        # pt = scalePointToNative(point, point.units)
+        pt = point
         coords = [pt.x, pt.y, pt.z]
         # print(coords)
         return coords

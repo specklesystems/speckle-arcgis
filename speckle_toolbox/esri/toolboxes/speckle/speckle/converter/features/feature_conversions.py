@@ -4,6 +4,7 @@ import math
 import os
 from typing import List, Union
 import arcpy
+from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 
 import numpy as np
 
@@ -16,6 +17,7 @@ from speckle.speckle.converter.layers.utils import (
     findTransformation,
     getVariantFromValue,
     traverseDict,
+    validateAttributeName,
 )
 
 # from speckle.speckle.converter.geometry.conversions import transform
@@ -39,12 +41,15 @@ from specklepy.objects import Base
 
 
 def featureToSpeckle(
-    fieldnames: List[str],
-    f: "QgsFeature",
-    geomType,
-    selectedLayer: Union["QgsVectorLayer", "QgsRasterLayer"],
-    dataStorage,
+    fieldnames,
+    attr_list,
+    index: int,
+    f_shape,
+    projectCRS: arcpy.SpatialReference,
+    selectedLayer: arcLayer,
+    plugin,
 ):
+    dataStorage = plugin.dataStorage
     if dataStorage is None:
         return
     units = dataStorage.currentUnits
@@ -52,80 +57,96 @@ def featureToSpeckle(
     iterations = 0
     try:
         geom = None
+        data = arcpy.Describe(selectedLayer.dataSource)
+        geomType = data.shapeType
+        if (
+            hasattr(data, "isRevit")
+            or hasattr(data, "isIFC")
+            or hasattr(data, "bimLevels")
+        ):
+            # print(f"Layer {selectedLayer.name} has unsupported data type")
+            logToUser(
+                f"Layer {selectedLayer.name} has unsupported data type",
+                level=1,
+                func=inspect.stack()[0][3],
+            )
+            return None
 
-        if geomType == "None":
-            geom = GisNonGeometryElement()
-            new_report = {"obj_type": geom.speckle_type, "errors": ""}
-        else:
-            # Try to extract geometry
-            skipped_msg = f"'{geomType}' feature skipped due to invalid geometry"
-            try:
-                geom, iterations = convertToSpeckle(f, selectedLayer, dataStorage)
-                if geom is not None and geom != "None":
-                    if not isinstance(geom.geometry, List):
-                        logToUser(
-                            "Geometry not in list format",
-                            level=2,
-                            func=inspect.stack()[0][3],
-                        )
-                        return None
-
-                    all_errors = ""
-                    for g in geom.geometry:
-                        if g is None or g == "None":
-                            all_errors += skipped_msg + ", "
-                            logToUser(skipped_msg, level=2, func=inspect.stack()[0][3])
-                        elif isinstance(g, GisPolygonGeometry):
-                            if len(g.displayValue) == 0:
-                                all_errors += (
-                                    "Polygon converted, but display mesh not generated"
-                                    + ", "
-                                )
-                                logToUser(
-                                    "Polygon converted, but display mesh not generated",
-                                    level=1,
-                                    func=inspect.stack()[0][3],
-                                )
-                            elif iterations is not None and iterations > 0:
-                                all_errors += (
-                                    "Polygon display mesh is simplified" + ", "
-                                )
-                                logToUser(
-                                    "Polygon display mesh is simplified",
-                                    level=1,
-                                    func=inspect.stack()[0][3],
-                                )
-
-                    if len(geom.geometry) == 0:
-                        all_errors = "No geometry converted"
-                    new_report.update(
-                        {"obj_type": geom.speckle_type, "errors": all_errors}
+        # if geomType == "None":
+        #    geom = GisNonGeometryElement()
+        #    new_report = {"obj_type": geom.speckle_type, "errors": ""}
+        # else:
+        # Try to extract geometry
+        skipped_msg = f"'{geomType}' feature skipped due to invalid geometry"
+        try:
+            geom, iterations = convertToSpeckle(
+                f_shape, index, selectedLayer, data, dataStorage
+            )
+            print(geom)
+            if geom is not None and geom != "None":
+                if not isinstance(geom.geometry, List):
+                    logToUser(
+                        "Geometry not in list format",
+                        level=2,
+                        func=inspect.stack()[0][3],
                     )
+                    return None
 
-                else:  # geom is None
-                    new_report = {"obj_type": "", "errors": skipped_msg}
-                    logToUser(skipped_msg, level=2, func=inspect.stack()[0][3])
-                    geom = GisNonGeometryElement()
-            except Exception as error:
-                new_report = {
-                    "obj_type": "",
-                    "errors": "Error converting geometry: " + str(error),
-                }
-                logToUser(
-                    "Error converting geometry: " + str(error),
-                    level=2,
-                    func=inspect.stack()[0][3],
-                )
+                all_errors = ""
+                for g in geom.geometry:
+                    if g is None or g == "None":
+                        all_errors += skipped_msg + ", "
+                        logToUser(skipped_msg, level=2, func=inspect.stack()[0][3])
+                    elif isinstance(g, GisPolygonGeometry):
+                        if len(g.displayValue) == 0:
+                            all_errors += (
+                                "Polygon converted, but display mesh not generated"
+                                + ", "
+                            )
+                            logToUser(
+                                "Polygon converted, but display mesh not generated",
+                                level=1,
+                                func=inspect.stack()[0][3],
+                            )
+                        elif iterations is not None and iterations > 0:
+                            all_errors += "Polygon display mesh is simplified" + ", "
+                            logToUser(
+                                "Polygon display mesh is simplified",
+                                level=1,
+                                func=inspect.stack()[0][3],
+                            )
 
+                if len(geom.geometry) == 0:
+                    all_errors = "No geometry converted"
+                new_report.update({"obj_type": geom.speckle_type, "errors": all_errors})
+
+            else:  # geom is None
+                new_report = {"obj_type": "", "errors": skipped_msg}
+                logToUser(skipped_msg, level=2, func=inspect.stack()[0][3])
+                # geom = GisNonGeometryElement()
+        except Exception as error:
+            new_report = {
+                "obj_type": "",
+                "errors": "Error converting geometry: " + str(error),
+            }
+            logToUser(
+                "Error converting geometry: " + str(error),
+                level=2,
+                func=inspect.stack()[0][3],
+            )
+
+        #print(fieldnames)
+        #print(attr_list)
         attributes = Base()
-        for name in fieldnames:
+        for i, name in enumerate(fieldnames):
             corrected = validateAttributeName(name, fieldnames)
-            f_val = f[name]
+            #print(corrected)
+            f_val = attr_list[i]
             if f_val == "NULL" or f_val is None or str(f_val) == "NULL":
                 f_val = None
-            if isinstance(f[name], list):
+            if isinstance(attr_list[i], list):
                 x = ""
-                for i, attr in enumerate(f[name]):
+                for i, attr in enumerate(attr_list[i]):
                     if i == 0:
                         x += str(attr)
                     else:
@@ -135,6 +156,7 @@ def featureToSpeckle(
 
         # if geom is not None and geom!="None":
         geom.attributes = attributes
+        #print(geom.attributes)
 
         dataStorage.latestActionFeaturesReport[
             len(dataStorage.latestActionFeaturesReport) - 1
@@ -993,8 +1015,8 @@ def featureToNative(
             feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
         else:
             return None
-        #print(arcGisGeom)
-        #print(feat)
+        # print(arcGisGeom)
+        # print(feat)
         for key, variant in fields.items():
             value = None
             try:

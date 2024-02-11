@@ -4,6 +4,7 @@ import json
 from arcpy.arcobjects.arcobjects import SpatialReference
 
 from specklepy.objects import Base
+from specklepy.objects.GIS.geometry import GisPolygonGeometry
 from specklepy.objects.geometry import Point, Arc, Circle, Polycurve, Polyline, Line
 
 import inspect
@@ -30,7 +31,7 @@ import math
 from panda3d.core import Triangulator
 
 
-def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool):
+def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
     print("________polygonToSpeckleMesh_____")
     print(geom)
     polygon = Base(units="m")
@@ -45,7 +46,7 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool):
             # print("____start enumerate feature")
             # print(p) #<geoprocessing array object object at 0x0000026796C77110>
             print(p)
-            boundary, voids = getPolyBoundaryVoids(p, layer, multitype)
+            boundary, voids = getPolyBoundaryVoids(p, layer, multitype, dataStorage)
             # print(boundary)
             # print(voids)
             polyBorder = speckleBoundaryToSpecklePts(boundary)
@@ -83,7 +84,7 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool):
         return None
 
 
-def getPolyBoundaryVoids(geom, layer, multiType: bool):
+def getPolyBoundaryVoids(geom, layer, multiType: bool, dataStorage):
     # print("__getPolyBoundaryVoids__")
     voids: List[Union[None, Polyline, Arc, Line, Polycurve]] = []
     # print(voids)
@@ -98,7 +99,7 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                     print("has curves")
                     # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
                     print(geom.JSON)
-                    boundary = curveToSpeckle(geom, "Polygon", geom, layer)
+                    boundary = curveToSpeckle(geom, "Polygon", geom, layer, dataStorage)
                 else:
                     print("no curves")
                     for p in geom:
@@ -107,7 +108,7 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                             if pt != None:
                                 pointList.append(pt)
                     boundary = polylineFromVerticesToSpeckle(
-                        pointList, True, geom, layer
+                        pointList, True, geom, layer, dataStorage
                     )
                     print(boundary)
             except:  # for multipatches, no property "has curves"
@@ -116,7 +117,9 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                     # print(pt)
                     if pt != None:
                         pointList.append(pt)
-                boundary = polylineFromVerticesToSpeckle(pointList, True, geom, layer)
+                boundary = polylineFromVerticesToSpeckle(
+                    pointList, True, geom, layer, dataStorage
+                )
                 # print(boundary)
             # partsBoundaries.append(boundary)
             # partsVoids.append([])
@@ -129,12 +132,12 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                     # print(pt) # 284394.58100903 5710688.11602606 NaN NaN
                     if pt == None and boundary == None:  # first break
                         boundary = polylineFromVerticesToSpeckle(
-                            pointList, True, geom, layer
+                            pointList, True, geom, layer, dataStorage
                         )
                         pointList = []
                     elif pt == None and boundary != None:  # breaks btw voids
                         void = polylineFromVerticesToSpeckle(
-                            pointList, True, geom, layer
+                            pointList, True, geom, layer, dataStorage
                         )
                         voids.append(void)
                         pointList = []
@@ -142,7 +145,9 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
                         pointList.append(pt)
 
                 if boundary != None and len(pointList) > 0:  # remaining polyline
-                    void = polylineFromVerticesToSpeckle(pointList, True, geom, layer)
+                    void = polylineFromVerticesToSpeckle(
+                        pointList, True, geom, layer, dataStorage
+                    )
                     voids.append(void)
 
     except Exception as e:
@@ -150,7 +155,7 @@ def getPolyBoundaryVoids(geom, layer, multiType: bool):
     return boundary, voids
 
 
-def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
+def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool, dataStorage):
 
     print("___MultiPolygon to Speckle____")
     polygon = []
@@ -182,7 +187,9 @@ def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
                 has_z=True,
             )
             # print(poly) #<geoprocessing describe geometry object object at 0x000002B2D3E338D0>
-            polygon.append(polygonToSpeckle(poly, index, layer, poly.isMultipart))
+            polygon.append(
+                polygonToSpeckle(poly, index, layer, poly.isMultipart, dataStorage)
+            )
 
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
@@ -191,12 +198,13 @@ def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool):
 
 def polygonToSpeckle(geom, index: int, layer, multitype: bool, dataStorage):
     """Converts a Polygon to Speckle"""
-    polygon = Base(units="m")
+    # polygon = Base(units="m")
+    polygon = GisPolygonGeometry(units="m")
     try:
         print("___Polygon to Speckle____")
         print(geom)
 
-        boundary, voids = getPolyBoundaryVoids(geom, layer, multitype)
+        boundary, voids = getPolyBoundaryVoids(geom, layer, multitype, dataStorage)
 
         data = arcpy.Describe(layer.dataSource)
         sr = data.spatialReference
@@ -337,7 +345,9 @@ def polygonToSpeckle(geom, index: int, layer, multitype: bool, dataStorage):
         return None
 
 
-def polygonToNative(poly: Base, sr: arcpy.SpatialReference, dataStorage) -> arcpy.Polygon:
+def polygonToNative(
+    poly: Base, sr: arcpy.SpatialReference, dataStorage
+) -> arcpy.Polygon:
     """Converts a Speckle Polygon base object to QgsPolygon.
     This object must have a 'boundary' and 'voids' properties.
     Each being a Speckle Polyline and List of polylines respectively."""

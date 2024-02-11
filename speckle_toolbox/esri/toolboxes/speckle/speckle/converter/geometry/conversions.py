@@ -13,9 +13,14 @@ from specklepy.objects.geometry import (
 )
 
 import arcpy
-from typing import Any, List, Union, Sequence
+from typing import Any, List, Tuple, Union, Sequence
 
 import inspect
+from specklepy.objects.GIS.geometry import (
+    GisLineElement,
+    GisPointElement,
+    GisPolygonElement,
+)
 from specklepy.objects.GIS.geometry import GisPolygonGeometry
 
 from speckle.speckle.converter.geometry.mesh import meshToNative
@@ -25,8 +30,12 @@ from speckle.speckle.converter.geometry.polygon import (
     multiPolygonToSpeckle,
     polygonToSpeckleMesh,
 )
-from speckle.speckle.converter.geometry.utils import specklePolycurveToPoints
+from speckle.speckle.converter.geometry.utils import (
+    specklePolycurveToPoints,
+    addCorrectUnits,
+)
 from speckle.speckle.converter.geometry.polyline import (
+    anyLineToSpeckle,
     arcToNative,
     ellipseToNative,
     circleToNative,
@@ -44,21 +53,34 @@ from speckle.speckle.converter.geometry.point import (
     pointToSpeckle,
     multiPointToSpeckle,
 )
+
+from speckle.speckle.converter.layers.utils import findTransformation
 from speckle.speckle.utils.panel_logging import logToUser
 
 import numpy as np
 
 
 def convertToSpeckle(
-    feature, index: str, layer, geomType, featureType
-) -> Union[Base, Sequence[Base], None]:
+    feature, index, layer, data, dataStorage
+) -> Tuple[Union[Base, Sequence[Base], None], int]:
     """Converts the provided layer feature to Speckle objects"""
     print("___convertToSpeckle____________")
     try:
-        geom = feature
-        print(geom.isMultipart)  # e.g. False
-        print(geom.partCount)
-        geomMultiType = geom.isMultipart
+        iterations = 0
+        layer_sr = data.spatialReference  # if sr.type == "Projected":
+        geomType = data.shapeType  # Polygon, Point, Polyline, Multipoint, MultiPatch
+        featureType = data.featureType
+        projectCRS = dataStorage.project.activeMap.spatialReference
+        units = dataStorage.currentUnits
+
+        xform_vars = (geomType, layer_sr, projectCRS, layer)
+        # f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+        # if f_shape is None:
+        #    return None
+
+        print(feature.isMultipart)  # e.g. False
+        print(feature.partCount)
+        # geomMultiType = feature.isMultipart
         hasCurves = feature.hasCurves
 
         # feature is <geoprocessing describe geometry object object at 0x000002A75D6A4BD0>
@@ -68,37 +90,135 @@ def convertToSpeckle(
         # geomSingleType = (featureType=="Simple") # Simple,SimpleJunction,SimpleJunction,ComplexEdge,Annotation,CoverageAnnotation,Dimension,RasterCatalogItem
 
         if geomType == "Point":  # Polygon, Point, Polyline, Multipoint, MultiPatch
-            for pt in geom:
-                return pointToSpeckle(pt, feature, layer)
-        elif geomType == "Polyline":
-            # if geom.hasCurves:
-            #    geom, feature = curvesToSegments(geom, feature, layer, geomMultiType)
-            #    geomMultiType = geom.isMultipart
-            #    return polylineToSpeckle(geom, feature, layer, geomMultiType)
-            # else:
-            if geom.partCount > 1:
-                return multiPolylineToSpeckle(geom, feature, layer, geomMultiType)
-            else:
-                return polylineToSpeckle(geom, feature, layer, geomMultiType)
-        elif geomType == "Polygon":
-            if geom.partCount > 1:
-                return multiPolygonToSpeckle(geom, index, layer, geomMultiType)
-            else:
-                return polygonToSpeckle(geom, index, layer, geomMultiType)
+            print("__Point conversion")
+            f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+            if f_shape is None:
+                return None
+            result = [pointToSpeckle(feature.getPart(), feature, layer, dataStorage)]
+            for r in result:
+                r.units = units
+
+            element = GisPointElement(units=units, geometry=result)
+
         elif geomType == "Multipoint":
-            return multiPointToSpeckle(geom, feature, layer, geomMultiType)
+            print("__Multipoint conversion")
+            f_shape = findTransformation(
+                feature, geomType, layer_sr, projectCRS, layer
+            )
+            if f_shape is None:
+                return None
+            result = [
+                pointToSpeckle(pt, feature, layer, dataStorage)
+                for pt in feature.getPart()
+            ]
+            for r in result:
+                r.units = units
+
+            element = GisPointElement(units=units, geometry=result)
+
+        elif geomType == "Polyline":
+            print("__Polyline conversion")
+            if feature.partCount == 1:
+                result = anyLineToSpeckle(
+                    feature, feature, layer, dataStorage, xform_vars
+                )
+                result = addCorrectUnits(result, dataStorage)
+                result = [result]
+            else:
+                all_parts = []
+                for part in feature.getPart():
+                    all_parts.append(
+                        arcpy.Polyline(
+                            part,
+                            arcpy.Describe(layer.dataSource).SpatialReference,
+                            has_z=True,
+                        )
+                    )
+                result = [
+                    anyLineToSpeckle(poly, feature, layer, dataStorage, xform_vars)
+                    for poly in all_parts
+                ]
+                for r in result:
+                    r = addCorrectUnits(r, dataStorage)
+
+            element = GisLineElement(units=units, geometry=result)
+
+        elif geomType == "Polygon":
+            print("__Polygon conversion")
+            if feature.partCount > 1:
+
+                for i, x in enumerate(feature):
+                    polygon, iterations = polygonToSpeckle(
+                        poly,
+                        feature,
+                        layer,
+                        height,
+                        translationZaxis,
+                        dataStorage,
+                        xform,
+                    )
+                    result.append(polygon)
+                for r in result:
+                    if r is None:
+                        continue
+                    r.units = units
+                    r.boundary.units = units
+                    for v in r.voids:
+                        if v is not None:
+                            v.units = units
+                    for v in r.displayValue:
+                        if v is not None:
+                            v.units = units
+
+                element = GisPolygonElement(units=units, geometry=result)
+
+            else:
+                # return polygonToSpeckle(geom, index, layer, geomMultiType, dataStorage)
+
+                result, iterations = polygonToSpeckle(
+                    feature,
+                    feature,
+                    layer,
+                    height,
+                    translationZaxis,
+                    dataStorage,
+                    xform,
+                )
+                if result is None:
+                    return None, None
+                result.units = units
+                if result.boundary is not None:
+                    result.boundary.units = units
+                for v in result.voids:
+                    if v is not None:
+                        v.units = units
+                try:  # if mesh creation failed, displayValue stays None
+                    for v in result.displayValue:
+                        if v is not None:
+                            v.units = units
+                except:
+                    pass
+
+                if not isinstance(result, List):
+                    result = [result]
+
+            element = GisPolygonElement(units=units, geometry=result)
+
         elif geomType == "MultiPatch":
-            return polygonToSpeckleMesh(geom, index, layer, False)
+            f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+            if f_shape is None:
+                return None
+            return polygonToSpeckleMesh(feature, index, layer, False, dataStorage)
         else:
             logToUser(
                 "Unsupported or invalid geometry in layer " + layer.name,
                 level=1,
                 func=inspect.stack()[0][3],
             )
-        return None
+        return element, iterations
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
-        return None
+        return None, None
 
 
 def convertToNative(

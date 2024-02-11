@@ -156,7 +156,7 @@ def collectionsFromJson(
         if sub_collection_found == 0:
             # print("___ SUB COLLECTION NOT FOUND")
             subCollection = Collection(
-                units="m", collectionType="QGIS Layer Group", name=l, elements=[]
+                units="m", collectionType="ArcGIS Layer Group", name=l, elements=[]
             )
             lastLevel.elements.append(subCollection)
             lastLevel = lastLevel.elements[

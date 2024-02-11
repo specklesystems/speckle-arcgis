@@ -119,20 +119,22 @@ GEOM_LINE_TYPES = [
 
 def convertSelectedLayersToSpeckle(
     baseCollection: Collection,
-    layers: List[Union["QgsVectorLayer", "QgsRasterLayer"]],
+    layers: List,
     tree_structure: List[str],
-    projectCRS: "QgsCoordinateReferenceSystem",
+    projectCRS,
     plugin,
 ) -> List[Union[VectorLayer, RasterLayer]]:
     """Converts the current selected layers to Speckle"""
     dataStorage = plugin.dataStorage
     result = []
     try:
-        project: QgsProject = plugin.project
+        project = plugin.project
 
         ## Generate dictionnary from the list of layers to send
         jsonTree = {}
         for i, layer in enumerate(layers):
+            print("Tree structure: ")
+            print(tree_structure)
             structure = tree_structure[i]
 
             if structure.startswith(SYMBOL):
@@ -145,85 +147,16 @@ def convertSelectedLayersToSpeckle(
             jsonTree = jsonFromList(jsonTree, levels)
 
         for i, layer in enumerate(layers):
-            data_provider_type = (
-                layer.providerType()
-            )  # == ogr, memory, gdal, delimitedtext
-            if data_provider_type in UNSUPPORTED_PROVIDERS:
-                logToUser(
-                    f"Layer '{layer.name()}' has unsupported provider type '{data_provider_type}' and cannot be sent",
-                    level=2,
-                    plugin=plugin.dockwidget,
-                )
-                return None
-
             logToUser(
-                f"Converting layer '{layer.name()}'...",
+                f"Converting layer '{layer.name}'...",
                 level=0,
                 plugin=plugin.dockwidget,
             )
-            try:
-                for item in plugin.dataStorage.savedTransforms:
-                    layer_name = item.split("  ->  ")[0].split(" ('")[0]
-                    transform_name = item.split("  ->  ")[1]
-                    if layer_name == layer.name():
-                        logToUser(
-                            f"Applying transformation to layer '{layer_name}': '{transform_name}'",
-                            level=0,
-                            plugin=plugin.dockwidget,
-                        )
-            except Exception as e:
-                print(e)
-
-            if plugin.dataStorage.savedTransforms is not None:
-                for item in plugin.dataStorage.savedTransforms:
-                    layer_name = item.split("  ->  ")[0].split(" ('")[0]
-                    transform_name = item.split("  ->  ")[1].lower()
-
-                    # check all the conditions for transform
-                    if (
-                        isinstance(layer, QgsVectorLayer)
-                        and layer.name() == layer_name
-                        and "extrude" in transform_name
-                        and "polygon" in transform_name
-                    ):
-                        if plugin.dataStorage.project.crs().isGeographic():
-                            logToUser(
-                                "Extrusion cannot be applied when the project CRS is set to Geographic type",
-                                level=2,
-                                plugin=plugin.dockwidget,
-                            )
-                            return None
-
-                        attribute = None
-                        if " ('" in item:
-                            attribute = item.split(" ('")[1].split("') ")[0]
-                        if (
-                            attribute is None
-                            or str(attribute) not in layer.fields().names()
-                        ) and "ignore" in transform_name:
-                            logToUser(
-                                "Attribute for extrusion not found",
-                                level=2,
-                                plugin=plugin.dockwidget,
-                            )
-                            return None
-
-                    elif (
-                        isinstance(layer, QgsRasterLayer)
-                        and layer.name() == layer_name
-                        and "elevation" in transform_name
-                    ):
-                        if plugin.dataStorage.project.crs().isGeographic():
-                            logToUser(
-                                "Raster layer transformation cannot be applied when the project CRS is set to Geographic type",
-                                level=2,
-                                plugin=plugin.dockwidget,
-                            )
-                            return None
 
             converted = layerToSpeckle(layer, projectCRS, plugin)
             # print(converted)
             if converted is not None:
+                print(tree_structure)
                 structure = tree_structure[i]
                 if structure.startswith(SYMBOL):
                     structure = structure[len(SYMBOL) :]
@@ -236,7 +169,7 @@ def convertSelectedLayersToSpeckle(
                 )
             else:
                 logToUser(
-                    f"Layer '{layer.name()}' conversion failed",
+                    f"Layer '{layer.name}' conversion failed",
                     level=2,
                     plugin=plugin.dockwidget,
                 )
@@ -248,50 +181,59 @@ def convertSelectedLayersToSpeckle(
 
 
 def layerToSpeckle(
-    selectedLayer: Union["QgsVectorLayer", "QgsRasterLayer"],
-    projectCRS: "QgsCoordinateReferenceSystem",
+    selectedLayer: arcLayer,
+    projectCRS,
     plugin,
 ) -> Union[
     VectorLayer, RasterLayer
 ]:  # now the input is QgsVectorLayer instead of qgis._core.QgsLayerTreeLayer
     """Converts a given QGIS Layer to Speckle"""
+    speckleLayer = None
     try:
         # print("___layerToSpeckle")
         dataStorage = plugin.dataStorage
-        project: QgsProject = plugin.project
-        layerName = selectedLayer.name()
+        dataStorage.latestActionFeaturesReport = []
+        project: ArcGISProject = plugin.project
 
-        crs = selectedLayer.crs()
+        try:
+            data = arcpy.Describe(selectedLayer.dataSource)
+        except OSError as e:
+            logToUser(str(e.args[0]), level=2, func=inspect.stack()[0][3])
+            return
+
+        layerName = selectedLayer.name
+        crs = data.SpatialReference
+        units = str(project.activeMap.spatialReference.linearUnitName)
+        layerObjs = []
 
         offset_x = plugin.dataStorage.crs_offset_x
         offset_y = plugin.dataStorage.crs_offset_y
         rotation = plugin.dataStorage.crs_rotation
 
         units_proj = plugin.dataStorage.currentUnits
-        units_layer_native = str(QgsUnitTypes.encodeUnit(crs.mapUnits()))
-
+        units_layer_native = str(crs.linearUnitName)  # "m"
         units_layer = units_layer_native
-        if crs.isGeographic():
-            units_layer = "m"  ## specklepy.logging.exceptions.SpeckleException: SpeckleException: Could not understand what unit degrees is referring to. Please enter a valid unit (eg ['mm', 'cm', 'm', 'in', 'ft', 'yd', 'mi']).
 
+        if crs.type == "Geographic":
+            units_layer = "m"  ## specklepy.logging.exceptions.SpeckleException: SpeckleException: Could not understand what unit degrees is referring to. Please enter a valid unit (eg ['mm', 'cm', 'm', 'in', 'ft', 'yd', 'mi']).
         if "unknown" in units_layer:
             units_layer = "m"  # if no-geometry layer
         layerObjs = []
 
         # Convert CRS to speckle, use the projectCRS
         speckleReprojectedCrs = CRS(
-            authority_id=projectCRS.authid(),
-            name=str(projectCRS.description()),
-            wkt=projectCRS.toWkt(),
+            authority_id=str(projectCRS.factoryCode),
+            name=str(projectCRS.name),
+            wkt=projectCRS.exportToString(),
             units=units_proj,
             offset_x=offset_x,
             offset_y=offset_y,
             rotation=rotation,
         )
         layerCRS = CRS(
-            authority_id=crs.authid(),
-            name=str(crs.description()),
-            wkt=crs.toWkt(),
+            authority_id=str(crs.factoryCode),
+            name=str(crs.name),
+            wkt=crs.exportToString(),
             units=units_layer,
             units_native=units_layer_native,
             offset_x=offset_x,
@@ -299,172 +241,155 @@ def layerToSpeckle(
             rotation=rotation,
         )
 
-        renderer = selectedLayer.renderer()
-        layerRenderer = rendererToSpeckle(renderer)
+        if selectedLayer.isFeatureLayer:
+            print("VECTOR LAYER HERE")
 
-        if isinstance(selectedLayer, QgsVectorLayer):
-            fieldnames = []  # [str(field.name()) for field in selectedLayer.fields()]
-            attributes = Base()
-            for field in selectedLayer.fields():
-                fieldnames.append(str(field.name()))
-                corrected = validateAttributeName(str(field.name()), [])
-                attribute_type = field.type()
-                r"""
-                all_types = [
-                    (1, "bool"), 
-                    (2, "int"),
-                    (6, "decimal"),
-                    (8, "map"),
-                    (9, "int_list"),
-                    (10, "string"),
-                    (11, "string_list"),
-                    (12, "binary"),
-                    (14, "date"),
-                    (15, "time"),
-                    (16, "date_time") 
-                ]
-                for att_type in all_types:
-                    if attribute_type == att_type[0]:
-                        attribute_type = att_type[1]
-                """
-                attributes[corrected] = attribute_type
-
-            extrusionApplied = isAppliedLayerTransformByKeywords(
-                selectedLayer, ["extrude", "polygon"], [], plugin.dataStorage
+            speckleLayer = VectorLayer(units="m")
+            speckleLayer.collectionType = "VectorLayer"
+            speckleLayer.name = layerName
+            speckleLayer.crs = speckleReprojectedCrs
+            speckleLayer.renderer = rendererToSpeckle(
+                project, project.activeMap, selectedLayer, None
             )
 
-            if extrusionApplied is True:
-                if not layerName.endswith("_as_Mesh"):
-                    layerName += "_as_Mesh"
+            try:  # https://pro.arcgis.com/en/pro-app/2.8/arcpy/get-started/the-spatial-reference-object.htm
 
-            geomType = getLayerGeomType(selectedLayer)
-            features = selectedLayer.getFeatures()
-
-            elevationLayer = getElevationLayer(plugin.dataStorage)
-            projectingApplied = isAppliedLayerTransformByKeywords(
-                selectedLayer,
-                ["extrude", "polygon", "project", "elevation"],
-                [],
-                plugin.dataStorage,
-            )
-            if projectingApplied is True and elevationLayer is None:
-                logToUser(
-                    f"Elevation layer is not found. Layer '{selectedLayer.name()}' will not be projected on a 3d elevation.",
-                    level=1,
-                    plugin=plugin.dockwidget,
-                )
-
-            # write features
-            all_errors_count = 0
-            for i, f in enumerate(features):
-                dataStorage.latestActionFeaturesReport.append(
-                    {"feature_id": str(i + 1), "obj_type": "", "errors": ""}
-                )
-                b = featureToSpeckle(
-                    fieldnames,
-                    f,
-                    geomType,
-                    selectedLayer,
-                    plugin.dataStorage,
-                )
-                # if b is None: continue
-
+                # print(data.datasetType) # FeatureClass
                 if (
-                    extrusionApplied is True
-                    and isinstance(b, GisPolygonElement)
-                    and isinstance(b.geometry, list)
-                ):
-                    # b.attributes["Speckle_ID"] = str(i+1) # not needed
-                    for g in b.geometry:
-                        if g is not None and g != "None":
-                            # remove native polygon props, if extruded:
-                            g.boundary = None
-                            g.voids = None
+                    data.datasetType == "FeatureClass"
+                ):  # FeatureClass, ?Table Properties, ?Datasets
 
-                if isinstance(b, Base):
-                    b.applicationId = generate_qgis_app_id(b, selectedLayer, f)
+                    # write feature attributes
+                    fieldnames = [field.name for field in data.fields]
+                    rows_shapes = arcpy.da.SearchCursor(
+                        selectedLayer.dataSource, "Shape@"
+                    )  # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
+                    print("__ start iterating features")
+                    row_shapes_list = [x for k, x in enumerate(rows_shapes)]
+                    for i, features in enumerate(row_shapes_list):
 
-                layerObjs.append(b)
-                if (
-                    dataStorage.latestActionFeaturesReport[
-                        len(dataStorage.latestActionFeaturesReport) - 1
-                    ]["errors"]
-                    != ""
-                ):
-                    all_errors_count += 1
+                        print(
+                            "____error Feature # " + str(i + 1)
+                        )  # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
+                        if features[0] is None:
+                            continue
+                        feat = features[0]
+                        # print(feat) # <geoprocessing describe geometry object object at 0x000002A75D6A4BD0>
+                        # print(feat.hasCurves)
+                        # print(feat.partCount)
 
-            # Convert layer to speckle
-            layerBase = VectorLayer(
-                units=units_proj,
-                applicationId=hashlib.md5(
-                    selectedLayer.id().encode("utf-8")
-                ).hexdigest(),
-                name=layerName,
-                crs=speckleReprojectedCrs,
-                elements=layerObjs,
-                attributes=attributes,
-                geomType=geomType,
-            )
-            if all_errors_count == 0:
-                dataStorage.latestActionReport.append(
-                    {
-                        "feature_id": layerName,
-                        "obj_type": layerBase.speckle_type,
-                        "errors": "",
-                    }
-                )
-            else:
-                dataStorage.latestActionReport.append(
-                    {
-                        "feature_id": layerName,
-                        "obj_type": layerBase.speckle_type,
-                        "errors": f"{all_errors_count} features failed",
-                    }
-                )
-            for item in dataStorage.latestActionFeaturesReport:
-                dataStorage.latestActionReport.append(item)
+                        if feat is not None:
+                            print(
+                                feat
+                            )  # <geoprocessing describe geometry object object at 0x0000026796C47780>
+                            rows_attributes = arcpy.da.SearchCursor(
+                                selectedLayer.dataSource, fieldnames
+                            )
+                            row_attr = []
+                            for k, attrs in enumerate(rows_attributes):
+                                if i == k:
+                                    row_attr = attrs
+                                    break
 
-            layerBase.renderer = layerRenderer
-            # layerBase.applicationId = selectedLayer.id()
+                            # if curves detected, createa new feature class, turn to segments and get the same feature but in straigt lines
+                            # print(feat.hasCurves)
+                            if feat.hasCurves:
+                                # f_class_modified = curvedFeatureClassToSegments(layer)
+                                # rows_shapes_modified = arcpy.da.SearchCursor(f_class_modified, "Shape@")
+                                # row_shapes_list_modified = [x for k, x in enumerate(rows_shapes_modified)]
 
-            return layerBase
+                                feat = feat.densify("ANGLE", 1000, 0.12)
+                                # print(feat)
 
-        elif isinstance(selectedLayer, QgsRasterLayer):
-            # write feature attributes
-            b = rasterFeatureToSpeckle(selectedLayer, projectCRS, project, plugin)
-            b.applicationId = generate_qgis_raster_app_id(selectedLayer)
-            if b is None:
-                dataStorage.latestActionReport.append(
-                    {
-                        "feature_id": layerName,
-                        "obj_type": "Raster Layer",
-                        "errors": "Layer failed to send",
-                    }
-                )
+                            all_errors_count = 0
+                            dataStorage.latestActionFeaturesReport.append(
+                                {"feature_id": str(i + 1), "obj_type": "", "errors": ""}
+                            )
+                            b = featureToSpeckle(
+                                fieldnames,
+                                row_attr,
+                                i,
+                                feat,
+                                projectCRS,
+                                selectedLayer,
+                                plugin,
+                            )
+                            if b is not None:
+                                layerObjs.append(b)
+                                print(b)
+
+                            if (
+                                dataStorage.latestActionFeaturesReport[
+                                    len(dataStorage.latestActionFeaturesReport) - 1
+                                ]["errors"]
+                                != ""
+                            ):
+                                all_errors_count += 1
+                        else:
+                            logToUser(
+                                "Feature skipped due to invalid geometry",
+                                level=2,
+                                func=inspect.stack()[0][3],
+                            )
+
+                        print("____End of Feature # " + str(i + 1))
+
+                    print("__ finish iterating features")
+                    speckleLayer.elements = layerObjs
+                    speckleLayer.geomType = data.shapeType
+
+                    if len(speckleLayer.elements) == 0:
+                        return None
+
+                    # layerBase.renderer = layerRenderer
+                    # layerBase.applicationId = selectedLayer.id()
+
+                if all_errors_count == 0:
+                    dataStorage.latestActionReport.append(
+                        {
+                            "feature_id": layerName,
+                            "obj_type": speckleLayer.speckle_type,
+                            "errors": "",
+                        }
+                    )
+                else:
+                    dataStorage.latestActionReport.append(
+                        {
+                            "feature_id": layerName,
+                            "obj_type": speckleLayer.speckle_type,
+                            "errors": f"{all_errors_count} features failed",
+                        }
+                    )
+                for item in dataStorage.latestActionFeaturesReport:
+                    dataStorage.latestActionReport.append(item)
+
+            except OSError as e:
+                logToUser(str(e), level=2, func=inspect.stack()[0][3])
                 return None
-            layerObjs.append(b)
-            # Convert layer to speckle
-            layerBase = RasterLayer(
-                units=units_proj,
-                applicationId=hashlib.md5(
-                    selectedLayer.id().encode("utf-8")
-                ).hexdigest(),
-                name=layerName,
-                crs=speckleReprojectedCrs,
-                rasterCrs=layerCRS,
-                elements=layerObjs,
-            )
-            dataStorage.latestActionReport.append(
-                {
-                    "feature_id": layerName,
-                    "obj_type": layerBase.speckle_type,
-                    "errors": "",
-                }
+
+        elif selectedLayer.isRasterLayer:
+            print("RASTER IN DA HOUSE")
+            print(selectedLayer.name)  # London_square.tif
+            print(
+                arcpy.Describe(selectedLayer.dataSource)
+            )  # <geoprocessing describe data object object at 0x000002507C7F3BB0>
+            print(arcpy.Describe(selectedLayer.dataSource).datasetType)  # RasterDataset
+            b = rasterFeatureToSpeckle(layer, projectCRS, project)
+            if b is not None:
+                layerObjs.append(b)
+
+            speckleLayer = RasterLayer(units="m", type="RasterLayer")
+            speckleLayer.name = layerName
+            speckleLayer.crs = speckleReprojectedCrs
+            speckleLayer.rasterCrs = layerCRS
+            speckleLayer.collectionType = "RasterLayer"
+            # speckleLayer.geomType="Raster"
+            speckleLayer.elements = layerObjs
+
+            speckleLayer.renderer = rendererToSpeckle(
+                project, project.activeMap, selectedLayer, b
             )
 
-            layerBase.renderer = layerRenderer
-            # layerBase.applicationId = selectedLayer.id()
-            return layerBase
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
         dataStorage.latestActionReport.append(
@@ -475,6 +400,7 @@ def layerToSpeckle(
             }
         )
         return None
+    return speckleLayer
 
 
 def layerToNative(

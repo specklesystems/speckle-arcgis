@@ -75,11 +75,6 @@ def featureToSpeckle(
             return None
         print(layer_sr.name)
         print(projectCRS.name)
-        f_shape = findTransformation(
-            f_shape, geomType, layer_sr, projectCRS, selectedLayer
-        )
-        if f_shape is None:
-            return None
 
         ######################################### Convert geometry ##########################################
         try:
@@ -376,6 +371,7 @@ def rasterFeatureToSpeckle(
     print("_________ Raster feature to speckle______")
     b = Base(units="m")
     try:
+        dataStorage = plugin.project.dataStorage
         # https://pro.arcgis.com/en/pro-app/latest/arcpy/classes/raster-object.htm
 
         # get Raster object of entire raster dataset
@@ -423,7 +419,7 @@ def rasterFeatureToSpeckle(
                 )
                 if reprojectedPt is None:
                     reprojectedPt = rasterOriginPoint
-            geom = pointToSpeckle(reprojectedPt.getPart(), None, None)
+            geom = pointToSpeckle(reprojectedPt.getPart(), None, None, dataStorage)
             if geom != None:
                 b["displayValue"] = [geom]
             print(geom)

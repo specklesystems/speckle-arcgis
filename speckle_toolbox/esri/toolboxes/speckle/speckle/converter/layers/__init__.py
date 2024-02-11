@@ -50,6 +50,7 @@ from speckle.speckle.converter.layers.utils import (
 from speckle.speckle.plugin_utils.helpers import (
     validateNewFclassName,
     removeSpecialCharacters,
+    SYMBOL,
 )
 from speckle.speckle.utils.panel_logging import logToUser
 
@@ -83,19 +84,19 @@ GEOM_LINE_TYPES = [
 
 
 def getAllProjLayers(plugin) -> List[arcLayer]:
-    print("get all project layers")
+    # print("get all project layers")
     layers = []
     try:
         project: ArcGISProject = plugin.project
         if project.activeMap is not None and isinstance(
             project.activeMap, Map
         ):  # if project loaded
-            print(type(project.activeMap))
+            # print(type(project.activeMap))
             for layer in project.activeMap.listLayers():
                 if (layer.isFeatureLayer) or layer.isRasterLayer:
                     layers.append(layer)  # type: 'arcpy._mp.Layer'
         else:
-            print(type(project.activeMap))
+            # print(type(project.activeMap))
             logToUser(
                 "Cannot get Project layers, Project Active Map not loaded or not selected",
                 level=1,
@@ -108,9 +109,12 @@ def getAllProjLayers(plugin) -> List[arcLayer]:
     return layers
 
 
-def getLayers(plugin, bySelection=False) -> List[arcLayer]:
+def getLayersWithStructure(
+    plugin, bySelection=False
+) -> Tuple[List[arcLayer], List[str]]:
     """Gets a list of all layers in the map"""
     layers = []
+    structure = []
     try:
         print("___ get layers list ___")
 
@@ -125,13 +129,13 @@ def getLayers(plugin, bySelection=False) -> List[arcLayer]:
                 level=2,
                 func=inspect.stack()[0][3],
             )
-            return None
+            return None, None
 
         if bySelection is True:  # by selection
-            print("get selected layers")
+            # print("get selected layers")
             for layer in project.activeMap.listLayers():
 
-                print(layer.longName)
+                # print(layer.longName)
                 if layer.visible and ((layer.isFeatureLayer) or layer.isRasterLayer):
 
                     # find possible nested groups
@@ -145,7 +149,12 @@ def getLayers(plugin, bySelection=False) -> List[arcLayer]:
                                 break
                     if layerGroupsHidden == 0:
                         layers.append(layer)
-            print("layers selected and saved")
+                        structure.append(
+                            ("\\".join(layer.longName.split("\\")[:-1]) + "\\").replace(
+                                "\\", SYMBOL
+                            )
+                        )
+            # print("layers selected and saved")
         else:  # from project data
             # all_layers_ids = [l.id() for l in project.mapLayers().values()]
             for item in plugin.dataStorage.current_layers:
@@ -160,6 +169,11 @@ def getLayers(plugin, bySelection=False) -> List[arcLayer]:
                     for l in all_layers:
                         if l.dataSource == layerPath:
                             layers.append(l)
+                            structure.append(
+                                "\\".join(l.longName.split("\\")[:-1] + "\\").replace(
+                                    "\\", SYMBOL
+                                )
+                            )
                             found += 1
                             break
                     if found == 0:
@@ -178,7 +192,7 @@ def getLayers(plugin, bySelection=False) -> List[arcLayer]:
                     continue
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
-    return layers
+    return layers, structure
 
 
 def convertSelectedLayers(
@@ -239,7 +253,7 @@ def layerToSpeckle(
 
         layerName = layer.name
         crs = data.SpatialReference
-        units = str(project.activeMap.spatialReference.linearUnitName) #"m"
+        units = str(project.activeMap.spatialReference.linearUnitName)  # "m"
         layerObjs = []
 
         # Convert CRS to speckle, use the projectCRS

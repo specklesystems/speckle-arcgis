@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from typing import Any, List, Tuple, Union
+import colorsys
 import copy
 import os
 
@@ -43,9 +44,17 @@ def jsonFromLayerStyle(layerArcgis, path_style):
 def symbol_color_to_speckle(color: dict):
     newColor = (0 << 16) + (0 << 8) + 0
     try:
-        r = int(color["RGB"][0])
-        g = int(color["RGB"][1])
-        b = int(color["RGB"][2])
+        print(color)
+        if "RGB" in color:
+            r = int(color["RGB"][0])
+            g = int(color["RGB"][1])
+            b = int(color["RGB"][2])
+        elif "HSV" in color:
+            rgba = colorsys.hsv_to_rgb(359, 100, 100)
+            r = int(rgba[0])
+            g = int(rgba[1])
+            b = int(rgba[2])
+
         newColor = (r << 16) + (g << 8) + b
     except Exception as e:
         logToUser(str(e), level=1, func=inspect.stack()[0][3])
