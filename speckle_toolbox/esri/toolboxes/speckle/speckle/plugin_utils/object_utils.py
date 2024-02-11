@@ -48,12 +48,18 @@ def traverseObject(
             except KeyError:
                 continue
 
-            if nameBase == SYMBOL + "ArcGIS commit":
+            if (
+                nameBase == SYMBOL + "ArcGIS commit"
+                or nameBase == SYMBOL + "QGIS commit"
+            ):
                 name_pass = getBaseValidName(base, name)
             else:
                 name_pass = nameBase + SYMBOL + getBaseValidName(base, name)
             # check again
-            if name_pass == SYMBOL + "ArcGIS commit":
+            if (
+                name_pass == SYMBOL + "ArcGIS commit"
+                or nameBase == SYMBOL + "QGIS commit"
+            ):
                 name_pass = ""
 
             traverseValue(plugin, base[name], callback, check, streamBranch, name_pass)

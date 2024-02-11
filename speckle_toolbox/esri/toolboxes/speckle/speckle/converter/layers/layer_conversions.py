@@ -1314,7 +1314,6 @@ def addCadMainThread(obj: Tuple):
         except:
             layerName = layerName + ("_as_" + geom_print)
         finalName = shortName + ("_as_" + geom_print)
-
         try:
             groupName = streamBranch + SYMBOL + layerName.split(finalName)[0]
         except:
@@ -1358,7 +1357,6 @@ def addCadMainThread(obj: Tuple):
             f'{newGroupName.split("_")[len(newGroupName.split("_"))-1]}_{layerName}'
         )
         newName = newName.split(SYMBOL)[-1]
-
         all_layer_names = []
         for l in project.activeMap.listLayers():
             if l.longName.startswith(newGroupName + "\\"):
@@ -1507,6 +1505,7 @@ def addCadMainThread(obj: Tuple):
                 vl2 = l
                 break
         print(vl2)
+
         path_lyr = cadBimRendererToNative(
             project, active_map, layerGroup, fetColors, vl2, f_class, heads
         )
@@ -1588,15 +1587,16 @@ def addVectorMainThread(obj: Tuple):
             addTableMainThread(obj)
             return
 
+        geom_print = geomType
+
         vl = None
         project: ArcGISProject = plugin.project
-        layerName = removeSpecialCharacters(layer.name)
+
         layer_elements = layer.elements
         if layer_elements is None or len(layer_elements) == 0:
             layer_elements = layer.features
         # print(layer.elements)
         # print(layer.features)
-        print(layerName)
         sr = arcpy.SpatialReference(text=layer.crs.wkt)
         active_map = project.activeMap
         path = (
@@ -1605,7 +1605,44 @@ def addVectorMainThread(obj: Tuple):
         # if not os.path.exists(path): os.makedirs(path)
         # print(path)
 
-        newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
+        newName = removeSpecialCharacters(nameBase + SYMBOL + layer.name) + "_Speckle"
+        if "." in newName:
+            newName = ".".join(newName.split(".")[:-1])
+
+        shortName = newName.split(SYMBOL)[len(newName.split(SYMBOL)) - 1][:50]
+        # print(f"Final short name: {shortName}")
+        try:
+            layerName = newName.split(shortName)[0] + shortName  # + ("_" + geom_print)
+        except:
+            layerName = newName
+        finalName = shortName
+        try:
+            groupName = streamBranch + SYMBOL + layerName.split(finalName)[0]
+        except:
+            groupName = streamBranch + SYMBOL + layerName
+
+        layerGroup = None
+        newGroupName = groupName  # f"{streamBranch}"
+        print(newGroupName)
+        layerGroup = tryCreateGroupTree(project, groupName, plugin)
+
+        # find ID of the layer with a matching name in the "latest" group
+        newName = (
+            f'{newGroupName.split("_")[len(newGroupName.split("_"))-1]}_{layerName}'
+        )
+        newName = newName.split(SYMBOL)[-1]
+
+        dataStorage.latestActionLayers.append(finalName)
+
+        all_layer_names = []
+        for l in project.activeMap.listLayers():
+            if l.longName.startswith(newGroupName + "\\"):
+                all_layer_names.append(l.longName)
+
+        longName = newGroupName + "\\" + newName
+        newName = validateNewFclassName(newName, all_layer_names, newGroupName + "\\")
+
+        # newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
 
         print(geomType)
         if "polygon" in geomType.lower():
@@ -1764,13 +1801,19 @@ def addVectorMainThread(obj: Tuple):
             active_map.addLayerToGroup(layerGroup, vl)
         except Exception as e:
             logToUser("Layer not added: " + str(e), level=2, func=inspect.stack()[0][3])
+
         vl2 = None
         print(newName)
+        newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
+            SYMBOL + SYMBOL, SYMBOL
+        )
+        print(newGroupName.replace(SYMBOL, "\\") + newName)
         for l in project.activeMap.listLayers():
-            # print(l.longName)
-            if l.longName == layerGroup.longName + "\\" + newName:
+            print(l.longName)
+            if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 vl2 = l
                 break
+
         path_lyr = vectorRendererToNative(
             project, active_map, layerGroup, layer, vl2, f_class, heads
         )
@@ -1840,21 +1883,54 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
             plugin.workspace
         )  # project.filePath.replace("aprx","gdb") #"\\".join(project.filePath.split("\\")[:-1]) + "\\speckle_layers\\" #arcpy.env.workspace + "\\" #
 
-        newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
+        # newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
         newFields = getLayerAttributes(layer_elements)
+
+        newName = removeSpecialCharacters(nameBase + SYMBOL + layer.name) + "_Speckle"
+
+        shortName = newName.split(SYMBOL)[len(newName.split(SYMBOL)) - 1][:50]
+        # print(f"Final short name: {shortName}")
+        try:
+            layerName = newName.split(shortName)[0] + shortName  # + ("_" + geom_print)
+        except:
+            layerName = newName
+        finalName = shortName
+        try:
+            groupName = streamBranch + SYMBOL + layerName.split(finalName)[0]
+        except:
+            groupName = streamBranch + SYMBOL + layerName
+
+        layerGroup = None
+        newGroupName = groupName  # f"{streamBranch}"
+        print(newGroupName)
+        layerGroup = tryCreateGroupTree(project, groupName, plugin)
+
+        # find ID of the layer with a matching name in the "latest" group
+        newName = (
+            f'{newGroupName.split("_")[len(newGroupName.split("_"))-1]}_{layerName}'
+        )
+        newName = newName.split(SYMBOL)[-1]
+
+        dataStorage.latestActionLayers.append(finalName)
+
+        all_classes = arcpy.ListFeatureClasses()
+        class_name = f"table_{streamBranch.split(SYMBOL)[0]}_" + validateNewFclassName(
+            newName, all_classes
+        )
+        print(class_name)
 
         keys = list(newFields.keys())
         fields = [
             key.replace(" ", "_") for key in keys
         ]  # spaces will be replaced to underscore anyway
-        table_path = path + "\\" + newName
+        table_path = path + "\\" + class_name
         table = None
 
-        print(fields)
+        # print(fields)
 
         if newName not in arcpy.ListTables():
             try:
-                table = CreateTable(path, newName)
+                table = CreateTable(path, class_name)
                 for field in fields:
                     arcpy.management.AddField(table, field, "TEXT")
                 r"""
@@ -1874,13 +1950,13 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
                 raise e
         else:
             for item in arcpy.ListTables():
-                if item == newName:
+                if item == class_name:
                     table = item
                     print(table)
                     break
         if table is None:
             logToUser(
-                f"Error creating a table '{newName}'",
+                f"Error creating a table '{class_name}'",
                 level=1,
                 func=inspect.stack()[0][3],
             )
@@ -1992,9 +2068,35 @@ def addRasterMainThread(obj: Tuple):
         active_map = project.activeMap
         sr = arcpy.SpatialReference(text=layer.crs.wkt)
 
-        newName, layerGroup = newLayerGroupAndName(layer.name, streamBranch, project)
+        # newName, layerGroup = newLayerGroupAndName(layer.name, streamBranch, project)
+        # newName = layer.name
+
+        newName = removeSpecialCharacters(nameBase + SYMBOL + layer.name) + "_Speckle"
         if "." in newName:
             newName = ".".join(newName.split(".")[:-1])
+
+        shortName = newName.split(SYMBOL)[len(newName.split(SYMBOL)) - 1][:50]
+        # print(f"Final short name: {shortName}")
+        try:
+            layerName = newName.split(shortName)[0] + shortName  # + ("_" + geom_print)
+        except:
+            layerName = newName
+        finalName = shortName
+        try:
+            groupName = streamBranch + SYMBOL + layerName.split(finalName)[0]
+        except:
+            groupName = streamBranch + SYMBOL + layerName
+
+        layerGroup = None
+        newGroupName = groupName  # f"{streamBranch}"
+        print(newGroupName)
+        layerGroup = tryCreateGroupTree(project, groupName, plugin)
+
+        # find ID of the layer with a matching name in the "latest" group
+        newName = (
+            f'{newGroupName.split("_")[len(newGroupName.split("_"))-1]}_{layerName}'
+        )
+        newName = newName.split(SYMBOL)[-1]
 
         ###
         plugin.dataStorage.currentUnits = layer.crs.units
@@ -2188,9 +2290,14 @@ def addRasterMainThread(obj: Tuple):
         active_map.addLayerToGroup(layerGroup, rasterLayer)
 
         rl2 = None
-        for l in active_map.listLayers():
-            if l.longName == layerGroup.longName + "\\" + newName:
-                print(l.longName)
+        print(newName)
+        newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
+            SYMBOL + SYMBOL, SYMBOL
+        )
+        print(newGroupName.replace(SYMBOL, "\\") + newName)
+        for l in project.activeMap.listLayers():
+            print(l.longName)
+            if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 rl2 = l
                 break
         rasterLayer = rasterRendererToNative(

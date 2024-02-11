@@ -173,7 +173,7 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugi
     print("find And Clear LayerGroup")
     try:
         groupExists = 0
-        print(newGroupName)
+        # print(newGroupName)
         for l in project.activeMap.listLayers():
             # print(l.longName)
             if l.longName.startswith(newGroupName + "\\"):
@@ -181,7 +181,7 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugi
                 if l.isFeatureLayer:
                     # condition for feature layers:
                     fields = [f.name for f in arcpy.ListFields(l.dataSource)]
-                    print(fields)
+                    # print(fields)
                     if "Speckle_ID" in fields or "speckle_id" in fields:
                         project.activeMap.removeLayer(l)
                         groupExists += 1
@@ -193,7 +193,7 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugi
 
             elif l.longName == newGroupName:
                 groupExists += 1
-        print(newGroupName)
+        # print(newGroupName)
         if groupExists == 0:
             layerGroup = create_layer_group(project, newGroupName, plugin)
 
@@ -211,7 +211,7 @@ def create_layer_group(project: ArcGISProject, newGroupName: str, plugin):
         path += "\\Layers_Speckle\\"
         findOrCreatePath(path)
         lyr_path = path + newGroupName + ".lyrx"
-        print(lyr_path)
+        # print(lyr_path)
         r"""
         try:
             f = open(lyr_path, "w")
@@ -228,13 +228,13 @@ def create_layer_group(project: ArcGISProject, newGroupName: str, plugin):
             print("try creating the group")
             # check for full match
             for l in project.activeMap.listLayers():
-                print(newGroupName + "  __  " + l.longName)
+                # print(newGroupName + "  __  " + l.longName)
                 if l.longName == newGroupName:
                     layerGroup = l
                     return layerGroup
-            # check for parent layer 
+            # check for parent layer
             for l in project.activeMap.listLayers():
-                print(newGroupName + "  __  " + l.longName)
+                # print(newGroupName + "  __  " + l.longName)
                 if l.longName == "\\".join(newGroupName.split("\\")[:-1]):
                     short_name = newGroupName.split("\\")[-1]
                     new_group = project.activeMap.createGroupLayer(short_name)
@@ -242,14 +242,14 @@ def create_layer_group(project: ArcGISProject, newGroupName: str, plugin):
                     project.activeMap.removeLayer(new_group)
                     # find the layer again
                     for sub_group in project.activeMap.listLayers():
-                        print(sub_group.longName)
+                        # print(sub_group.longName)
                         if sub_group.longName == newGroupName:
                             new_group = sub_group
                             break
                     return new_group
 
             layerGroup = project.activeMap.createGroupLayer(newGroupName)
-            print(layerGroup)
+            # print(layerGroup)
             return layerGroup
         else:
             logToUser(
@@ -315,18 +315,18 @@ def getDisplayValueList(geom: Any) -> List:
             try:
                 val = geom.displayValue  # list
             except Exception as e:
-                #print(e)
+                # print(e)
                 try:
                     val = geom["@displayValue"]  # list
                 except Exception as e:
-                    #print(e)
+                    # print(e)
                     try:
                         val = geom.displayMesh
                     except:
                         pass
         return val
     except Exception as e:
-        #print(e)
+        # print(e)
         return []
 
 

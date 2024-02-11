@@ -993,8 +993,8 @@ def featureToNative(
             feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
         else:
             return None
-        print(arcGisGeom)
-        print(feat)
+        #print(arcGisGeom)
+        #print(feat)
         for key, variant in fields.items():
             value = None
             try:
