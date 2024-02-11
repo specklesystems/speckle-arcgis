@@ -91,16 +91,21 @@ def anyLineToSpeckle(geom, feature, layer, dataStorage, xform_vars=None):
         # multiType = feature.isMultipart
 
         # if multiType is False:
-        if geom.hasCurves:
-            print("has curves")
-            # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
-            # print(geom.JSON)
-            new_geom = geom.densify("GEODESIC", 0.1)
-            f_shape = findTransformation(new_geom, *xform_vars)
-            if f_shape is None:
-                return None
-        else:
+        try:
+            if geom.hasCurves:
+                print("has curves")
+                # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
+                # print(geom.JSON)
+                new_geom = geom.densify("GEODESIC", 0.1)
+                if xform_vars is not None:
+                    f_shape = findTransformation(new_geom, *xform_vars)
+                    if f_shape is None:
+                        return None
+            else:
+                new_geom = geom
+        except:  # no curves
             new_geom = geom
+
         print(new_geom)  # describe geometry object
         for p in new_geom:
             print(p)  # array
@@ -159,7 +164,8 @@ def polylineFromVerticesToSpeckle(
     """Converts a Polyline to Speckle"""
     polyline = Polyline(units="m")
     try:
-
+        print("__polylineFromVerticesToSpeckle")
+        print(vertices)
         if isinstance(vertices, list):
             if len(vertices) > 0 and isinstance(vertices[0], Point):
                 specklePts = vertices

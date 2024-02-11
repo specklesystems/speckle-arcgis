@@ -1531,7 +1531,9 @@ def addVectorMainThread(obj: Tuple):
         # if not os.path.exists(path): os.makedirs(path)
         # print(path)
 
-        newName = removeSpecialCharacters(nameBase + SYMBOL + layer.name) + "_Speckle"
+        newName = removeSpecialCharacters(
+            nameBase + SYMBOL + layer.name
+        )  # + "_Speckle"
         if "." in newName:
             newName = ".".join(newName.split(".")[:-1])
 
@@ -1812,7 +1814,9 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
         # newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
         newFields = getLayerAttributes(layer_elements)
 
-        newName = removeSpecialCharacters(nameBase + SYMBOL + layer.name) + "_Speckle"
+        newName = removeSpecialCharacters(
+            nameBase + SYMBOL + layer.name
+        )  # + "_Speckle"
 
         shortName = newName.split(SYMBOL)[len(newName.split(SYMBOL)) - 1][:50]
         # print(f"Final short name: {shortName}")

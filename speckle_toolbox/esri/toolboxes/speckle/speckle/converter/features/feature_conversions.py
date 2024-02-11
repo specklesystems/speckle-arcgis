@@ -72,11 +72,6 @@ def featureToSpeckle(
             )
             return None
 
-        # if geomType == "None":
-        #    geom = GisNonGeometryElement()
-        #    new_report = {"obj_type": geom.speckle_type, "errors": ""}
-        # else:
-        # Try to extract geometry
         skipped_msg = f"'{geomType}' feature skipped due to invalid geometry"
         try:
             geom, iterations = convertToSpeckle(
@@ -123,6 +118,11 @@ def featureToSpeckle(
             else:  # geom is None
                 new_report = {"obj_type": "", "errors": skipped_msg}
                 logToUser(skipped_msg, level=2, func=inspect.stack()[0][3])
+
+                dataStorage.latestActionFeaturesReport[
+                    len(dataStorage.latestActionFeaturesReport) - 1
+                ].update(new_report)
+                return
                 # geom = GisNonGeometryElement()
         except Exception as error:
             new_report = {
@@ -135,12 +135,12 @@ def featureToSpeckle(
                 func=inspect.stack()[0][3],
             )
 
-        #print(fieldnames)
-        #print(attr_list)
+        # print(fieldnames)
+        # print(attr_list)
         attributes = Base()
         for i, name in enumerate(fieldnames):
             corrected = validateAttributeName(name, fieldnames)
-            #print(corrected)
+            # print(corrected)
             f_val = attr_list[i]
             if f_val == "NULL" or f_val is None or str(f_val) == "NULL":
                 f_val = None
@@ -156,7 +156,7 @@ def featureToSpeckle(
 
         # if geom is not None and geom!="None":
         geom.attributes = attributes
-        #print(geom.attributes)
+        # print(geom.attributes)
 
         dataStorage.latestActionFeaturesReport[
             len(dataStorage.latestActionFeaturesReport) - 1

@@ -102,9 +102,7 @@ def convertToSpeckle(
 
         elif geomType == "Multipoint":
             print("__Multipoint conversion")
-            f_shape = findTransformation(
-                feature, geomType, layer_sr, projectCRS, layer
-            )
+            f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
             if f_shape is None:
                 return None
             result = [
@@ -118,90 +116,59 @@ def convertToSpeckle(
 
         elif geomType == "Polyline":
             print("__Polyline conversion")
-            if feature.partCount == 1:
-                result = anyLineToSpeckle(
-                    feature, feature, layer, dataStorage, xform_vars
-                )
-                result = addCorrectUnits(result, dataStorage)
-                result = [result]
-            else:
-                all_parts = []
-                for part in feature.getPart():
-                    all_parts.append(
-                        arcpy.Polyline(
-                            part,
-                            arcpy.Describe(layer.dataSource).SpatialReference,
-                            has_z=True,
-                        )
+            # if feature.partCount == 1:
+            #    result = anyLineToSpeckle(
+            #        feature, feature, layer, dataStorage, xform_vars
+            #    )
+            #    result = addCorrectUnits(result, dataStorage)
+            #    result = [result]
+            # else:
+            all_parts = []
+            for part in feature.getPart():
+                all_parts.append(
+                    arcpy.Polyline(
+                        part,
+                        arcpy.Describe(layer.dataSource).SpatialReference,
+                        has_z=True,
                     )
-                result = [
-                    anyLineToSpeckle(poly, feature, layer, dataStorage, xform_vars)
-                    for poly in all_parts
-                ]
-                for r in result:
-                    r = addCorrectUnits(r, dataStorage)
+                )
+            result = [
+                anyLineToSpeckle(poly, feature, layer, dataStorage, xform_vars)
+                for poly in all_parts
+            ]
+            for r in result:
+                r = addCorrectUnits(r, dataStorage)
 
             element = GisLineElement(units=units, geometry=result)
 
         elif geomType == "Polygon":
             print("__Polygon conversion")
-            if feature.partCount > 1:
-
-                for i, x in enumerate(feature):
-                    polygon, iterations = polygonToSpeckle(
-                        poly,
-                        feature,
-                        layer,
-                        height,
-                        translationZaxis,
-                        dataStorage,
-                        xform,
-                    )
-                    result.append(polygon)
-                for r in result:
-                    if r is None:
-                        continue
-                    r.units = units
-                    r.boundary.units = units
-                    for v in r.voids:
-                        if v is not None:
-                            v.units = units
-                    for v in r.displayValue:
-                        if v is not None:
-                            v.units = units
-
-                element = GisPolygonElement(units=units, geometry=result)
+            # if feature.partCount > 1:
+            r"""
+            if feature.partCount == 1:
+                result = polygonToSpeckle(
+                    feature, feature, index, layer, dataStorage, xform_vars
+                )
+                result = [result]
 
             else:
-                # return polygonToSpeckle(geom, index, layer, geomMultiType, dataStorage)
+            """
+            result = [
+                polygonToSpeckle(geom, feature, index, layer, dataStorage, xform_vars)
+                for geom in feature.getPart()
+            ]
 
-                result, iterations = polygonToSpeckle(
-                    feature,
-                    feature,
-                    layer,
-                    height,
-                    translationZaxis,
-                    dataStorage,
-                    xform,
-                )
-                if result is None:
-                    return None, None
-                result.units = units
-                if result.boundary is not None:
-                    result.boundary.units = units
-                for v in result.voids:
+            for r in result:
+                if r is None:
+                    continue
+                r.units = units
+                r.boundary.units = units
+                for v in r.voids:
                     if v is not None:
                         v.units = units
-                try:  # if mesh creation failed, displayValue stays None
-                    for v in result.displayValue:
-                        if v is not None:
-                            v.units = units
-                except:
-                    pass
-
-                if not isinstance(result, List):
-                    result = [result]
-
+                for v in r.displayValue:
+                    if v is not None:
+                        v.units = units
             element = GisPolygonElement(units=units, geometry=result)
 
         elif geomType == "MultiPatch":
