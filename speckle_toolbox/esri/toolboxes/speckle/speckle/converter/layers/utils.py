@@ -237,15 +237,15 @@ def create_layer_group(project: ArcGISProject, newGroupName: str, plugin):
                 # print(newGroupName + "  __  " + l.longName)
                 if l.longName == "\\".join(newGroupName.split("\\")[:-1]):
                     short_name = newGroupName.split("\\")[-1]
-                    new_group = project.activeMap.createGroupLayer(short_name)
-                    project.activeMap.addLayerToGroup(l, new_group)
-                    project.activeMap.removeLayer(new_group)
+                    new_group = project.activeMap.createGroupLayer(short_name, l)
+                    # project.activeMap.addLayerToGroup(l, new_group)
+                    # project.activeMap.removeLayer(new_group)
                     # find the layer again
-                    for sub_group in project.activeMap.listLayers():
-                        # print(sub_group.longName)
-                        if sub_group.longName == newGroupName:
-                            new_group = sub_group
-                            break
+                    # for sub_group in project.activeMap.listLayers():
+                    #    # print(sub_group.longName)
+                    #    if sub_group.longName == newGroupName:
+                    #        new_group = sub_group
+                    #        break
                     return new_group
 
             layerGroup = project.activeMap.createGroupLayer(newGroupName)

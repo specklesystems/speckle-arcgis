@@ -1911,13 +1911,12 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
         )
         newName = newName.split(SYMBOL)[-1]
 
-        dataStorage.latestActionLayers.append(finalName)
-
         all_classes = arcpy.ListFeatureClasses()
         class_name = f"table_{streamBranch.split(SYMBOL)[0]}_" + validateNewFclassName(
             newName, all_classes
         )
         print(class_name)
+        dataStorage.latestActionLayers.append(class_name)
 
         keys = list(newFields.keys())
         fields = [

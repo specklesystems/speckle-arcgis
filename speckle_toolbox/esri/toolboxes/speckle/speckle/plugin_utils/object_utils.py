@@ -58,7 +58,7 @@ def traverseObject(
             # check again
             if (
                 name_pass == SYMBOL + "ArcGIS commit"
-                or nameBase == SYMBOL + "QGIS commit"
+                or name_pass == SYMBOL + "QGIS commit"
             ):
                 name_pass = ""
 
