@@ -13,8 +13,8 @@ import inspect
 
 
 def logToUser(msg: str, func=None, level: int = 2, plugin=None, url="", blue=False):
-    print("Log to user")
-    print(msg)
+    # print("Log to user")
+    # print(msg)
 
     msg = str(msg)
     dockwidget = plugin

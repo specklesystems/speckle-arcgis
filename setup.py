@@ -45,7 +45,6 @@ setup(
             "esri/toolboxes/speckle/specklepy_qt_ui/qt_ui/ui/*",
             "esri/toolboxes/speckle/specklepy_qt_ui/qt_ui/utils/*",
             "esri/toolboxes/speckle/specklepy_qt_ui/qt_ui/utils/assets/*",
-            "esri/toolboxes/speckle/ui/*",
             "esri/toolboxes/speckle/ui_widgets/*",
         ]
     },
