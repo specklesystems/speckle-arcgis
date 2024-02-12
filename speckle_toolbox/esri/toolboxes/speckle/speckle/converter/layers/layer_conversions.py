@@ -6,6 +6,7 @@ import enum
 import inspect
 import hashlib
 import math
+import random
 from typing import List, Tuple, Union
 
 import os
@@ -993,11 +994,13 @@ def addBimMainThread(obj: Tuple):
         all_layer_names = []
         for l in project.activeMap.listLayers():
             if l.longName.startswith(newGroupName + "\\"):
-                all_layer_names.append(l.longName)
+                all_layer_names.append(l.shortName)
         # print(all_layer_names)
 
         longName = newGroupName + "\\" + newName
-        newName = validateNewFclassName(newName, all_layer_names, newGroupName + "\\")
+        newName = validateNewFclassName(
+            newName, all_layer_names
+        )  # , newGroupName + "\\")
 
         # newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
         # newName_shp = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}/{finalName[:30]}'
@@ -1054,8 +1057,9 @@ def addBimMainThread(obj: Tuple):
         validated_class_name = validated_class_path.split("\\")[
             len(validated_class_path.split("\\")) - 1
         ]
-        validated_class_name = validateNewFclassName(validated_class_name, all_layer_names, newGroupName + "\\")
 
+        all_classes = arcpy.ListFeatureClasses()
+        validated_class_name = validateNewFclassName(validated_class_name, all_classes)
         print(validated_class_name)
         # print(validated_class_name)
 
@@ -1258,7 +1262,10 @@ def addBimMainThread(obj: Tuple):
             del cur
 
         print("create layer:")
-        vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+        vl = MakeFeatureLayer(
+            str(f_class), "x" + str(random.randint(100000, 500000))
+        ).getOutput(0)
+        vl.name = newName
 
         active_map.addLayerToGroup(layerGroup, vl)
         # print("created2")
@@ -1422,14 +1429,18 @@ def addCadMainThread(obj: Tuple):
         all_layer_names = []
         for l in project.activeMap.listLayers():
             if l.longName.startswith(newGroupName + "\\"):
-                all_layer_names.append(l.longName)
+                all_layer_names.append(l.shortName)
         # print(all_layer_names)
 
         longName = newGroupName + "\\" + newName
-        newName = validateNewFclassName(newName, all_layer_names, newGroupName + "\\")
+        newName = validateNewFclassName(
+            newName, all_layer_names
+        )  # , newGroupName + "\\")
 
         # print(geomType)
         class_name = "f_class_" + newName
+        all_classes = arcpy.ListFeatureClasses()
+        class_name = validateNewFclassName(class_name, all_classes)
         f_class = CreateFeatureclass(
             path, class_name, geomType, has_z="ENABLED", spatial_reference=sr
         )
@@ -1547,7 +1558,11 @@ def addCadMainThread(obj: Tuple):
             except Exception as e:
                 print(e)
         del cur
-        vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+        # vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+        vl = MakeFeatureLayer(
+            str(f_class), "x" + str(random.randint(100000, 500000))
+        ).getOutput(0)
+        vl.name = newName
 
         # adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
         # active_map.addLayer(new_layer)
@@ -1701,10 +1716,12 @@ def addVectorMainThread(obj: Tuple):
         all_layer_names = []
         for l in project.activeMap.listLayers():
             if l.longName.startswith(newGroupName + "\\"):
-                all_layer_names.append(l.longName)
+                all_layer_names.append(l.shortName)
 
         longName = newGroupName + "\\" + newName
-        newName = validateNewFclassName(newName, all_layer_names, newGroupName + "\\")
+        newName = validateNewFclassName(
+            newName, all_layer_names
+        )  # , newGroupName + "\\")
 
         # newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
 
@@ -1734,8 +1751,6 @@ def addVectorMainThread(obj: Tuple):
         except arcgisscripting.ExecuteError as e:
             # print(e)
             all_classes = arcpy.ListFeatureClasses()
-            # print("All classes: ")
-            # print(all_classes)
             class_name = validateNewFclassName(class_name, all_classes)
             f_class = CreateFeatureclass(
                 path, class_name, geomType, has_z="ENABLED", spatial_reference=sr
@@ -1856,7 +1871,11 @@ def addVectorMainThread(obj: Tuple):
             cur.insertRow(tuple(row))
         del cur
 
-        vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+        # vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
+        vl = MakeFeatureLayer(
+            str(f_class), "x" + str(random.randint(100000, 500000))
+        ).getOutput(0)
+        vl.name = newName
         # print(vl)
 
         # adding layers from code solved: https://gis.stackexchange.com/questions/344343/arcpy-makefeaturelayer-management-function-not-creating-feature-layer-in-arcgis
