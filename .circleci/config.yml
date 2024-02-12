@@ -8,6 +8,54 @@ orbs:
   aws-s3: circleci/aws-s3@2.0.0
 
 jobs:
+  get-ci-tools: # Clones our ci tools and persists them to the workspace
+    docker:
+      - image: cimg/base:2021.01
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "77:64:03:93:c5:f3:1d:a6:fd:bd:fb:d1:05:56:ca:e9"
+      - run:
+          name: I know Github as a host
+          command: |
+            mkdir ~/.ssh
+            touch ~/.ssh/known_hosts
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+      - run:
+          name: Clone
+          command: git clone git@github.com:specklesystems/speckle-sharp-ci-tools.git speckle-sharp-ci-tools
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - speckle-sharp-ci-tools
+
+  get-ui: # Clones our ci tools and persists them to the workspace
+    docker:
+      - image: cimg/base:2021.01
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "d1:d5:96:4d:ed:58:6e:7f:58:cc:21:5f:94:20:76:49"
+      - run:
+          name: I know Github as a host
+          command: |
+            mkdir ~/.ssh
+            touch ~/.ssh/known_hosts
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+      - run:
+          name: Clone
+          command:  |
+            git clone git@github.com:specklesystems/specklepy_qt_ui.git specklepy_qt_ui
+      - run:
+          name: Remove Git Artifacts
+          command: |
+            rm -rf ./specklepy_qt_ui/.git/
+            rm ./specklepy_qt_ui/.gitignore
+      - persist_to_workspace:
+          root: ./
+          paths:
+            - specklepy_qt_ui
+
   build-connector-win: # Reusable job for basic connectors
     executor:
       name: win/default # comes with python 3.7.3
@@ -56,6 +104,7 @@ jobs:
                 paths:
                   - speckle-sharp-ci-tools/Installers
                   - speckle_arcgis_installer
+
   publish-github-release:
     docker:
       - image: cimg/go:1.20.0
@@ -70,27 +119,6 @@ jobs:
             VERSION="${CIRCLE_TAG:-0.0.0}"
             VERSION_SHORT=$(echo "${VERSION}" | cut -d- -f1)
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete "${VERSION}" "./speckle_arcgis_installer/speckle_toolbox-${VERSION_SHORT}-py3-none-any.whl"
-
-  get-ci-tools: # Clones our ci tools and persists them to the workspace
-    docker:
-      - image: cimg/base:2021.01
-    steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "77:64:03:93:c5:f3:1d:a6:fd:bd:fb:d1:05:56:ca:e9"
-      - run:
-          name: I know Github as a host
-          command: |
-            mkdir ~/.ssh
-            touch ~/.ssh/known_hosts
-            ssh-keyscan github.com >> ~/.ssh/known_hosts
-      - run:
-          name: Clone
-          command: git clone git@github.com:specklesystems/speckle-sharp-ci-tools.git speckle-sharp-ci-tools
-      - persist_to_workspace:
-          root: ./
-          paths:
-            - speckle-sharp-ci-tools
 
   deploy-manager2:
     docker:
@@ -115,56 +143,54 @@ jobs:
             TAG=$(if [ "${CIRCLE_TAG}" ]; then echo $CIRCLE_TAG; else echo "0.0.0"; fi;)
             SEMVER=$(echo "$TAG" | sed -e 's/\/[a-zA-Z-]*//')
             /root/.dotnet/tools/Speckle.Manager.Feed deploy -s << parameters.slug >> -v ${SEMVER} -u https://releases.speckle.dev/installers/<< parameters.slug >>/<< parameters.slug >>-${SEMVER}.<< parameters.extension >> -o << parameters.os >> -f speckle-sharp-ci-tools/Installers/<< parameters.slug >>/<< parameters.slug >>-${SEMVER}.<< parameters.extension >>
+
 workflows: #happens with every PR to main
   build: # build the installers, but don't persist to workspace for deployment
     jobs:
+      - get-ui:
+          context: github-dev-bot
+          filters: &build_filters
+            branches:
+              only:
+                - main
+                - /ci\/.*/
       - get-ci-tools:
           context: github-dev-bot
-          filters:
-            branches:
-              only:
-                - main
-                - /ci\/.*/
+          filters: *build_filters
       - build-connector-win:
           requires:
+            - get-ui
             - get-ci-tools
-          filters:
-            branches:
-              only:
-                - main
-                - /ci\/.*/
+          filters: *build_filters
           context: innosetup
 
   deploy: # build installers and deploy
     jobs:
-      - get-ci-tools:
+      - get-ui:
           context: github-dev-bot
-          filters:
+          filters: &deploy_filters
             tags:
-              only: /.*/
+              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
             branches:
               ignore: /.*/
+
+      - get-ci-tools:
+          context: github-dev-bot
+          filters: *deploy_filters
 
       - build-connector-win:
           name: build-deploy-connector-win
           slug: arcgis
           installer: true
           requires:
+            - get-ui
             - get-ci-tools
-          filters:
-            tags:
-              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
-            branches:
-              ignore: /.*/
+          filters: *deploy_filters
           context: innosetup
       - publish-github-release:
           requires:
             - build-deploy-connector-win
-          filters:
-            tags:
-              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
-            branches:
-              ignore: /.*/
+          filters: *deploy_filters
           context: arcgis-github-release
       - deploy-manager2:
           slug: arcgis
@@ -172,9 +198,5 @@ workflows: #happens with every PR to main
           extension: exe
           requires:
             - build-deploy-connector-win
-          filters:
-            tags:
-              only: /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-\w+)?$/
-            branches:
-              ignore: /.*/ # For testing only! /ci\/.*/
+          filters: *deploy_filters
           context: do-spaces-speckle-releases

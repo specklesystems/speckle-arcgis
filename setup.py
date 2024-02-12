@@ -17,7 +17,7 @@ def read(fname):
 setup(
     name="speckle_toolbox",
     author="SpeckleSystems",
-			version="2.9.9",
+    version="0.0.99",
     author_email="connectors@speckle.systems",
     url="https://speckle.systems/",
     description=("Example for extending geoprocessing through Python modules"),
@@ -33,7 +33,6 @@ setup(
             "esri/help/gp/messages/*",
             "esri/toolboxes/*",
             "esri/toolboxes/speckle/*",
-            "esri/toolboxes/speckle/plugin_utils/*",
             "esri/toolboxes/speckle/speckle/*",
             "esri/toolboxes/speckle/speckle/converter/*",
             "esri/toolboxes/speckle/speckle/converter/features/*",
@@ -42,6 +41,10 @@ setup(
             "esri/toolboxes/speckle/speckle/plugin_utils/*",
             "esri/toolboxes/speckle/speckle/utils/*",
             "esri/toolboxes/speckle/specklepy_qt_ui/*",
+            "esri/toolboxes/speckle/specklepy_qt_ui/qt_ui/*",
+            "esri/toolboxes/speckle/specklepy_qt_ui/qt_ui/ui/*",
+            "esri/toolboxes/speckle/specklepy_qt_ui/qt_ui/utils/*",
+            "esri/toolboxes/speckle/specklepy_qt_ui/qt_ui/utils/assets/*",
             "esri/toolboxes/speckle/ui/*",
             "esri/toolboxes/speckle/ui_widgets/*",
         ]

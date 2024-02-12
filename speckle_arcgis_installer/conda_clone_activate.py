@@ -11,6 +11,7 @@ from subprocess_call import subprocess_call
 import sys
 
 ENV_NEW_NAME = "arcgispro-py3-speckle"
+PROSWAP = "proswap"
 
 
 def setup():
@@ -69,6 +70,12 @@ def clone_env(pythonExec_old: str):
         "Pro\\bin\\Python\\envs\\arcgispro-py3\\python.exe",
         "Pro\\bin\\Python\\Scripts\\conda.exe",
     )  # %PROGRAMFILES%\ArcGIS\Pro\bin\Python\Scripts\conda.exe #base: %PROGRAMDATA%\Anaconda3\condabin\conda.bat
+    global PROSWAP
+    PROSWAP = conda_exe.replace(
+        "conda.exe",
+        "proswap.bat",
+    )
+    print(PROSWAP)
     new_env = install_folder + "\\" + ENV_NEW_NAME  # %LOCALAPPDATA%\ESRI\conda\envs\...
 
     # first check if venv invalid:
@@ -79,7 +86,10 @@ def clone_env(pythonExec_old: str):
     ):
         # delete existing venv
         print(f"Removing invalid environment {new_env}")
-        os.remove(new_env)
+        try:
+            os.remove(new_env)
+        except PermissionError as e:
+            print(e)
     elif (
         os.path.exists(conda_exe)
         and os.path.exists(default_env)
@@ -92,18 +102,6 @@ def clone_env(pythonExec_old: str):
         )  # will not execute if already exists
         subprocess_call([conda_exe, "config", "--set", "ssl_verify", "True"])
 
-    r"""
-    # repair venv: https://pro.arcgis.com/en/pro-app/3.1/arcpy/get-started/repair-an-environment.htm
-    # upgrade venv with conda: https://pro.arcgis.com/en/pro-app/3.1/arcpy/get-started/upgrade-an-environment.htm
-    elif (
-        os.path.exists(conda_exe)
-        and os.path.exists(default_env)
-        and os.path.exists(new_env)
-        and os.path.exists(new_env + "\\python.exe")
-    ):
-        print(f"Environment {new_env} already exists, upgrading ..")
-        subprocess_call([conda_exe, "proup", "-n", ENV_NEW_NAME])
-    """
     # final check
     if os.path.exists(new_env) and os.path.exists(new_env + "\\python.exe"):
         print("Preparing to install packages..")
@@ -114,12 +112,14 @@ def clone_env(pythonExec_old: str):
 
 def activate_env():
     # using Popen, because process does not return result; subprocess.run will hang indefinitely
-    variable = subprocess.Popen(
-        (f"proswap {ENV_NEW_NAME}"),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+    # print(os.environ["TMPDIR"])
+    my_env = os.environ.copy()
+    print(PROSWAP)
+    # my_env["TMPDIR"] = r"C:\Users\katri\AppData\Roaming\Speckle\connector_installations"
+    pop = subprocess.Popen(
+        (f"{PROSWAP} {ENV_NEW_NAME}"),
         text=True,
-        shell=True,
+        env=my_env,
     )
     # activate new env : https://support.esri.com/en/technical-article/000024206
 
@@ -127,7 +127,7 @@ def activate_env():
 def installToolbox(newExec: str):
     print("Installing Speckle Toolbox")
     whl_file = os.path.join(
-        os.path.dirname(__file__), "speckle_toolbox-2.9.9-py3-none-any.whl"
+        os.path.dirname(__file__), "speckle_toolbox-2.9.99-py3-none-any.whl"
     )
     print(whl_file)
     subprocess_call(
