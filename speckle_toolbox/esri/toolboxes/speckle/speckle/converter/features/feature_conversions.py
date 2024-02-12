@@ -796,6 +796,7 @@ def featureToNative(
     feature: Base, fields: dict, geomType: str, sr: arcpy.SpatialReference, dataStorage
 ):
     print("04_____Feature To Native correct____________")
+    print(feature)
     feat = {}
     try:
         try:
@@ -819,8 +820,8 @@ def featureToNative(
             feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
         else:
             return None
-        #print(arcGisGeom)
-        #print(feat)
+        # print(arcGisGeom)
+        # print(feat)
         for key, variant in fields.items():
             value = None
             try:
@@ -832,7 +833,7 @@ def featureToNative(
                             feature["speckle_id"]
                         )  # if GIS already generated this field
                     except Exception as e:
-                        print(e)
+                        # print(e)
                         value = str(feature["id"])
                 else:
                     # print(key)

@@ -73,7 +73,7 @@ def updateFeat(feat: dict, fields: dict, feature: Base) -> Union[Dict[str, Any],
                                                 break
                                         feat = addFeatVariant(key, variant, value, feat)
                                 except Exception as e:
-                                    print(e)
+                                    pass  # print(e)
                         # except: # if not a list
                         else:
                             try:

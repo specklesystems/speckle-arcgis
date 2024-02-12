@@ -224,14 +224,16 @@ def convertToNative(
             (Ellipse, ellipseToNative),
             # (Mesh, meshToNative),
             (Polycurve, polycurveToNative),
-            (
-                Base,
-                multiPolygonToNative,
-            ),  # temporary solution for polygons (Speckle has no type Polygon yet)
+            # temporary solution for polygons (Speckle has no type Polygon yet)
         ]
 
         for conversion in conversions:
+            if isinstance(base, conversion[0]):
+                # print(conversion[0])
+                converted = conversion[1](base, sr, dataStorage)
+                break
 
+        if converted is None:
             # distinguish normal QGIS polygons and the ones sent as Mesh only
             try:
                 if isinstance(base, GisPolygonGeometry):
@@ -243,10 +245,8 @@ def convertToNative(
                             converted = meshToNative(
                                 base["@displayValue"], sr, dataStorage
                             )
-                        break
-                    elif isinstance(base, conversion[0]):
-                        converted = conversion[1](base, dataStorage)
-                        break
+                    else: 
+                        converted = multiPolygonToNative(base, sr, dataStorage)
                 else:
                     # for older commits
                     boundary = base.boundary  # will throw exception if not polygon
@@ -257,10 +257,8 @@ def convertToNative(
                             converted = meshToNative(
                                 base["@displayValue"], sr, dataStorage
                             )
-                        break
                     elif boundary is not None and isinstance(base, conversion[0]):
-                        converted = conversion[1](base, dataStorage)
-                        break
+                        converted = multiPolygonToNative(base, sr, dataStorage)
 
             except (
                 Exception
@@ -282,12 +280,10 @@ def convertToNative(
                                 base["@displayValue"], sr, dataStorage
                             )  # only called for Meshes created in QGIS before
 
-                except:  # any other object
-                    if isinstance(base, conversion[0]):
-                        # print(conversion[0])
-                        converted = conversion[1](base, sr, dataStorage)
-                        break
-        # print(converted)
+                except:  # any other object(
+                    pass 
+        if converted is None:
+            converted = multiPolygonToNative(base, sr, dataStorage)
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return converted

@@ -357,20 +357,20 @@ def rasterRendererToNative(
     try:
         renderer = layer.renderer
         rendererNew = None
-        print(renderer)
+        #print(renderer)
 
         layer_elements = layer.elements
         if layer_elements is None or len(layer_elements) == 0:
             layer_elements = layer.features
         feat = layer_elements[0]
-        print(feat)
+        #print(feat)
 
         sym = arcLayer.symbology
         symJson = None
         path_style = ""
         path_style2 = ""
 
-        print(sym)
+        #print(sym)
 
         if renderer and renderer["type"]:
 
@@ -462,7 +462,7 @@ def rasterRendererToNative(
                     except:
                         symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] = 0
 
-                    print(symJson)
+                    #print(symJson)
                     f = open(path_style2, "w")
                     f.write(json.dumps(symJson, indent=2))
                     f.close()
@@ -479,7 +479,7 @@ def rasterRendererToNative(
 
                 if symJson is None:
                     for br in sym.colorizer.groups:
-                        print(br.heading)  # "Value"
+                        #print(br.heading)  # "Value"
                         # go through all values classified
                         for k, itm in enumerate(br.items):
                             if k < len(renderer["properties"]["classes"]):

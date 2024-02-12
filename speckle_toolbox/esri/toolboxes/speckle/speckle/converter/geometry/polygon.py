@@ -455,9 +455,10 @@ def multiPolygonToNative(
                 full_array_list.extend(
                     geomPart
                 )  # outlines are written one by one, with no separation to "parts"
-                print(full_array_list)  # array of points
+                # print(full_array_list)  # array of points
+
             # print("end of loop1")
-        print("end of loop2")
+        # print("end of loop2")
         geomPartArray = arcpy.Array(full_array_list)
         polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
 
@@ -466,4 +467,3 @@ def multiPolygonToNative(
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
 
     return polygon
-

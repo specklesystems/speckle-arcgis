@@ -392,7 +392,7 @@ def trySaveCRS(crs, streamBranch: str = ""):
 def getLayerAttributes(
     featuresList: List[Base], attrsToRemove: List[str] = ATTRS_REMOVE
 ) -> Dict[str, str]:
-    print("03________ get layer attributes")
+    # print("03________ get layer attributes")
     fields = {}
     try:
         if not isinstance(featuresList, list):

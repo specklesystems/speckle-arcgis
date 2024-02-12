@@ -87,7 +87,6 @@ from speckle.speckle.converter.layers.utils import (
     tryCreateGroupTree,
     trySaveCRS,
     validateAttributeName,
-    getLayerAttributes,
     newLayerGroupAndName,
     validate_path,
     findTransformation,
@@ -134,8 +133,8 @@ def convertSelectedLayersToSpeckle(
         ## Generate dictionnary from the list of layers to send
         jsonTree = {}
         for i, layer in enumerate(layers):
-            print("Tree structure: ")
-            print(tree_structure)
+            # print("Tree structure: ")
+            # print(tree_structure)
             structure = tree_structure[i]
 
             if structure.startswith(SYMBOL):
@@ -157,7 +156,7 @@ def convertSelectedLayersToSpeckle(
             converted = layerToSpeckle(layer, projectCRS, plugin)
             # print(converted)
             if converted is not None:
-                print(tree_structure)
+                # print(tree_structure)
                 structure = tree_structure[i]
                 if structure.startswith(SYMBOL):
                     structure = structure[len(SYMBOL) :]
@@ -265,11 +264,11 @@ def layerToSpeckle(
                     rows_shapes = arcpy.da.SearchCursor(
                         selectedLayer.dataSource, "Shape@"
                     )  # arcpy.da.SearchCursor(in_table, field_names, {where_clause}, {spatial_reference}, {explode_to_points}, {sql_clause})
-                    print("__ start iterating features")
+                    # print("__ start iterating features")
                     row_shapes_list = [x for k, x in enumerate(rows_shapes)]
                     for i, features in enumerate(row_shapes_list):
 
-                        print(
+                        # print(
                             "____error Feature # " + str(i + 1)
                         )  # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
                         if features[0] is None:
@@ -280,7 +279,7 @@ def layerToSpeckle(
                         # print(feat.partCount)
 
                         if feat is not None:
-                            print(
+                            # print(
                                 feat
                             )  # <geoprocessing describe geometry object object at 0x0000026796C47780>
                             rows_attributes = arcpy.da.SearchCursor(
@@ -317,7 +316,7 @@ def layerToSpeckle(
                             )
                             if b is not None:
                                 layerObjs.append(b)
-                                print(b)
+                                # print(b)
 
                             if (
                                 dataStorage.latestActionFeaturesReport[
@@ -333,9 +332,9 @@ def layerToSpeckle(
                                 func=inspect.stack()[0][3],
                             )
 
-                        print("____End of Feature # " + str(i + 1))
+                        # print("____End of Feature # " + str(i + 1))
 
-                    print("__ finish iterating features")
+                    # print("__ finish iterating features")
                     speckleLayer.elements = layerObjs
                     speckleLayer.geomType = data.shapeType
 
@@ -370,11 +369,11 @@ def layerToSpeckle(
 
         elif selectedLayer.isRasterLayer:
             print("RASTER HERE")
-            print(selectedLayer.name)  # London_square.tif
-            print(
-                arcpy.Describe(selectedLayer.dataSource)
-            )  # <geoprocessing describe data object object at 0x000002507C7F3BB0>
-            print(arcpy.Describe(selectedLayer.dataSource).datasetType)  # RasterDataset
+            # print(selectedLayer.name)  # London_square.tif
+            #print(
+            #    arcpy.Describe(selectedLayer.dataSource)
+            #)  # <geoprocessing describe data object object at 0x000002507C7F3BB0>
+            # print(arcpy.Describe(selectedLayer.dataSource).datasetType)  # RasterDataset
             b = rasterFeatureToSpeckle(selectedLayer, projectCRS, plugin)
 
             if b is None:
@@ -1046,7 +1045,7 @@ def addBimMainThread(obj: Tuple):
         dataStorage.matrix = None
         if shp is None:
             return
-        print("____ meshes saved___")
+        # print("____ meshes saved___")
 
         cursor = arcpy.da.SearchCursor(shp, "Speckle_ID")
         class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
@@ -1060,7 +1059,7 @@ def addBimMainThread(obj: Tuple):
 
         all_classes = arcpy.ListFeatureClasses()
         validated_class_name = validateNewFclassName(validated_class_name, all_classes)
-        print(validated_class_name)
+        # print(validated_class_name)
         # print(validated_class_name)
 
         path = plugin.workspace  # project.filePath.replace("aprx","gdb") #
@@ -1251,9 +1250,9 @@ def addBimMainThread(obj: Tuple):
                         cur.updateRow(rowShape)
                         shp_num += 1
                 except Exception as e:
-                    print("Layer attr error: " + str(e))
-                    print(shp_num)
-                    print(len(rowValues))
+                    # print("Layer attr error: " + str(e))
+                    # print(shp_num)
+                    # print(len(rowValues))
                     logToUser(
                         "Layer attribute error: " + e,
                         level=2,
@@ -1702,7 +1701,7 @@ def addVectorMainThread(obj: Tuple):
 
         layerGroup = None
         newGroupName = groupName  # f"{streamBranch}"
-        #print(newGroupName)
+        # print(newGroupName)
         layerGroup = tryCreateGroupTree(project, groupName, plugin)
 
         # find ID of the layer with a matching name in the "latest" group
@@ -1725,7 +1724,7 @@ def addVectorMainThread(obj: Tuple):
 
         # newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
 
-        #print(geomType)
+        # print(geomType)
         if "polygon" in geomType.lower():
             geomType = "Polygon"
         if "line" in geomType.lower() or "curve" in geomType.lower():
@@ -1819,7 +1818,7 @@ def addVectorMainThread(obj: Tuple):
         if len(matrix) > 0:
             AddFields(str(f_class), matrix)
 
-        #print(layer_elements)
+        # print(layer_elements)
         fets = []
         report_features = []
         all_feature_errors_count = 0
@@ -1842,7 +1841,7 @@ def addVectorMainThread(obj: Tuple):
                 )
                 all_feature_errors_count += 1
 
-        #print(fets)
+        # print(fets)
         if len(fets) == 0:
             return None
         count = 0
@@ -1888,13 +1887,13 @@ def addVectorMainThread(obj: Tuple):
             logToUser("Layer not added: " + str(e), level=2, func=inspect.stack()[0][3])
 
         vl2 = None
-        #print(newName)
+        # print(newName)
         newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
             SYMBOL + SYMBOL, SYMBOL
         )
-        #print(newGroupName.replace(SYMBOL, "\\") + newName)
+        # print(newGroupName.replace(SYMBOL, "\\") + newName)
         for l in project.activeMap.listLayers():
-            #print(l.longName)
+            # print(l.longName)
             if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 vl2 = l
                 break
@@ -1961,7 +1960,7 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
             report_features.append(
                 {"speckle_id": f.id, "obj_type": f.speckle_type, "errors": ""}
             )
-        print(layerName)
+        # print(layerName)
         sr = arcpy.SpatialReference(text=layer.crs.wkt)  # (text=layer.crs.wkt)
         active_map = project.activeMap
         path = (
@@ -1989,7 +1988,7 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
 
         layerGroup = None
         newGroupName = groupName  # f"{streamBranch}"
-        print(newGroupName)
+        # print(newGroupName)
         layerGroup = tryCreateGroupTree(project, groupName, plugin)
 
         # find ID of the layer with a matching name in the "latest" group
@@ -2002,7 +2001,7 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
         class_name = f"table_{streamBranch.split(SYMBOL)[0]}_" + validateNewFclassName(
             newName, all_classes
         )
-        print(class_name)
+        # print(class_name)
         dataStorage.latestActionLayers.append(class_name)
 
         keys = list(newFields.keys())
@@ -2038,7 +2037,7 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
             for item in arcpy.ListTables():
                 if item == class_name:
                     table = item
-                    print(table)
+                    # print(table)
                     break
         if table is None:
             logToUser(
@@ -2078,7 +2077,7 @@ def addTableMainThread(obj: Tuple) -> Union[str, None]:
         del cursor
 
         try:
-            print(table)
+            # print(table)
             active_map.addTableToGroup(layerGroup, table)
         except Exception as e:
             logToUser("Layer not added: " + str(e), level=2, func=inspect.stack()[0][3])
@@ -2175,7 +2174,7 @@ def addRasterMainThread(obj: Tuple):
 
         layerGroup = None
         newGroupName = groupName  # f"{streamBranch}"
-        print(newGroupName)
+        # print(newGroupName)
         layerGroup = tryCreateGroupTree(project, groupName, plugin)
 
         # find ID of the layer with a matching name in the "latest" group
@@ -2208,13 +2207,8 @@ def addRasterMainThread(obj: Tuple):
         finalName = shortName  # + ("_" + geom_print)
         dataStorage.latestActionLayers.append(finalName)
 
-        ###
-
         layerName = removeSpecialCharacters(layer.name) + "_Speckle"
-
-        print(layerName)
         rasterHasSr = False
-        print(path)
 
         p: str = (
             os.path.expandvars(r"%LOCALAPPDATA%")
@@ -2232,7 +2226,6 @@ def addRasterMainThread(obj: Tuple):
         except:
             srRasterWkt = str(layer.crs.wkt)
             srRaster: arcpy.SpatialReference = sr  # by layer
-        print(srRaster)
 
         layer_elements = layer.elements
         if layer_elements is None or len(layer_elements) == 0:
@@ -2248,7 +2241,6 @@ def addRasterMainThread(obj: Tuple):
             xres = float(feat["X resolution"])
             yres = float(feat["Y resolution"])
             bandsCount = int(feat["Band count"])
-            print(bandsCount)
             noDataVals = feat["NoDataVal"]
         except:
             bandNames = feat.band_names
@@ -2259,7 +2251,6 @@ def addRasterMainThread(obj: Tuple):
             xres = float(feat.x_resolution)
             yres = float(feat.y_resolution)
             bandsCount = int(feat.band_count)
-            print(bandsCount)
             noDataVals = feat.noDataValue
 
         try:
@@ -2268,7 +2259,6 @@ def addRasterMainThread(obj: Tuple):
             originPt = arcpy.Point(
                 feat["displayValue"][0].x, feat["displayValue"][0].y, 0
             )
-        print(originPt)
         # if source projection is different from layer display projection, convert display OriginPt to raster source projection
         if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
             originPt = findTransformation(
@@ -2278,36 +2268,28 @@ def addRasterMainThread(obj: Tuple):
                 srRaster,
                 None,
             ).getPart()
-        print(originPt)
 
         bandDatasets = ""
         rastersToMerge = []
         rasterPathsToMerge = []
 
-        arcpy.env.workspace = path
         arcpy.env.overwriteOutput = True
         # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/composite-bands.htm
 
         for i in range(bandsCount):
-            print(i)
-            print(bandNames[i])
+            # print(i)
+            # print(bandNames[i])
             rasterbandPath = (
                 path_bands + "\\" + newName + "_Band_" + str(i + 1) + ".tif"
             )
             bandDatasets += rasterbandPath + ";"
             rasterband = np.array(bandValues[i])
             rasterband = np.reshape(rasterband, (ysize, xsize))
-            print(rasterband)
-            print(np.shape(rasterband))
-            print(xsize)
-            print(xres)
-            print(ysize)
-            print(yres)
             leftLowerCorner = arcpy.Point(
                 originPt.X, originPt.Y + (ysize * yres), originPt.Z
             )
             # upperRightCorner = arcpy.Point(originPt.X + (xsize*xres), originPt.Y, originPt.Z)
-            print(leftLowerCorner)
+            #print(leftLowerCorner)
             # print(upperRightCorner)
 
             # # Convert array to a geodatabase raster, add to layers
@@ -2327,35 +2309,31 @@ def addRasterMainThread(obj: Tuple):
             rasterbandPath = validate_path(
                 rasterbandPath, plugin
             )  # solved file saving issue
-            print(rasterbandPath)
+            #print(rasterbandPath)
             # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
             myRaster.save(rasterbandPath)
 
-            print(myRaster.width)
-            print(myRaster.height)
-
             rastersToMerge.append(myRaster)
             rasterPathsToMerge.append(rasterbandPath)
-            print(rasterbandPath)
 
         # mergedRaster.setProperty("spatialReference", crsRaster)
-
         full_path = validate_path(
             path + "\\" + newName, plugin
         )  # solved file saving issue
-        print("RASTER FULL PATH")
-        print(full_path)
+
         if os.path.exists(full_path):
             # print(full_path)
             for index, letter in enumerate("1234567890abcdefghijklmnopqrstuvwxyz"):
-                print(full_path + letter)
+                # print(full_path + letter)
                 if os.path.exists(full_path + letter):
                     pass
                 else:
                     full_path += letter
                     break
-        print("RASTER new PATH")
-        print(full_path)
+        newName = full_path.split("\\")[-1]
+        # print("RASTER new PATH")
+        # print(full_path)
+        # print(rasterPathsToMerge)
         # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
         # mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
 
@@ -2364,7 +2342,7 @@ def addRasterMainThread(obj: Tuple):
         except:  # if already exists
             full_path += "_"
             arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
-        print(path + "\\" + newName)
+        # print(path + "\\" + newName)
         arcpy.management.DefineProjection(full_path, srRaster)
 
         rasterLayer = arcpy.management.MakeRasterLayer(full_path, newName).getOutput(0)
@@ -2372,17 +2350,18 @@ def addRasterMainThread(obj: Tuple):
         #    rasterLayer,
         #    nodata=[[i, noDataVals[i] for i in range(bandsCount)],
         # )
-        print(layerGroup)
+        # print(rasterLayer)
+        #print(layerGroup)
         active_map.addLayerToGroup(layerGroup, rasterLayer)
 
         rl2 = None
-        print(newName)
+        #print(newName)
         newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
             SYMBOL + SYMBOL, SYMBOL
         )
-        print(newGroupName.replace(SYMBOL, "\\") + newName)
+        #print(newGroupName.replace(SYMBOL, "\\") + newName)
         for l in project.activeMap.listLayers():
-            print(l.longName)
+            #print(l.longName)
             if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 rl2 = l
                 break
