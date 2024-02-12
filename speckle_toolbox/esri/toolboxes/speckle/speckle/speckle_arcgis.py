@@ -182,7 +182,7 @@ class SpeckleGIS:
     def __init__(self):
         """Constructor."""
         print("Start SpeckleGIS")
-        self.version = "0.0.99"
+        self.version = "2.9.9"
         try:
             version = arcpy.GetInstallInfo()["Version"]
             python_version = f"python {'.'.join(map(str, sys.version_info[:2]))}"
