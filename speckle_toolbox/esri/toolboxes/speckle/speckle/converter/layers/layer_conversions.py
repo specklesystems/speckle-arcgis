@@ -375,7 +375,7 @@ def layerToSpeckle(
             )  # <geoprocessing describe data object object at 0x000002507C7F3BB0>
             print(arcpy.Describe(selectedLayer.dataSource).datasetType)  # RasterDataset
             b = rasterFeatureToSpeckle(selectedLayer, projectCRS, plugin)
-            
+
             if b is None:
                 dataStorage.latestActionReport.append(
                     {
@@ -385,7 +385,7 @@ def layerToSpeckle(
                     }
                 )
                 return None
-            
+
             layerObjs.append(b)
 
             # Convert layer to speckle
@@ -909,29 +909,18 @@ def bimVectorLayerToNative(
 ):
     print("02_________BIM vector layer to native_____")
     try:
-        # project: QgsProject = plugin.project
-        # print(layerName_old)
+        project = plugin.project
+        active_map = project.activeMap
 
         layerName = layerName_old  # [:50]
         layerName = removeSpecialCharacters(layerName)
-        # print(layerName)
-
-        # get Project CRS, use it by default for the new received layer
-        vl = None
-        # layerName = layerName + "_" + geomType
-        # print(layerName)
-
-        if "mesh" in geomType.lower():
-            geomType = "MultiPolygonZ"
 
         newFields = getLayerAttributes(geomList)
-        # print("___________Layer fields_____________")
-        # print(newFields.toList())
 
         plugin.dockwidget.signal_2.emit(
             {
                 "plugin": plugin,
-                "geomType": geomType,
+                "geomType": "Multipatch",
                 "layerName": layerName,
                 "layer_id": val_id,
                 "streamBranch": streamBranch,
@@ -962,20 +951,16 @@ def addBimMainThread(obj: Tuple):
 
         dataStorage = plugin.dataStorage
         dataStorage.matrix = matrix
+        project = dataStorage.project
+        active_map = project.activeMap
+        geom_print = "Mesh"
         report_features = []
 
-        project = dataStorage.project
-
-        geom_print = geomType
-        if "MultiPolygonZ" in geom_print:
-            geom_print = "Mesh"
-        elif "LineStringZ" in geom_print:
-            geom_print = "Polyline"
-        elif "PointZ" in geom_print:
-            geom_print = "Point"
+        layerName = removeSpecialCharacters(layerName)
+        layerName = layerName + "_" + geomType
+        # print(layerName)
 
         shortName = layerName.split(SYMBOL)[len(layerName.split(SYMBOL)) - 1][:50]
-        # print(f"Final short name: {shortName}")
         try:
             layerName = (
                 layerName.split(shortName)[0] + shortName + ("_as_" + geom_print)
@@ -983,30 +968,54 @@ def addBimMainThread(obj: Tuple):
         except:
             layerName = layerName + ("_as_" + geom_print)
         finalName = shortName + ("_as_" + geom_print)
+        try:
+            groupName = streamBranch + SYMBOL + layerName.split(finalName)[0]
+        except:
+            groupName = streamBranch + SYMBOL + layerName
+
         dataStorage.latestActionLayers.append(finalName)
 
         try:
             groupName = streamBranch + SYMBOL + layerName.split(finalName)[0]
         except:
             groupName = streamBranch + SYMBOL + layerName
-        layerGroup = tryCreateGroupTree(project.layerTreeRoot(), groupName, plugin)
+
+        layerGroup = None
+        newGroupName = groupName  # f"{streamBranch}"
+        # print(newGroupName)
+        layerGroup = tryCreateGroupTree(project, groupName, plugin)
+
+        # find ID of the layer with a matching name in the "latest" group
+        newName = (
+            f'{newGroupName.split("_")[len(newGroupName.split("_"))-1]}_{layerName}'
+        )
+        newName = newName.split(SYMBOL)[-1]
+        all_layer_names = []
+        for l in project.activeMap.listLayers():
+            if l.longName.startswith(newGroupName + "\\"):
+                all_layer_names.append(l.longName)
+        # print(all_layer_names)
+
+        longName = newGroupName + "\\" + newName
+        newName = validateNewFclassName(newName, all_layer_names, newGroupName + "\\")
 
         # newName = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}_{layerName}'
-        newName_shp = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}/{finalName[:30]}'
+        # newName_shp = f'{streamBranch.split("_")[len(streamBranch.split("_"))-1]}/{finalName[:30]}'
+        newName_shp = newName + "_shp"
 
-        crs = (
-            project.spatialReference
-        )  # QgsCoordinateReferenceSystem.fromWkt(layer.crs.wkt)
-        dataStorage.currentUnits = str(QgsUnitTypes.encodeUnit(crs.mapUnits()))
-        if dataStorage.currentUnits is None or dataStorage.currentUnits == "degrees":
-            dataStorage.currentUnits = "m"
-
-        if crs.isGeographic is True:
+        # get Project CRS, use it by default for the new received layer
+        sr = project.activeMap.spatialReference
+        if sr.type == "Geographic":
             logToUser(
                 f"Project CRS is set to Geographic type, and objects in linear units might not be received correctly",
                 level=1,
                 func=inspect.stack()[0][3],
             )
+
+        units = str(sr.linearUnitName)
+        dataStorage.currentUnits = units
+        if dataStorage.currentUnits is None or dataStorage.currentUnits == "degrees":
+            dataStorage.currentUnits = "m"
 
         p = (
             os.path.expandvars(r"%LOCALAPPDATA%")
@@ -1028,50 +1037,132 @@ def addBimMainThread(obj: Tuple):
 
         findOrCreatePath(path_bim)
         # print(path_bim)
+        class_name = "f_class_" + newName
 
         shp = writeMeshToShp(geomList, path_bim + newName_shp, dataStorage)
         dataStorage.matrix = None
         if shp is None:
             return
-        # print("____ meshes saved___")
-        # print(shp)
+        print("____ meshes saved___")
 
-        vl_shp = QgsVectorLayer(
-            shp + ".shp", finalName, "ogr"
-        )  # do something to distinguish: stream_id_latest_name
-        vl = QgsVectorLayer(
-            geomType + "?crs=" + crs.authid(), finalName, "memory"
-        )  # do something to distinguish: stream_id_latest_name
-        vl.setCrs(crs)
-        project.addMapLayer(vl, False)
+        cursor = arcpy.da.SearchCursor(shp, "Speckle_ID")
+        class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
+        del cursor
 
-        pr = vl.dataProvider()
-        vl.startEditing()
+        validated_class_path = validate_path(class_name, plugin)
+        # print(validated_class_path)
+        validated_class_name = validated_class_path.split("\\")[
+            len(validated_class_path.split("\\")) - 1
+        ]
+        validated_class_name = validateNewFclassName(validated_class_name, all_layer_names, newGroupName + "\\")
 
-        # add Layer attribute fields
-        pr.addAttributes(newFields)
-        vl.updateFields()
+        print(validated_class_name)
+        # print(validated_class_name)
 
-        # create list of Features (fets) and list of Layer fields (fields)
-        # attrs = QgsFields()
+        path = plugin.workspace  # project.filePath.replace("aprx","gdb") #
+
+        f_class = arcpy.conversion.FeatureClassToFeatureClass(
+            shp, path, validated_class_name
+        )
+        arcpy.management.DefineProjection(f_class, sr.exportToString())
+
+        # get and set Layer attribute fields
+        # example: https://resource.esriuk.com/blog/an-introductory-slice-of-arcpy-in-arcgis-pro/
+        fields_to_ignore = ["arcgisgeomfromspeckle", "shape", "objectid", "displayMesh"]
+        matrix = []
+        matrix_no_id = []
+        all_keys = []
+        all_key_types = []
+        max_len = 52
+
+        # print("___ after layer attributes: ___________")
+        for key, value in newFields.items():
+            existingFields = [fl.name for fl in arcpy.ListFields(validated_class_name)]
+            # print(existingFields)
+            if (
+                key not in existingFields and key.lower() not in fields_to_ignore
+            ):  # exclude geometry and default existing fields
+                # print(key)
+                # signs that should not be used as field names and table names: https://support.esri.com/en/technical-article/000005588
+                key = (
+                    key.replace(" ", "_")
+                    .replace("-", "_")
+                    .replace("(", "_")
+                    .replace(")", "_")
+                    .replace(":", "_")
+                    .replace("\\", "_")
+                    .replace("/", "_")
+                    .replace('"', "_")
+                    .replace("&", "_")
+                    .replace("@", "_")
+                    .replace("$", "_")
+                    .replace("%", "_")
+                    .replace("^", "_")
+                )
+                if key[0] in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+                    key = "_" + key
+                if len(key) > max_len:
+                    key = key[:max_len]
+                # print(all_keys)
+                if key in all_keys:
+                    for index, letter in enumerate(
+                        "1234567890abcdefghijklmnopqrstuvwxyz"
+                    ):
+                        if len(key) < max_len and (key + letter) not in all_keys:
+                            key += letter
+                            break
+                        if len(key) == max_len and (key[:9] + letter) not in all_keys:
+                            key = key[:9] + letter
+                            break
+                if key not in all_keys:
+                    all_keys.append(key)
+                    all_key_types.append(value)
+                    # print(all_keys)
+                    if key.lower() == "speckle_id":
+                        matrix.append(["Speckle_ID", value, "Speckle_ID", 255])
+                    else:
+                        matrix.append([key, value, key, 255])
+                        matrix_no_id.append([key, value, key, 255])
+        # 51.5019052°N  0.1076614°W 51.5020862°N  51.5019596,-0.1077379
+        # print(len(all_keys))
+        # print(matrix)
+        try:
+            if len(matrix) > 0:
+                AddFields(str(f_class), matrix_no_id)
+        except Exception as e:
+            print(e)
+        # print(matrix)
+
         fets = []
         fetIds = []
         fetColors = []
+        rows_delete = []
 
+        cursor = arcpy.da.SearchCursor(f_class, "Speckle_ID")
+        class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
+        del cursor
+
+        # print(len(class_shapes))
+        # print(len(geomList))
+
+        # print("_________BIM FeatureS To Native___________")
         report_features = []
         all_feature_errors_count = 0
-        for i, f in enumerate(geomList[:]):
-            # pre-fill report:
-            report_features.append(
-                {"speckle_id": f.id, "obj_type": f.speckle_type, "errors": ""}
-            )
-
+        for f in geomList[:]:
             try:
-                exist_feat: None = None
-                for n, shape in enumerate(vl_shp.getFeatures()):
-                    if shape["speckle_id"] == f.id:
-                        exist_feat = vl_shp.getFeature(n)
+                # pre-fill report:
+                report_features.append(
+                    {"speckle_id": f.id, "obj_type": f.speckle_type, "errors": ""}
+                )
+                exist_feat = None
+                shape_id = None
+                n = None
+                for n, shape_id in enumerate(class_shapes):
+                    # print(shape_id[0])
+                    if shape_id == f.id:
+                        exist_feat = f
                         break
+
                 if exist_feat is None:
                     logToUser(
                         f"Feature skipped due to invalid geometry",
@@ -1081,16 +1172,19 @@ def addBimMainThread(obj: Tuple):
                     report_features[len(report_features) - 1].update(
                         {"errors": "Feature skipped due to invalid geometry"}
                     )
+                    all_feature_errors_count += 1
+                    rows_delete.append(n)
                     continue
 
                 new_feat = bimFeatureToNative(
-                    exist_feat, f, vl.fields(), crs, path_bim, dataStorage
+                    exist_feat, newFields, sr, path_bim, dataStorage
                 )
                 if new_feat is not None and new_feat != "":
                     fetColors = findFeatColors(fetColors, f)
+
                     fets.append(new_feat)
-                    vl.addFeature(new_feat)
                     fetIds.append(f.id)
+                    # print(len(fets))
                 else:
                     logToUser(
                         f"Feature skipped due to invalid geometry",
@@ -1100,76 +1194,98 @@ def addBimMainThread(obj: Tuple):
                     report_features[len(report_features) - 1].update(
                         {"errors": "Feature skipped due to invalid geometry"}
                     )
+                    all_feature_errors_count += 1
+                    rows_delete.append(n)
 
             except Exception as e:
-                logToUser(e, level=2, func=inspect.stack()[0][3])
-                report_features[len(report_features) - 1].update({"errors": f"{e}"})
+                print(e)
 
-        vl.updateExtents()
-        vl.commitChanges()
+        # print(rows_delete)
+        cursor = arcpy.da.UpdateCursor(f_class, "Speckle_ID")
+        for n, row in enumerate(cursor):
+            if n in rows_delete:
+                cursor.deleteRow()
+        del cursor
+        # print(n)
 
-        layerGroup.addLayer(vl)
+        if len(fets) == 0:
+            return None
+        count = 0
+        rowValues = []
+        for i, feat in enumerate(fets):
 
-        try:
-            ################################### RENDERER 3D ###########################################
-            # rend3d = QgsVectorLayer3DRenderer() # https://qgis.org/pyqgis/3.16/3d/QgsVectorLayer3DRenderer.html?highlight=layer3drenderer#module-QgsVectorLayer3DRenderer
+            row = []
+            heads = []
+            for key in all_keys:
+                try:
+                    row.append(feat[key])
+                    heads.append(key)
+                except Exception as e:
+                    row.append(None)
+                    heads.append(key)
 
-            plugin_dir = os.path.dirname(__file__)
-            renderer3d = os.path.join(plugin_dir, "renderer3d.qml")
-            # print(renderer3d)
+            rowValues.append(row)
+            count += 1
+        # print(heads)
+        # print(len(heads))
 
-            vl.loadNamedStyle(renderer3d)
-            vl.triggerRepaint()
-        except:
-            pass
+        if len(heads) > 0:
+            with arcpy.da.UpdateCursor(f_class, heads) as cur:
+                # For each row, evaluate the WELL_YIELD value (index position
+                # of 0), and update WELL_CLASS (index position of 1)
+                shp_num = 0
+                try:
+                    for rowShape in cur:
+                        for i, r in enumerate(rowShape):
+                            rowShape[i] = rowValues[shp_num][i]
+                            if matrix[i][1] == "TEXT" and rowShape[i] is not None:
+                                rowShape[i] = str(rowValues[shp_num][i])
+                            if isinstance(
+                                rowValues[shp_num][i], str
+                            ):  # cut if string is too long
+                                rowShape[i] = rowValues[shp_num][i][:255]
+                        cur.updateRow(rowShape)
+                        shp_num += 1
+                except Exception as e:
+                    print("Layer attr error: " + str(e))
+                    print(shp_num)
+                    print(len(rowValues))
+                    logToUser(
+                        "Layer attribute error: " + e,
+                        level=2,
+                        func=inspect.stack()[0][3],
+                    )
+            del cur
 
-        try:
-            ################################### RENDERER ###########################################
-            # only set up renderer if the layer is just created
-            attribute = "Speckle_ID"
-            categories = []
-            for i in range(len(fets)):
-                material = fetColors[i]
-                color = colorFromSpeckle(material)
+        print("create layer:")
+        vl = MakeFeatureLayer(str(f_class), newName).getOutput(0)
 
-                symbol = QgsSymbol.defaultSymbol(
-                    QgsWkbTypes.geometryType(QgsWkbTypes.parseType(geomType))
-                )
-                symbol.setColor(color)
-                categories.append(
-                    QgsRendererCategory(fetIds[i], symbol, fetIds[i], True)
-                )
-            # create empty category for all other values
-            symbol2 = symbol.clone()
-            symbol2.setColor(QColor.fromRgb(245, 245, 245))
-            cat = QgsRendererCategory()
-            cat.setSymbol(symbol2)
-            cat.setLabel("Other")
-            categories.append(cat)
-            rendererNew = QgsCategorizedSymbolRenderer(attribute, categories)
-        except Exception as e:
-            print(e)
+        active_map.addLayerToGroup(layerGroup, vl)
+        # print("created2")
 
-        try:
-            vl.setRenderer(rendererNew)
-        except:
-            pass
+        vl2 = None
+        newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
+            SYMBOL + SYMBOL, SYMBOL
+        )
+        # print(newGroupName.replace(SYMBOL, "\\") + newName)
+        for l in project.activeMap.listLayers():
+            # print(l.longName)
+            if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
+                vl2 = l
+                print(l.longName)
+                break
+        # print(vl2)
 
-        try:
-            project.removeMapLayer(dummy)
-        except:
-            pass
+        path_lyr = cadBimRendererToNative(
+            project, active_map, layerGroup, fetColors, vl2, f_class, heads
+        )
 
         # report
-        obj_type = (
-            geom_print + " Vector Layer"
-            if "Mesh" not in geom_print
-            else "Multipolygon Vector Layer"
-        )
+        obj_type = "Multipatch Layer"
         if all_feature_errors_count == 0:
             dataStorage.latestActionReport.append(
                 {
-                    "speckle_id": f"{layer_id} {finalName}",
+                    "layer_name": f"{layerName}",
                     "obj_type": obj_type,
                     "errors": "",
                 }
@@ -1177,7 +1293,7 @@ def addBimMainThread(obj: Tuple):
         else:
             dataStorage.latestActionReport.append(
                 {
-                    "speckle_id": f"{layer_id} {finalName}",
+                    "layer_name": f"{layerName}",
                     "obj_type": obj_type,
                     "errors": f"{all_feature_errors_count} features failed",
                 }
@@ -1186,10 +1302,12 @@ def addBimMainThread(obj: Tuple):
             dataStorage.latestActionReport.append(item)
         dataStorage.latestConversionTime = datetime.now()
 
+        return vl2
+
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3], plugin=plugin.dockwidget)
         # report
-        obj_type = geom_print + "Vector Layer"
+        obj_type = "Multipatch Layer"
         dataStorage.latestActionReport.append(
             {
                 "speckle_id": f"{layer_id} {finalName}",
@@ -1247,7 +1365,7 @@ def addCadMainThread(obj: Tuple):
         # get Project CRS, use it by default for the new received layer
         layerName = removeSpecialCharacters(layerName)
         layerName = layerName + "_" + geomType
-        print(layerName)
+        # print(layerName)
 
         shortName = layerName.split(SYMBOL)[len(layerName.split(SYMBOL)) - 1][:50]
         geom_print = geomType
@@ -1267,7 +1385,7 @@ def addCadMainThread(obj: Tuple):
 
         # map data
         active_map = project.activeMap
-        print(active_map.spatialReference)
+        # print(active_map.spatialReference)
         sr = arcpy.SpatialReference(text=active_map.spatialReference.exportToString())
         path = (
             plugin.workspace
@@ -1293,7 +1411,7 @@ def addCadMainThread(obj: Tuple):
 
         layerGroup = None
         newGroupName = groupName  # f"{streamBranch}"
-        print(newGroupName)
+        # print(newGroupName)
         layerGroup = tryCreateGroupTree(project, groupName, plugin)
 
         # find ID of the layer with a matching name in the "latest" group
@@ -1310,12 +1428,12 @@ def addCadMainThread(obj: Tuple):
         longName = newGroupName + "\\" + newName
         newName = validateNewFclassName(newName, all_layer_names, newGroupName + "\\")
 
-        print(geomType)
+        # print(geomType)
         class_name = "f_class_" + newName
         f_class = CreateFeatureclass(
             path, class_name, geomType, has_z="ENABLED", spatial_reference=sr
         )
-        print(f_class)
+        # print(f_class)
         arcpy.management.DefineProjection(f_class, sr)
 
         newFields = getLayerAttributes(geomList)
@@ -1396,9 +1514,9 @@ def addCadMainThread(obj: Tuple):
 
         dataStorage.matrix = None
 
-        print("features created")
-        print(len(fets))
-        print(all_keys)
+        # print("features created")
+        # print(len(fets))
+        # print(all_keys)
 
         if len(fets) == 0:
             return None
@@ -1435,20 +1553,20 @@ def addCadMainThread(obj: Tuple):
         # active_map.addLayer(new_layer)
 
         active_map.addLayerToGroup(layerGroup, vl)
-        print("Layer created")
+        # print("Layer created")
 
         vl2 = None
-        print(newName)
+        # print(newName)
         newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
             SYMBOL + SYMBOL, SYMBOL
         )
-        print(newGroupName.replace(SYMBOL, "\\") + newName)
+        # print(newGroupName.replace(SYMBOL, "\\") + newName)
         for l in project.activeMap.listLayers():
-            print(l.longName)
+            # print(l.longName)
             if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 vl2 = l
                 break
-        print(vl2)
+        # print(vl2)
 
         path_lyr = cadBimRendererToNative(
             project, active_map, layerGroup, fetColors, vl2, f_class, heads

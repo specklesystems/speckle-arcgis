@@ -23,6 +23,8 @@ from speckle.speckle.plugin_utils.helpers import findOrCreatePath
 
 from panda3d.core import Triangulator
 
+from speckle.speckle.converter.geometry.utils import apply_pt_transform_matrix
+
 
 def meshToNative(meshes: Mesh, sr, dataStorage=None):
     """Converts a Speckle Mesh to MultiPatch"""
@@ -69,7 +71,7 @@ def writeMeshToShp(meshes: List[Mesh], path: str, dataStorage):
                     + datetime.now().strftime("%Y-%m-%d_%H-%M")
                 )
                 findOrCreatePath(path)
-            w = shapefile.Writer(path + "\\" + str(meshes[0].id))
+            w = shapefile.Writer(path)  # + "\\" + str(meshes[0].id))
         except Exception as e:
             logToUser(e)
             return
@@ -98,7 +100,7 @@ def fill_multi_mesh_parts(
                 continue
             try:
                 # print(f"Fill multi-mesh parts # {geom_id}")
-                parts_list_x, types_list_x = deconstructSpeckleMesh(mesh)
+                parts_list_x, types_list_x = deconstructSpeckleMesh(mesh, dataStorage)
                 parts_list.extend(parts_list_x)
                 types_list.extend(types_list_x)
             except Exception as e:
@@ -111,11 +113,11 @@ def fill_multi_mesh_parts(
     return w
 
 
-def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str):
+def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str, dataStorage):
 
     try:
         # print(f"Fill mesh parts # {geom_id}")
-        parts_list, types_list = deconstructSpeckleMesh(mesh)
+        parts_list, types_list = deconstructSpeckleMesh(mesh, dataStorage)
         w.multipatch(parts_list, partTypes=types_list)  # one type for each part
         w.record(geom_id)
 
@@ -124,7 +126,7 @@ def fill_mesh_parts(w: shapefile.Writer, mesh: Mesh, geom_id: str):
     return w
 
 
-def deconstructSpeckleMesh(mesh: Mesh):
+def deconstructSpeckleMesh(mesh: Mesh, dataStorage):
     parts_list = []
     types_list = []
     try:
@@ -143,13 +145,13 @@ def deconstructSpeckleMesh(mesh: Mesh):
                 for i in range(vertices):
                     index_faces = count + 1 + i
                     index_vertices = mesh.faces[index_faces] * 3
-                    face.append(
-                        [
-                            scale * mesh.vertices[index_vertices],
-                            scale * mesh.vertices[index_vertices + 1],
-                            scale * mesh.vertices[index_vertices + 2],
-                        ]
-                    )
+                    pt_coords = [
+                        mesh.vertices[index_vertices],
+                        mesh.vertices[index_vertices + 1],
+                        scale * mesh.vertices[index_vertices + 2],
+                    ]
+                    pt_coords_new = apply_pt_transform_matrix(pt_coords, dataStorage)
+                    face.append([scale * coord for coord in pt_coords_new])
 
                 parts_list.append(face)
                 types_list.append(OUTER_RING)

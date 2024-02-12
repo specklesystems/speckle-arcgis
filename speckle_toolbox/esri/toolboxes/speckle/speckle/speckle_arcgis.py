@@ -400,6 +400,7 @@ class SpeckleGIS:
                 )
                 return
             current_active_stream = copy(self.active_stream)
+            branchName = str(self.dockwidget.streamBranchDropdown.currentText())
 
             # Check if no layers are selected
             if layers is None or (
@@ -513,7 +514,6 @@ class SpeckleGIS:
                 logToUser(f"Stream invalid", level=2, plugin=self.dockwidget)
                 return
 
-            branchName = str(self.dockwidget.streamBranchDropdown.currentText())
             branch = validateBranch(stream, branchName, False, self.dockwidget)
             branchId = branch.id
             if branch == None:

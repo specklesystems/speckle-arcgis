@@ -129,7 +129,7 @@ def findUpdateJsonItemPath(tree: Dict, full_path_str: str):
                 new_tree.update(branch)
         return new_tree
     except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+        # logToUser(str(e), level=2, func=inspect.stack()[0][3])
         return tree
 
 
@@ -225,27 +225,22 @@ def create_layer_group(project: ArcGISProject, newGroupName: str, plugin):
         except:  # for 3.0.0
         """
         if project.activeMap is not None:
-            print("try creating the group")
+            # print("try creating the group")
             # check for full match
             for l in project.activeMap.listLayers():
                 # print(newGroupName + "  __  " + l.longName)
-                if l.longName == newGroupName:
+                if l.longName == newGroupName and l.isGroupLayer:
                     layerGroup = l
                     return layerGroup
             # check for parent layer
             for l in project.activeMap.listLayers():
                 # print(newGroupName + "  __  " + l.longName)
-                if l.longName == "\\".join(newGroupName.split("\\")[:-1]):
+                if (
+                    l.longName == "\\".join(newGroupName.split("\\")[:-1])
+                    and l.isGroupLayer
+                ):
                     short_name = newGroupName.split("\\")[-1]
                     new_group = project.activeMap.createGroupLayer(short_name, l)
-                    # project.activeMap.addLayerToGroup(l, new_group)
-                    # project.activeMap.removeLayer(new_group)
-                    # find the layer again
-                    # for sub_group in project.activeMap.listLayers():
-                    #    # print(sub_group.longName)
-                    #    if sub_group.longName == newGroupName:
-                    #        new_group = sub_group
-                    #        break
                     return new_group
 
             layerGroup = project.activeMap.createGroupLayer(newGroupName)

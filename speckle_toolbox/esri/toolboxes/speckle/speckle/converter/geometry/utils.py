@@ -148,16 +148,18 @@ def transform_speckle_pt_on_receive(pt_original: Point, dataStorage) -> Point:
     return pt
 
 
-def apply_pt_transform_matrix(pt: Point, dataStorage) -> Point:
+def apply_pt_transform_matrix(pt_coords: List, dataStorage) -> List:
     try:
         if dataStorage.matrix is not None:
-            b = np.matrix([pt.x, pt.y, pt.z, 1])
+            b = np.matrix(pt_coords + [1])
+            print(b)
+            print(dataStorage.matrix)
             res = b * dataStorage.matrix
             x, y, z = res.item(0), res.item(1), res.item(2)
-            return Point(x=x, y=y, z=z, units=pt.units)
+            return [x, y, z]
     except Exception as e:
         print(e)
-    return pt
+    return pt_coords
 
 
 def speckleBoundaryToSpecklePts(

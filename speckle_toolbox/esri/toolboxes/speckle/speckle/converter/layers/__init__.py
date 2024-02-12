@@ -633,7 +633,7 @@ def bimVectorLayerToNative(
         p: str = (
             os.path.expandvars(r"%LOCALAPPDATA%")
             + "\\Temp\\Speckle_ArcGIS_temp\\"
-            + datetime.now().strftime("%Y-%m-%d %H-%M")
+            + datetime.now().strftime("%Y-%m-%d_%H-%M")
         )
         # findOrCreatePath(p)
         path_bim = (
@@ -659,11 +659,7 @@ def bimVectorLayerToNative(
         cursor = arcpy.da.SearchCursor(shp, "Speckle_ID")
         class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
         del cursor
-        # print(class_shapes)
-        # print(len(class_shapes))
-
-        # print(path)
-        # print(class_name)
+        
         validated_class_path = validate_path(class_name, plugin)
         # print(validated_class_path)
         validated_class_name = validated_class_path.split("\\")[

@@ -176,7 +176,7 @@ def loopObj(
         # dont loop primitives
         if not isinstance(base, Base):
             return
-        print(base)
+        # print(base)
         memberNames = base.get_member_names()
 
         baseName_pass = removeSpecialCharacters(baseName)

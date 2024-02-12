@@ -34,7 +34,7 @@ def jsonFromLayerStyle(layerArcgis, path_style):
         f = open(path_style, "r")
         layerStyle = json.loads(f.read())
         f.close()
-        os.remove(path_style)
+        # os.remove(path_style)
         return layerStyle
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
@@ -86,10 +86,10 @@ def cadBimRendererToNative(
     f_class,
     existingAttrs: List,
 ) -> Union[None, Dict[str, Any]]:
-    print("___________APPLY VECTOR RENDERER______________")
-    print(layerArcgis)
-    print(f_class)
-    print(fetColors)
+    #print("___________APPLY VECTOR RENDERER______________")
+    #print(layerArcgis)
+    #print(f_class)
+    #print(fetColors)
 
     attribute = "Speckle_ID"
     try:
@@ -106,9 +106,9 @@ def cadBimRendererToNative(
             del cursor
 
             sym.updateRenderer("UniqueValueRenderer")
-            print(sym.renderer.type)
-            print(existingAttrs)
-            print(attribute)
+            #print(sym.renderer.type)
+            #print(existingAttrs)
+            #print(attribute)
 
             sym.renderer.fields = [attribute]
             for k, grp in enumerate(sym.renderer.groups):
@@ -127,8 +127,8 @@ def cadBimRendererToNative(
                             # print("found label")
                             material = fetColors[i]
                             # print(material)
-                            print("Symbol: ")
-                            print(itm.symbol)
+                            #print("Symbol: ")
+                            #print(itm.symbol)
                             itm.symbol.color = colorFromSpeckle(material)
                             itm.label = label
                             break
@@ -149,14 +149,14 @@ def vectorRendererToNative(
     f_class,
     existingAttrs: List,
 ) -> Union[None, Dict[str, Any]]:
-    print("___________APPLY VECTOR RENDERER______________")
+    #print("___________APPLY VECTOR RENDERER______________")
     # print(layerArcgis)
     # print(f_class)
     try:
         renderer = layerSpeckle.renderer
 
         if renderer and renderer["type"]:
-            print(renderer["type"])
+            #print(renderer["type"])
 
             root_path = "\\".join(project.filePath.split("\\")[:-1])
             # path_style = root_path + '\\' + str(f_class).split('\\')[-1] + '_old.lyrx'
@@ -167,7 +167,7 @@ def vectorRendererToNative(
                 sym = layerArcgis.symbology
 
                 if renderer["type"] == "singleSymbol":
-                    print("RENDERER SINGLE")
+                    #print("RENDERER SINGLE")
                     # print(renderer)
 
                     r, g, b = get_rgb_from_speckle(
@@ -182,7 +182,7 @@ def vectorRendererToNative(
                     return layerArcgis
 
                 elif renderer["type"] == "categorizedSymbol":
-                    print("RENDERER CATEGORIZED")
+                    #print("RENDERER CATEGORIZED")
                     # print(renderer)
                     # print(existingAttrs)
 
@@ -196,7 +196,7 @@ def vectorRendererToNative(
                     # vl2 = active_map.addLayer(layerArcgis)[0]
                     # sym = layerArcgis.symbology
                     sym.updateRenderer("UniqueValueRenderer")
-                    print(sym.renderer.type)
+                    #print(sym.renderer.type)
                     # print(existingAttrs)
                     # print(attribute)
 
@@ -220,7 +220,7 @@ def vectorRendererToNative(
                     return layerArcgis
 
                 elif renderer["type"] == "graduatedSymbol":
-                    print("RENDERER GRADUATED")
+                    #print("RENDERER GRADUATED")
                     # print(renderer)
 
                     attribute = renderer["properties"]["attribute"]
@@ -238,7 +238,7 @@ def vectorRendererToNative(
                         return layerArcgis  # by color, not line width
 
                     sym.updateRenderer("GraduatedColorsRenderer")
-                    print(sym.renderer.type)
+                    #print(sym.renderer.type)
 
                     r, g, b = get_rgb_from_speckle(
                         renderer["properties"]["sourceSymbColor"]
@@ -526,7 +526,7 @@ def rendererToSpeckle(project: ArcGISProject, active_map, arcLayer, rasterFeat: 
                 root_path: str = (
                     os.path.expandvars(r"%LOCALAPPDATA%")
                     + "\\Temp\\Speckle_ArcGIS_temp\\"
-                    + datetime.now().strftime("%Y-%m-%d %H-%M")
+                    + datetime.now().strftime("%Y-%m-%d_%H-%M")
                 )
                 root_path += "\\Layers_Speckle\\raster_bands\\"
                 findOrCreatePath(root_path)

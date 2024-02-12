@@ -352,6 +352,7 @@ def rasterFeatureToSpeckle(
             )  # <arcpy._colorizer.RasterStretchColorizer object at 0x000001780497FBC8>
             print(colorizer.type)  # RasterStretchColorizer
         else:
+            redBand = greenBand = blueBand = None
             # RGB colorizer
             root_path: str = (
                 os.path.expandvars(r"%LOCALAPPDATA%")
@@ -366,18 +367,18 @@ def rasterFeatureToSpeckle(
             symJson = jsonFromLayerStyle(selectedLayer, path_style)
 
             # read from Json
-            # print(symJson["layerDefinitions"][0]["colorizer"])
             try:
                 greenBand = symJson["layerDefinitions"][0]["colorizer"][
                     "greenBandIndex"
                 ]
             except:
-                greenBand = None
+                if len(rasterBandVals) > 1:
+                    greenBand = 1
             try:
                 blueBand = symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"]
             except:
-                blueBand = None
-
+                if len(rasterBandVals) > 2:
+                    blueBand = 2
             try:
                 redBand = symJson["layerDefinitions"][0]["colorizer"]["redBandIndex"]
             except:
@@ -393,8 +394,8 @@ def rasterFeatureToSpeckle(
                 rbVals = rasterBandVals[
                     redBand
                 ]  # my_raster.getRasterBands(rasterBandNames[redBand])
-                rbvalMin = min(rbVals)
-                rbvalMax = max(rbVals)
+                rbvalMin = rasterBandMinVal[redBand]
+                rbvalMax = rasterBandMaxVal[redBand]
                 rvalRange = float(rbvalMax) - float(rbvalMin)
                 print(rbvalMin)
                 print(rbvalMax)
@@ -404,8 +405,8 @@ def rasterFeatureToSpeckle(
                 rvalRange = None
             try:
                 gbVals = rasterBandVals[greenBand]
-                gbvalMin = min(gbVals)
-                gbvalMax = max(gbVals)
+                gbvalMin = rasterBandMinVal[greenBand]
+                gbvalMax = rasterBandMaxVal[greenBand]
                 gvalRange = float(gbvalMax) - float(gbvalMin)
                 print(gbvalMin)
                 print(gbvalMax)
@@ -414,8 +415,8 @@ def rasterFeatureToSpeckle(
                 gvalRange = None
             try:
                 bbVals = rasterBandVals[blueBand]
-                bbvalMin = min(bbVals)
-                bbvalMax = max(bbVals)
+                bbvalMin = rasterBandMinVal[blueBand]
+                bbvalMax = rasterBandMaxVal[blueBand]
                 bvalRange = float(bbvalMax) - float(bbvalMin)
                 print(bbvalMin)
                 print(bbvalMax)
@@ -830,7 +831,7 @@ def featureToNative(
                         print(e)
                         value = str(feature["id"])
                 else:
-                    print(key)
+                    #print(key)
                     # arcpy.AddWarning(f'Field {key} not found')
                     try:
                         value = feature.attributes[key]
@@ -843,11 +844,12 @@ def featureToNative(
             if variant == "TEXT":
                 value = str(value)
                 if len(value) > 255:
-                    print(len(value))
+                    #print(len(value))
                     value = value[:255]
-                    arcpy.AddWarning(
-                        f'Field "{key}" values are trimmed at 255 characters'
-                    )
+                    logToUser(f'Field "{key}" values are trimmed at 255 characters', level=2, func=inspect.stack()[0][3])
+                    #arcpy.AddWarning(
+                    #    f'Field "{key}" values are trimmed at 255 characters'
+                    #)
             if (
                 variant == getVariantFromValue(value)
                 and value != "NULL"
@@ -863,7 +865,7 @@ def featureToNative(
                     feat.update({key: None})
                 if variant == "SHORT":
                     feat.update({key: None})
-        print(feat)
+        #print(feat)
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return feat
@@ -963,26 +965,30 @@ def featureToNative(feature: Base, fields: "QgsFields", dataStorage):
 
 
 def bimFeatureToNative(
-    exist_feat: "QgsFeature",
     feature: Base,
-    fields: "QgsFields",
-    crs,
+    fields: dict,
+    sr: arcpy.SpatialReference,
     path: str,
     dataStorage,
 ):
     # print("04_________BIM Feature To Native____________")
+    feat_updated = {}
     try:
-        exist_feat.setFields(fields)
+        feat = {}
+        feat.update({"arcGisGeomFromSpeckle": ""})
+        # feat_updated = updateFeat(exist_feat, fields, feature)
 
-        feat_updated = updateFeat(exist_feat, fields, feature)
-        # print(fields.toList())
-        # print(feature)
-        # print(feat_updated)
+        try:
+            if "Speckle_ID" not in fields.keys() and feature["id"]:
+                feat.update("Speckle_ID", "TEXT")
+        except:
+            pass
+        feat_updated = updateFeat(feat, fields, feature)
 
         return feat_updated
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3])
-        return
+    return feat_updated
 
 
 def nonGeomFeatureToNative(feature: Base, fields: "QgsFields", dataStorage):
@@ -1027,8 +1033,8 @@ def cadFeatureToNative(
 
         #### setting attributes to feature
         feat_updated = updateFeat(feat, fields, feature)
-        print(feat)
-        print(fields)
+        #print(feat)
+        #print(fields)
         return feat_updated
 
     except Exception as e:
