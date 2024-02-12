@@ -193,6 +193,7 @@ def rasterFeatureToSpeckle(
         rasterBandCount = my_raster.bandCount
         rasterBandNames = my_raster.bandNames
         rasterDimensions = [my_raster.width, my_raster.height]
+        print(rasterDimensions)
 
         # ds = gdal.Open(selectedLayer.source(), gdal.GA_ReadOnly)
         extent = my_raster.extent
@@ -241,17 +242,20 @@ def rasterFeatureToSpeckle(
 
             rb = my_raster.getRasterBands(item)
             print(rb)
-            print(np.shape(rb.read()))
+            size = np.shape(rb.read())
+            print(size)
+            rasterDimensions = [size[1], size[0]]
+
             valMin = rb.minimum
             valMax = rb.maximum
             bandVals = np.swapaxes(rb.read(), 1, 2).flatten()  # .tolist() np.flip( , 0)
 
-            bandValsFlat = []
-            bandValsFlat.extend(bandVals.tolist())
-            # look at mesh chunking
+            bandValsFlat = bandVals.tolist()
+            # print(bandValsFlat)
 
             const = float(-1 * math.pow(10, 30))
             defaultNoData = rb.noDataValue
+            print(defaultNoData)
 
             # check whether NA value is too small or raster has too small values
             # assign min value of an actual list; re-assign NA val; replace list items to new NA val
@@ -298,7 +302,7 @@ def rasterFeatureToSpeckle(
 
             # if rasterBandNoDataVal[len(rasterBandNoDataVal) - 1] is None:
             #   rasterBandNoDataVal[len(rasterBandNoDataVal) - 1] = np.nan
-
+            print(len(bandValsFlat))
             rasterBandVals.append(bandValsFlat)
             rasterBandMinVal.append(valMin)
             rasterBandMaxVal.append(valMax)
