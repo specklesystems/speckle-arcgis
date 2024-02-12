@@ -368,24 +368,42 @@ def layerToSpeckle(
                 return None
 
         elif selectedLayer.isRasterLayer:
-            print("RASTER IN DA HOUSE")
+            print("RASTER HERE")
             print(selectedLayer.name)  # London_square.tif
             print(
                 arcpy.Describe(selectedLayer.dataSource)
             )  # <geoprocessing describe data object object at 0x000002507C7F3BB0>
             print(arcpy.Describe(selectedLayer.dataSource).datasetType)  # RasterDataset
-            b = rasterFeatureToSpeckle(layer, projectCRS, project)
-            if b is not None:
-                layerObjs.append(b)
+            b = rasterFeatureToSpeckle(selectedLayer, projectCRS, plugin)
+            
+            if b is None:
+                dataStorage.latestActionReport.append(
+                    {
+                        "feature_id": layerName,
+                        "obj_type": "Raster Layer",
+                        "errors": "Layer failed to send",
+                    }
+                )
+                return None
+            
+            layerObjs.append(b)
 
-            speckleLayer = RasterLayer(units="m", type="RasterLayer")
-            speckleLayer.name = layerName
-            speckleLayer.crs = speckleReprojectedCrs
-            speckleLayer.rasterCrs = layerCRS
-            speckleLayer.collectionType = "RasterLayer"
-            # speckleLayer.geomType="Raster"
-            speckleLayer.elements = layerObjs
+            # Convert layer to speckle
+            speckleLayer = RasterLayer(
+                units=units_proj,
+                name=layerName,
+                crs=speckleReprojectedCrs,
+                rasterCrs=layerCRS,
+                elements=layerObjs,
+            )
 
+            dataStorage.latestActionReport.append(
+                {
+                    "feature_id": layerName,
+                    "obj_type": speckleLayer.speckle_type,
+                    "errors": "",
+                }
+            )
             speckleLayer.renderer = rendererToSpeckle(
                 project, project.activeMap, selectedLayer, b
             )

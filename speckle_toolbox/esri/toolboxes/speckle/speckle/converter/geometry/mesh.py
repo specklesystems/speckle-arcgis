@@ -24,13 +24,20 @@ from speckle.speckle.plugin_utils.helpers import findOrCreatePath
 from panda3d.core import Triangulator
 
 
-def meshToNative(meshes: List[Mesh], sr, dataStorage=None):
+def meshToNative(meshes: Mesh, sr, dataStorage=None):
     """Converts a Speckle Mesh to MultiPatch"""
     from speckle.speckle.converter.geometry.conversions import multiPolygonToNative
 
     result = []
 
     print("06___________________Mesh to Native")
+    new_path = writeMeshToShp(meshes, "", dataStorage)
+
+    cursor = arcpy.da.SearchCursor(new_path, "Speckle_ID")
+    class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
+    del cursor
+    return class_shapes[0]
+
     for m in meshes:
         if isinstance(m, Mesh):
             faces, _ = deconstructSpeckleMesh(m)
@@ -62,7 +69,7 @@ def writeMeshToShp(meshes: List[Mesh], path: str, dataStorage):
                     + datetime.now().strftime("%Y-%m-%d_%H-%M")
                 )
                 findOrCreatePath(path)
-            w = shapefile.Writer(path)
+            w = shapefile.Writer(path + "\\" + str(meshes[0].id))
         except Exception as e:
             logToUser(e)
             return
@@ -80,7 +87,9 @@ def writeMeshToShp(meshes: List[Mesh], path: str, dataStorage):
         return None
 
 
-def fill_multi_mesh_parts(w: shapefile.Writer, meshes: List[Mesh], geom_id: str):
+def fill_multi_mesh_parts(
+    w: shapefile.Writer, meshes: List[Mesh], geom_id: str, dataStorage
+):
     try:
         parts_list = []
         types_list = []

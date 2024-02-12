@@ -531,7 +531,7 @@ def rasterFeatureToSpeckle(
             root_path: str = (
                 os.path.expandvars(r"%LOCALAPPDATA%")
                 + "\\Temp\\Speckle_ArcGIS_temp\\"
-                + datetime.now().strftime("%Y-%m-%d %H-%M")
+                + datetime.now().strftime("%Y-%m-%d_%H-%M")
             )
             root_path += "\\Layers_Speckle\\raster_bands\\"
             findOrCreatePath(root_path)
