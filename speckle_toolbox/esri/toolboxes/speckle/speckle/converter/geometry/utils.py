@@ -154,8 +154,8 @@ def apply_pt_transform_matrix(pt_coords: List, dataStorage) -> List:
             b = np.matrix(pt_coords + [1])
             # print(b)
             # print(dataStorage.matrix)
-            # res = b * dataStorage.matrix
-            # x, y, z = res.item(0), res.item(1), res.item(2)
+            res = b * dataStorage.matrix
+            x, y, z = res.item(0), res.item(1), res.item(2)
             return [x, y, z]
     except Exception as e:
         pass

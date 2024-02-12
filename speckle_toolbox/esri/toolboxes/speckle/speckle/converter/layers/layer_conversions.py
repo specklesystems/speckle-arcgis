@@ -1261,7 +1261,7 @@ def addBimMainThread(obj: Tuple):
                     )
             del cur
 
-        print("create layer:")
+        # print("create layer:")
         vl = MakeFeatureLayer(
             str(f_class), "x" + str(random.randint(100000, 500000))
         ).getOutput(0)
@@ -1279,7 +1279,7 @@ def addBimMainThread(obj: Tuple):
             # print(l.longName)
             if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 vl2 = l
-                print(l.longName)
+                # print(l.longName)
                 break
         # print(vl2)
 

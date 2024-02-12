@@ -148,7 +148,7 @@ def deconstructSpeckleMesh(mesh: Mesh, dataStorage):
                     pt_coords = [
                         mesh.vertices[index_vertices],
                         mesh.vertices[index_vertices + 1],
-                        scale * mesh.vertices[index_vertices + 2],
+                        mesh.vertices[index_vertices + 2],
                     ]
                     pt_coords_new = apply_pt_transform_matrix(pt_coords, dataStorage)
                     face.append([scale * coord for coord in pt_coords_new])
