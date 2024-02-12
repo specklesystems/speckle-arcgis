@@ -157,8 +157,8 @@ def featureToSpeckle(
                 f_val = x
             attributes[corrected] = f_val
 
-        # if geom is not None and geom!="None":
-        geom.attributes = attributes
+        if geom is not None and geom!="None":
+            geom.attributes = attributes
         # print(geom.attributes)
 
         dataStorage.latestActionFeaturesReport[

@@ -223,10 +223,14 @@ def meshPartsFromPolygon(
                     #    pt = QgsPoint(pt)
                     # print(pt)
                     if isinstance(pt, Point):
-                        pt = pointToNative(pt, sr, dataStorage).getPart()
-                    x = pt.X
-                    y = pt.Y
-                    z = 0 if math.isnan(pt.Z) else pt.Z
+                        x = pt.x
+                        y = pt.y
+                        z = pt.z
+                        # pt = pointToNative(pt, sr, dataStorage).getPart()
+                    else:
+                        x = pt.X
+                        y = pt.Y
+                        z = 0 if math.isnan(pt.Z) else pt.Z
                     vertices.extend([x, y, z])
                     total_vertices += 1
                 else:

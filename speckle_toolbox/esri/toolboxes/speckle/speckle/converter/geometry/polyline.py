@@ -164,8 +164,8 @@ def polylineFromVerticesToSpeckle(
     """Converts a Polyline to Speckle"""
     polyline = Polyline(units="m")
     try:
-        print("__polylineFromVerticesToSpeckle")
-        print(vertices)
+        #print("__polylineFromVerticesToSpeckle")
+        #print(vertices)
         if isinstance(vertices, list):
             if len(vertices) > 0 and isinstance(vertices[0], Point):
                 specklePts = vertices

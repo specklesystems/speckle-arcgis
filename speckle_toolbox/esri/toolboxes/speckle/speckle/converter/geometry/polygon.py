@@ -35,7 +35,7 @@ from panda3d.core import Triangulator
 def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
     print("________polygonToSpeckleMesh_____")
     print(geom)
-    polygon = Base(units="m")
+    polygon = GisPolygonGeometry(units="m")
     try:
 
         vertices = []
@@ -46,20 +46,19 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
         for i, p in enumerate(geom):
             # print("____start enumerate feature")
             # print(p) #<geoprocessing array object object at 0x0000026796C77110>
-            print(p)
+            #print(p)
             boundary, voids = getPolyBoundaryVoids(p, layer, dataStorage)
-            # print(boundary)
-            # print(voids)
+            #print(boundary)
+            #print(voids)
             polyBorder = speckleBoundaryToSpecklePts(boundary)
-            # print(polyBorder)
+            #print(polyBorder)
             voidsAsPts = []
             for v in voids:
                 pts = speckleBoundaryToSpecklePts(v)
                 voidsAsPts.append(pts)
-            # print(voidsAsPts)
-            # print("__to start meshPartsFromPolygon")
+            #print(voidsAsPts)
             total_vert, vertices_x, faces_x, colors_x = meshPartsFromPolygon(
-                polyBorder, voidsAsPts, existing_vert, index, layer
+                polyBorder, voidsAsPts, existing_vert, index, layer, dataStorage
             )
 
             existing_vert += total_vert
@@ -68,8 +67,11 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
             colors.extend(colors_x)
 
         # print("Colors: ")
-        # print(colors)
+        #print(faces)
+        #print(vertices)
+        #print(colors)
         mesh = constructMesh(vertices, faces, colors)
+        print(mesh)
         if mesh is not None:
             polygon.displayValue = [mesh]
         else:
@@ -95,17 +97,17 @@ def getPolyBoundaryVoids(feature, layer, dataStorage, xform_vars=None):
         #    boundary = anyLineToSpeckle(feature, feature, layer, dataStorage, xform_vars)
 
         # else:
-        print("multi type")
+        # print("multi type")
         for i, pt in enumerate(feature):
-            print(pt)  # 284394.58100903 5710688.11602606 NaN NaN
+            #print(pt)  # 284394.58100903 5710688.11602606 NaN NaN
             # for pt in p:
             # print(pt)
             if pt == None and boundary == None:  # first break
                 boundary = polylineFromVerticesToSpeckle(
                     pointList, True, feature, layer, dataStorage
                 )
-                print("__Boundary:")
-                print(boundary)  # Polyline
+                # print("__Boundary:")
+                # print(boundary)  # Polyline
                 pointList = []
             elif pt == None and boundary != None:  # breaks btw voids
                 void = polylineFromVerticesToSpeckle(
@@ -182,8 +184,8 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
         print(geom)  # array
 
         boundary, voids = getPolyBoundaryVoids(geom, layer, dataStorage, xform_vars)
-        print(boundary)
-        print(voids)
+        #print(boundary)
+        #print(voids)
 
         data = arcpy.Describe(layer.dataSource)
         sr = data.spatialReference
@@ -201,10 +203,10 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
         total_vertices = 0
 
         if len(polyBorder) > 2:  # at least 3 points
-            print("make meshes from polygons")
+            #print("make meshes from polygons")
             if len(voids) == 0:  # if there is a mesh with no voids
-                print("no voids")
-                print(polyBorder)
+                #print("no voids")
+                #print(polyBorder)
                 for pt in polyBorder:
                     if isinstance(pt, Point):
                         pt = pointToNative(pt, sr, dataStorage).getPart()  # SR unknown
@@ -220,8 +222,8 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
                 # print(faces)
                 # else: https://docs.panda3d.org/1.10/python/reference/panda3d.core.Triangulator
             else:
-                print("voids")
-                print(polyBorder)
+                #print("voids")
+                #print(polyBorder)
                 trianglator = Triangulator()
                 faces = []
 

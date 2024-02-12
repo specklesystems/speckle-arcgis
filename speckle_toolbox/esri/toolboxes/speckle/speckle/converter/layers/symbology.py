@@ -44,7 +44,7 @@ def jsonFromLayerStyle(layerArcgis, path_style):
 def symbol_color_to_speckle(color: dict):
     newColor = (0 << 16) + (0 << 8) + 0
     try:
-        print(color)
+        #print(color)
         if "RGB" in color:
             r = int(color["RGB"][0])
             g = int(color["RGB"][1])

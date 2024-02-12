@@ -162,20 +162,37 @@ def convertToSpeckle(
                 if r is None:
                     continue
                 r.units = units
-                r.boundary.units = units
-                for v in r.voids:
-                    if v is not None:
-                        v.units = units
-                for v in r.displayValue:
-                    if v is not None:
-                        v.units = units
+                if r.boundary is not None:
+                    r.boundary.units = units
+                if r.voids is not None:
+                    for v in r.voids:
+                        if v is not None:
+                            v.units = units
+                    for v in r.displayValue:
+                        if v is not None:
+                            v.units = units
             element = GisPolygonElement(units=units, geometry=result)
 
         elif geomType == "MultiPatch":
             f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
             if f_shape is None:
                 return None
-            return polygonToSpeckleMesh(feature, index, layer, False, dataStorage)
+            result = [polygonToSpeckleMesh(feature, index, layer, False, dataStorage)]
+            for r in result:
+                if r is None:
+                    continue
+                r.units = units
+                if r.boundary is not None:
+                    r.boundary.units = units
+                if r.voids is not None:
+                    for v in r.voids:
+                        if v is not None:
+                            v.units = units
+                    for v in r.displayValue:
+                        if v is not None:
+                            v.units = units
+            element = GisPolygonElement(units=units, geometry=result)
+            print(element)
         else:
             logToUser(
                 "Unsupported or invalid geometry in layer " + layer.name,
