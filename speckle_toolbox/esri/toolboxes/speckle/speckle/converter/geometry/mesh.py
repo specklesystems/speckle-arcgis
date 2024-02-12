@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import time
 from typing import List
 import arcpy
 import math
@@ -7,6 +8,7 @@ import math
 from specklepy.objects.geometry import Mesh, Point, Polyline
 from specklepy.objects.other import RenderMaterial
 from specklepy.objects.GIS.geometry import GisPolygonGeometry
+
 
 import inspect
 
@@ -19,44 +21,40 @@ from speckle.speckle.converter.geometry.point import pointToNative
 from speckle.speckle.converter.layers.symbology import featureColorfromNativeRenderer
 from speckle.speckle.converter.layers.utils import get_scale_factor
 from speckle.speckle.utils.panel_logging import logToUser
-from speckle.speckle.plugin_utils.helpers import findOrCreatePath
+from speckle.speckle.plugin_utils.helpers import findOrCreatePath, validateNewFclassName
 
 from panda3d.core import Triangulator
 
 from speckle.speckle.converter.geometry.utils import apply_pt_transform_matrix
+from arcpy.management import CreateFeatureclass
 
 
 def meshToNative(meshes: Mesh, sr, dataStorage=None):
     """Converts a Speckle Mesh to MultiPatch"""
-    from speckle.speckle.converter.geometry.conversions import multiPolygonToNative
 
     result = []
 
     print("06___________________Mesh to Native")
     new_path = writeMeshToShp(meshes, "", dataStorage)
 
-    cursor = arcpy.da.SearchCursor(new_path, "Speckle_ID")
+    # time.sleep(0.1)
+    try:
+        cursor = arcpy.da.SearchCursor(new_path, "Speckle_ID")
+    except:
+        class_name = new_path.split("\\")[-1]
+        all_classes = arcpy.ListFeatureClasses()
+        validated_class_name = validateNewFclassName(class_name, all_classes)
+        path = dataStorage.workspace  # project.filePath.replace("aprx","gdb") #
+
+        f_class = arcpy.conversion.FeatureClassToFeatureClass(
+            new_path, path, validated_class_name
+        )
+        arcpy.management.DefineProjection(f_class, sr.exportToString())
+        cursor = arcpy.da.SearchCursor(new_path, "Speckle_ID")
+
     class_shapes = [shp_id[0] for n, shp_id in enumerate(cursor)]
     del cursor
     return class_shapes[0]
-
-    for m in meshes:
-        if isinstance(m, Mesh):
-            faces, _ = deconstructSpeckleMesh(m)
-            for face in faces:
-                flat_list = []
-                for xs in face:
-                    for x in xs:
-                        flat_list.append(x)
-                poly = Polyline().from_list(flat_list)
-                poly.closed = True
-
-                polygon = GisPolygonGeometry(
-                    boundary=poly, units=m.units, displayValue=[]
-                )
-                result.append(multiPolygonToNative([polygon], sr, dataStorage))
-
-    return result
 
 
 def writeMeshToShp(meshes: List[Mesh], path: str, dataStorage):
@@ -65,12 +63,19 @@ def writeMeshToShp(meshes: List[Mesh], path: str, dataStorage):
     try:
         try:
             if path == "":
-                path = (
+                path_folder = (
                     os.path.expandvars(r"%LOCALAPPDATA%")
                     + "\\Temp\\Speckle_ArcGIS_temp\\"
-                    + datetime.now().strftime("%Y-%m-%d_%H-%M")
+                    + datetime.now().strftime("%Y_%m_%d__%H_%M")
+                    + "\\Layers_Speckle\\BIM_layers\\"
                 )
-                findOrCreatePath(path)
+                findOrCreatePath(path_folder)
+                path = (
+                    path_folder
+                    + "mesh_"
+                    + datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
+                    + "_shp"
+                )
             w = shapefile.Writer(path)  # + "\\" + str(meshes[0].id))
         except Exception as e:
             logToUser(e)
@@ -80,6 +85,7 @@ def writeMeshToShp(meshes: List[Mesh], path: str, dataStorage):
 
         for _, geom in enumerate(meshes):
             meshList: List = getDisplayValueList(geom)
+            print(meshList)
             w = fill_multi_mesh_parts(w, meshList, geom.id, dataStorage)
         w.close()
         return path

@@ -27,7 +27,7 @@ setup(name='speckle_toolbox',
                   'esri/arcpy/*', 
                   'esri/help/gp/*', 'esri/help/gp/toolboxes/*', 'esri/help/gp/messages/*',
                   'esri/toolboxes/*','esri/toolboxes/speckle/*',
-                  'esri/toolboxes/speckle/converter/*', 'esri/toolboxes/speckle/converter/geometry/*', 'esri/toolboxes/speckle/converter/layers/*',
+                  'esri/toolboxes/speckle/converter/*', 'esri/toolboxes/speckle/converter/geometry/*', 'esri/toolboxes/speckle/converter/layers/*', 'esri/toolboxes/speckle/converter/features/*',
                   'esri/toolboxes/speckle/plugin_utils/*',
                   'esri/toolboxes/speckle/ui/*'] 
                   }, 

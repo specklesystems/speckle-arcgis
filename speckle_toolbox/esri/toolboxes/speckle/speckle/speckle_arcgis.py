@@ -839,7 +839,9 @@ class SpeckleGIS:
         )
 
         self.dataStorage = DataStorage()
+        self.dataStorage.workspace = arcpy.env.workspace
         self.dataStorage.plugin_version = self.version
+        self.workspace = arcpy.env.workspace
 
         self.is_setup = self.dataStorage.check_for_accounts()
         if self.dockwidget is not None:
@@ -872,6 +874,8 @@ class SpeckleGIS:
             self.dataStorage = DataStorage()
             self.dataStorage.plugin_version = self.version
             self.dataStorage.project = self.project
+            self.dataStorage.workspace = arcpy.env.workspace
+            self.workspace = arcpy.env.workspace
 
             self.is_setup = self.dataStorage.check_for_accounts()
 
@@ -880,6 +884,7 @@ class SpeckleGIS:
             else:
                 print("Plugin inactive, launch")
                 self.workspace = arcpy.env.workspace
+                self.dataStorage.workspace = arcpy.env.workspace
                 self.pluginIsActive = True
                 print("run plugin 100")
                 if self.dockwidget is None:

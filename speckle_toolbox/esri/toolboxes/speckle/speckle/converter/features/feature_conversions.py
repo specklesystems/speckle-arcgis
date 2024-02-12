@@ -157,7 +157,7 @@ def featureToSpeckle(
                 f_val = x
             attributes[corrected] = f_val
 
-        if geom is not None and geom!="None":
+        if geom is not None and geom != "None":
             geom.attributes = attributes
         # print(geom.attributes)
 
@@ -815,8 +815,8 @@ def featureToNative(
             feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
         else:
             return None
-        # print(arcGisGeom)
-        # print(feat)
+        print(arcGisGeom)
+        print(feat)
         for key, variant in fields.items():
             value = None
             try:
@@ -831,7 +831,7 @@ def featureToNative(
                         print(e)
                         value = str(feature["id"])
                 else:
-                    #print(key)
+                    # print(key)
                     # arcpy.AddWarning(f'Field {key} not found')
                     try:
                         value = feature.attributes[key]
@@ -844,12 +844,16 @@ def featureToNative(
             if variant == "TEXT":
                 value = str(value)
                 if len(value) > 255:
-                    #print(len(value))
+                    # print(len(value))
                     value = value[:255]
-                    logToUser(f'Field "{key}" values are trimmed at 255 characters', level=2, func=inspect.stack()[0][3])
-                    #arcpy.AddWarning(
+                    logToUser(
+                        f'Field "{key}" values are trimmed at 255 characters',
+                        level=2,
+                        func=inspect.stack()[0][3],
+                    )
+                    # arcpy.AddWarning(
                     #    f'Field "{key}" values are trimmed at 255 characters'
-                    #)
+                    # )
             if (
                 variant == getVariantFromValue(value)
                 and value != "NULL"
@@ -865,7 +869,7 @@ def featureToNative(
                     feat.update({key: None})
                 if variant == "SHORT":
                     feat.update({key: None})
-        #print(feat)
+        # print(feat)
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return feat
@@ -1033,8 +1037,8 @@ def cadFeatureToNative(
 
         #### setting attributes to feature
         feat_updated = updateFeat(feat, fields, feature)
-        #print(feat)
-        #print(fields)
+        # print(feat)
+        # print(fields)
         return feat_updated
 
     except Exception as e:

@@ -237,7 +237,8 @@ def convertToNative(
                     if base.boundary is None:
                         try:
                             converted = meshToNative(base.displayValue, sr, dataStorage)
-                        except:
+                        except KeyError as e:
+                            # print(e)
                             converted = meshToNative(
                                 base["@displayValue"], sr, dataStorage
                             )
@@ -263,6 +264,7 @@ def convertToNative(
             except (
                 Exception
             ) as e:  # if no "boundary" found (either old Mesh from QGIS or other object)
+                print(e)
                 try:  # check for a QGIS Mesh
                     try:
                         # if sent as Mesh
@@ -435,6 +437,8 @@ def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference, dataStor
         elif isinstance(first, Base):
             try:
                 if first["boundary"] is not None and first["voids"] is not None:
+                    print(first["boundary"])
+                    print(first["voids"])
                     return multiPolygonToNative(items, sr, dataStorage)
             except:
                 return None

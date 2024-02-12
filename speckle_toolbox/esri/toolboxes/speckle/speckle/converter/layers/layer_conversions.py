@@ -1743,6 +1743,8 @@ def addVectorMainThread(obj: Tuple):
         # print("_________create feature class___________________________________")
         # should be created inside the workspace to be a proper Feature class (not .shp) with Nullable Fields
         class_name = "f_class_" + newName
+        all_classes = arcpy.ListFeatureClasses()
+        class_name = validateNewFclassName(class_name, all_classes)
         # print(class_name)
         try:
             f_class = CreateFeatureclass(
