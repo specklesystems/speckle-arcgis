@@ -26,6 +26,7 @@ from specklepy.objects.GIS.geometry import GisPolygonGeometry
 from speckle.speckle.converter.geometry.mesh import meshToNative
 from speckle.speckle.converter.geometry.polygon import (
     polygonToNative,
+    multiPolygonToNative,
     polygonToSpeckle,
     multiPolygonToSpeckle,
     polygonToSpeckleMesh,
@@ -336,94 +337,6 @@ def multiPolylineToNative(
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return poly
-
-
-def multiPolygonToNative(
-    items: List[Base], sr: arcpy.SpatialReference, dataStorage
-):  # TODO fix multi features
-
-    print("_______Drawing Multipolygons____")
-    polygon = None
-    if not isinstance(items, List):
-        items = [items]
-    try:
-        # print(items)
-        full_array_list = []
-
-        for item_geom in items:  # will be 1 item
-            print(item_geom)
-            try:
-                item_geom = item_geom["geometry"]
-            except:
-                item_geom = [item_geom]
-            for item in item_geom:
-                # print(item)
-                # pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
-                pointsSpeckle = []
-                if isinstance(item["boundary"], Circle) or isinstance(
-                    item["boundary"], Arc
-                ):
-                    pointsSpeckle = speckleArcCircleToPoints(item["boundary"])
-                elif isinstance(item["boundary"], Polycurve):
-                    pointsSpeckle = specklePolycurveToPoints(item["boundary"])
-                elif isinstance(item["boundary"], Line):
-                    pass
-                else:
-                    try:
-                        pointsSpeckle = item["boundary"].as_points()
-                    except Exception as e:
-                        print(e)  # if Line
-                # print(pointsSpeckle)
-                pts = [pointToCoord(pt) for pt in pointsSpeckle]
-                # print(pts)
-
-                outer_arr = [arcpy.Point(*coords) for coords in pts]
-                if pts[0] != pts[-1]:
-                    outer_arr.append(outer_arr[0])
-                # print("outer border")
-                # print(outer_arr)
-                geomPart = []
-                try:
-                    for void in item["voids"]:
-                        print("void")
-                        print(void)
-                        # pts = [pointToCoord(pt) for pt in void.as_points()]
-                        pointsSpeckle = []
-                        if isinstance(void, Circle) or isinstance(void, Arc):
-                            pointsSpeckle = speckleArcCircleToPoints(void)
-                        elif isinstance(void, Polycurve):
-                            pointsSpeckle = specklePolycurveToPoints(void)
-                        elif isinstance(void, Line):
-                            pass
-                        else:
-                            try:
-                                pointsSpeckle = void.as_points()
-                            except:
-                                pass  # if Line
-                        pts = [pointToCoord(pt) for pt in pointsSpeckle]
-
-                        inner_arr = [arcpy.Point(*coords) for coords in pts]
-                        if pts[0] != pts[-1]:
-                            inner_arr.append(inner_arr[0])
-                        geomPart.append(arcpy.Array(inner_arr))
-                except Exception as e:
-                    print(e)
-
-                geomPart.insert(0, arcpy.Array(outer_arr))
-                full_array_list.extend(
-                    geomPart
-                )  # outlines are written one by one, with no separation to "parts"
-                print(full_array_list)  # array of points
-            # print("end of loop1")
-        print("end of loop2")
-        geomPartArray = arcpy.Array(full_array_list)
-        polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
-
-        print(polygon)
-    except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
-
-    return polygon
 
 
 def convertToNativeMulti(items: List[Base], sr: arcpy.SpatialReference, dataStorage):

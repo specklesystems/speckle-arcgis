@@ -1702,7 +1702,7 @@ def addVectorMainThread(obj: Tuple):
 
         layerGroup = None
         newGroupName = groupName  # f"{streamBranch}"
-        print(newGroupName)
+        #print(newGroupName)
         layerGroup = tryCreateGroupTree(project, groupName, plugin)
 
         # find ID of the layer with a matching name in the "latest" group
@@ -1725,7 +1725,7 @@ def addVectorMainThread(obj: Tuple):
 
         # newName, layerGroup = newLayerGroupAndName(layerName, streamBranch, project)
 
-        print(geomType)
+        #print(geomType)
         if "polygon" in geomType.lower():
             geomType = "Polygon"
         if "line" in geomType.lower() or "curve" in geomType.lower():
@@ -1819,7 +1819,7 @@ def addVectorMainThread(obj: Tuple):
         if len(matrix) > 0:
             AddFields(str(f_class), matrix)
 
-        print(layer_elements)
+        #print(layer_elements)
         fets = []
         report_features = []
         all_feature_errors_count = 0
@@ -1842,7 +1842,7 @@ def addVectorMainThread(obj: Tuple):
                 )
                 all_feature_errors_count += 1
 
-        print(fets)
+        #print(fets)
         if len(fets) == 0:
             return None
         count = 0
@@ -1888,13 +1888,13 @@ def addVectorMainThread(obj: Tuple):
             logToUser("Layer not added: " + str(e), level=2, func=inspect.stack()[0][3])
 
         vl2 = None
-        print(newName)
+        #print(newName)
         newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
             SYMBOL + SYMBOL, SYMBOL
         )
-        print(newGroupName.replace(SYMBOL, "\\") + newName)
+        #print(newGroupName.replace(SYMBOL, "\\") + newName)
         for l in project.activeMap.listLayers():
-            print(l.longName)
+            #print(l.longName)
             if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 vl2 = l
                 break

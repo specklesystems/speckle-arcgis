@@ -34,7 +34,7 @@ from panda3d.core import Triangulator
 
 def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
     print("________polygonToSpeckleMesh_____")
-    print(geom)
+    # print(geom)
     polygon = GisPolygonGeometry(units="m")
     try:
 
@@ -46,17 +46,17 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
         for i, p in enumerate(geom):
             # print("____start enumerate feature")
             # print(p) #<geoprocessing array object object at 0x0000026796C77110>
-            #print(p)
+            # print(p)
             boundary, voids = getPolyBoundaryVoids(p, layer, dataStorage)
-            #print(boundary)
-            #print(voids)
+            # print(boundary)
+            # print(voids)
             polyBorder = speckleBoundaryToSpecklePts(boundary)
-            #print(polyBorder)
+            # print(polyBorder)
             voidsAsPts = []
             for v in voids:
                 pts = speckleBoundaryToSpecklePts(v)
                 voidsAsPts.append(pts)
-            #print(voidsAsPts)
+            # print(voidsAsPts)
             total_vert, vertices_x, faces_x, colors_x = meshPartsFromPolygon(
                 polyBorder, voidsAsPts, existing_vert, index, layer, dataStorage
             )
@@ -67,11 +67,11 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
             colors.extend(colors_x)
 
         # print("Colors: ")
-        #print(faces)
-        #print(vertices)
-        #print(colors)
+        # print(faces)
+        # print(vertices)
+        # print(colors)
         mesh = constructMesh(vertices, faces, colors)
-        print(mesh)
+        # print(mesh)
         if mesh is not None:
             polygon.displayValue = [mesh]
         else:
@@ -99,7 +99,7 @@ def getPolyBoundaryVoids(feature, layer, dataStorage, xform_vars=None):
         # else:
         # print("multi type")
         for i, pt in enumerate(feature):
-            #print(pt)  # 284394.58100903 5710688.11602606 NaN NaN
+            # print(pt)  # 284394.58100903 5710688.11602606 NaN NaN
             # for pt in p:
             # print(pt)
             if pt == None and boundary == None:  # first break
@@ -144,8 +144,8 @@ def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool, dataStorage)
         # js = json.loads(geom.JSON)['rings']
         # https://desktop.arcgis.com/en/arcmap/latest/analyze/python/reading-geometries.htm
         for i, x in enumerate(geom):  # [[x,x,x]
-            print("Part # " + str(i + 1))
-            print(x)
+            # print("Part # " + str(i + 1))
+            # print(x)
             boundaryFinished = 0
             arrBoundary = []
             arrInnerRings = []
@@ -181,11 +181,11 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
     polygon = GisPolygonGeometry(units="m")
     try:
         print("___Polygon to Speckle____")
-        print(geom)  # array
+        # print(geom)  # array
 
         boundary, voids = getPolyBoundaryVoids(geom, layer, dataStorage, xform_vars)
-        #print(boundary)
-        #print(voids)
+        # print(boundary)
+        # print(voids)
 
         data = arcpy.Describe(layer.dataSource)
         sr = data.spatialReference
@@ -203,10 +203,10 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
         total_vertices = 0
 
         if len(polyBorder) > 2:  # at least 3 points
-            #print("make meshes from polygons")
+            # print("make meshes from polygons")
             if len(voids) == 0:  # if there is a mesh with no voids
-                #print("no voids")
-                #print(polyBorder)
+                # print("no voids")
+                # print(polyBorder)
                 for pt in polyBorder:
                     if isinstance(pt, Point):
                         pt = pointToNative(pt, sr, dataStorage).getPart()  # SR unknown
@@ -222,8 +222,8 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
                 # print(faces)
                 # else: https://docs.panda3d.org/1.10/python/reference/panda3d.core.Triangulator
             else:
-                #print("voids")
-                #print(polyBorder)
+                # print("voids")
+                # print(polyBorder)
                 trianglator = Triangulator()
                 faces = []
 
@@ -293,7 +293,7 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
             colors = [col for i in ran]  # apply same color for all vertices
             mesh = constructMesh(vertices, faces, colors)
 
-            print(mesh)
+            # print(mesh)
             if mesh is not None:
                 polygon.displayValue = [mesh]
             else:
@@ -380,3 +380,90 @@ def polygonToNative(
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return polygon
+
+
+def multiPolygonToNative(
+    items: List[Base], sr: arcpy.SpatialReference, dataStorage
+):  # TODO fix multi features
+
+    print("_______Drawing Multipolygons____")
+    polygon = None
+    if not isinstance(items, List):
+        items = [items]
+    try:
+        # print(items)
+        full_array_list = []
+        for item_geom in items:  # will be 1 item
+            try:
+                item_geom = item_geom["geometry"]
+            except:
+                item_geom = [item_geom]
+            for item in item_geom:
+                # print(item)
+                # pts = [pointToCoord(pt) for pt in item["boundary"].as_points()]
+                pointsSpeckle = []
+                if isinstance(item["boundary"], Circle) or isinstance(
+                    item["boundary"], Arc
+                ):
+                    pointsSpeckle = speckleArcCircleToPoints(item["boundary"])
+                elif isinstance(item["boundary"], Polycurve):
+                    pointsSpeckle = specklePolycurveToPoints(item["boundary"])
+                elif isinstance(item["boundary"], Line):
+                    pass
+                else:
+                    try:
+                        pointsSpeckle = item["boundary"].as_points()
+                    except Exception as e:
+                        print(e)  # if Line
+                # print(pointsSpeckle)
+                pts = [pointToCoord(pt) for pt in pointsSpeckle]
+                # print(pts)
+
+                outer_arr = [arcpy.Point(*coords) for coords in pts]
+                if pts[0] != pts[-1]:
+                    outer_arr.append(outer_arr[0])
+                # print("outer border")
+                # print(outer_arr)
+                geomPart = []
+                try:
+                    for void in item["voids"]:
+                        # print("void")
+                        # print(void)
+                        # pts = [pointToCoord(pt) for pt in void.as_points()]
+                        pointsSpeckle = []
+                        if isinstance(void, Circle) or isinstance(void, Arc):
+                            pointsSpeckle = speckleArcCircleToPoints(void)
+                        elif isinstance(void, Polycurve):
+                            pointsSpeckle = specklePolycurveToPoints(void)
+                        elif isinstance(void, Line):
+                            pass
+                        else:
+                            try:
+                                pointsSpeckle = void.as_points()
+                            except:
+                                pass  # if Line
+                        pts = [pointToCoord(pt) for pt in pointsSpeckle]
+
+                        inner_arr = [arcpy.Point(*coords) for coords in pts]
+                        if pts[0] != pts[-1]:
+                            inner_arr.append(inner_arr[0])
+                        geomPart.append(arcpy.Array(inner_arr))
+                except Exception as e:
+                    print(e)
+
+                geomPart.insert(0, arcpy.Array(outer_arr))
+                full_array_list.extend(
+                    geomPart
+                )  # outlines are written one by one, with no separation to "parts"
+                print(full_array_list)  # array of points
+            # print("end of loop1")
+        print("end of loop2")
+        geomPartArray = arcpy.Array(full_array_list)
+        polygon = arcpy.Polygon(geomPartArray, sr, has_z=True)
+
+        print(polygon)
+    except Exception as e:
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+
+    return polygon
+
