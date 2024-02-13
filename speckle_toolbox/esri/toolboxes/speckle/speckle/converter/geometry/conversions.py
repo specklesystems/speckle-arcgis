@@ -107,7 +107,7 @@ def convertToSpeckle(
             f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
                 return None
-            result = [pointToSpeckle(feature.getPart(), feature, layer, dataStorage)]
+            result = [pointToSpeckle(f_shape, feature, layer, dataStorage)]
             for r in result:
                 r.units = units
 
@@ -123,7 +123,7 @@ def convertToSpeckle(
                 return None
             result = [
                 pointToSpeckle(pt, feature, layer, dataStorage)
-                for pt in feature.getPart()
+                for pt in f_shape
             ]
             for r in result:
                 r.units = units
@@ -172,7 +172,7 @@ def convertToSpeckle(
             f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             result = [
                 polygonToSpeckle(geom, feature, index, layer, dataStorage, x_form)
-                for geom in feature.getPart()
+                for geom in f_shape
             ]
 
             for r in result:
@@ -198,7 +198,7 @@ def convertToSpeckle(
             f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
                 return None
-            result = [polygonToSpeckleMesh(feature, index, layer, False, dataStorage)]
+            result = [polygonToSpeckleMesh(f_shape, index, layer, False, dataStorage)]
             for r in result:
                 if r is None:
                     continue

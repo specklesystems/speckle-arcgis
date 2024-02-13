@@ -1,5 +1,6 @@
 import copy
 from datetime import datetime
+import random
 from typing import Dict, Any, List, Tuple, Union
 import json
 import hashlib
@@ -527,91 +528,100 @@ def findTransformation(
     layer_sr: arcpy.SpatialReference,
     projectCRS: arcpy.SpatialReference,
     selectedLayer: arcLayer,
-) -> tuple:
+) -> Tuple:
     # apply transformation if needed
     try:
-        # print(f_shape)
+        print("___findTransformation___")
+        tr0 = tr1 = tr2 = tr_custom = None
         if (
-            layer_sr.name != projectCRS.name
-            or len(layer_sr.name) < 2
-            or len(projectCRS.name) < 2
+            geomType != "Point"
+            and geomType != "Polyline"
+            and geomType != "Polygon"
+            and geomType != "Multipoint"
+            and geomType != "MultiPatch"
         ):
-            tr0 = tr1 = tr2 = tr_custom = None
-            midSr = arcpy.SpatialReference("WGS 1984")  # GCS_WGS_1984
-            # print(layer_sr)
             try:
-                transformations = arcpy.ListTransformations(layer_sr, projectCRS)
-                # print(transformations)
-                customTransformName = "layer_sr.name" + "_To_" + projectCRS.name
-                if len(transformations) == 0:
-                    try:
-                        tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
-                        tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
-                    except:
-                        # customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
-                        # CreateCustomGeoTransformation(customTransformName, layer_sr, projectCRS)
-                        tr_custom = customTransformName
-                else:
-                    # print("else")
-                    # choose equation based instead of file-based/grid-based method,
-                    # to be consistent with QGIS: https://desktop.arcgis.com/en/arcmap/latest/map/projections/choosing-an-appropriate-transformation.htm
-                    selecterTr = {}
-                    for tr in transformations:
-                        if "NTv2" not in tr and "NADCON" not in tr:
-                            set1 = set(
-                                layer_sr.name.split("_") + projectCRS.name.split("_")
-                            )
-                            set2 = set(tr.split("_"))
-                            diff = len(set(set1).symmetric_difference(set2))
-                            selecterTr.update({tr: diff})
-                    selecterTr = dict(
-                        sorted(selecterTr.items(), key=lambda item: item[1])
-                    )
-                    tr0 = list(selecterTr.keys())[0]
-                    # print(tr0)
-
-                if (
-                    geomType != "Point"
-                    and geomType != "Polyline"
-                    and geomType != "Polygon"
-                    and geomType != "Multipoint"
-                    and geomType != "MultiPatch"
-                ):
-                    try:
-                        logToUser(
-                            "Unsupported or invalid geometry in layer "
-                            + selectedLayer.name,
-                            level=2,
-                            func=inspect.stack()[0][3],
-                        )
-                    except:
-                        logToUser(
-                            "Unsupported or invalid geometry",
-                            level=2,
-                            func=inspect.stack()[0][3],
-                        )
-                try:
-                    print(layer_sr, tr0, tr1, tr2)
-                except:
-                    pass
-                return layer_sr, tr0, tr1, tr2
-
-            except:
                 logToUser(
-                    f"Spatial Transformation not found for layer {selectedLayer.name}",
+                    "Unsupported or invalid geometry in layer " + selectedLayer.name,
                     level=2,
                     func=inspect.stack()[0][3],
                 )
-                return None, None, None, None
+            except:
+                logToUser(
+                    "Unsupported or invalid geometry",
+                    level=2,
+                    func=inspect.stack()[0][3],
+                )
+            return layer_sr, None, None, None, None
+
+        if layer_sr.name == projectCRS.name:
+            return layer_sr, None, None, None, None
+
+        # get list of transforms and find similar one
+        transformations = arcpy.ListTransformations(layer_sr, projectCRS)
+
+        customTransformName = (
+            hashlib.md5(layer_sr.exportToString().encode("utf-8")).hexdigest()
+            + "_To_"
+            + hashlib.md5(projectCRS.exportToString().encode("utf-8")).hexdigest()
+        )
+        print(customTransformName)
+        for tr in transformations:
+            print(tr)
+            if tr == customTransformName:
+                tr0 = tr
+                print("found")
+                return layer_sr, tr0, tr1, tr2, tr_custom
+
+        if tr0 is None:  # if no valid transforms found
+            try:  # try find intermediate transforms
+                midSr = arcpy.SpatialReference("WGS 1984")  # GCS_WGS_1984
+                tr1 = arcpy.ListTransformations(layer_sr, midSr)[0]
+                tr2 = arcpy.ListTransformations(midSr, projectCRS)[0]
+            except Exception as e:  # create custom transform in nothing else works
+                print(e)
+                layer_sr = arcpy.SpatialReference(text=layer_sr.exportToString())
+                projectCRS = arcpy.SpatialReference(text=projectCRS.exportToString())
+                customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
+                arcpy.management.CreateCustomGeoTransformation(
+                    customTransformName, layer_sr, projectCRS, customGeoTransfm
+                )
+                tr_custom = customTransformName
+                print(tr_custom)
+            return layer_sr, tr0, tr1, tr2, tr_custom
+        r"""
+        else:
+            print("else")
+            # choose equation based instead of file-based/grid-based method,
+            # to be consistent with QGIS: https://desktop.arcgis.com/en/arcmap/latest/map/projections/choosing-an-appropriate-transformation.htm
+            selecterTr = {}
+            for tr in transformations:
+                if "NTv2" not in tr and "NADCON" not in tr:
+                    set1 = set(
+                        layer_sr.name.split("_") + projectCRS.name.split("_")
+                    )
+                    set2 = set(tr.split("_"))
+                    diff = len(set(set1).symmetric_difference(set2))
+                    selecterTr.update({tr: diff})
+            selecterTr = dict(
+                sorted(selecterTr.items(), key=lambda item: item[1])
+            )
+            tr0 = list(selecterTr.keys())[0]
+            # print(tr0)
+        """
 
     except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
-        return None, None, None, None
+        logToUser(
+            f"Spatial Transformation not found for layer {selectedLayer.name}: {e}",
+            level=2,
+            func=inspect.stack()[0][3],
+        )
+        return layer_sr, None, None, None, None
 
 
 def apply_reproject(f_shape, transforms: Tuple, dataStorage):
     try:
-        layer_sr, tr0, tr1, tr2 = transforms
+        layer_sr, tr0, tr1, tr2, tr_custom = transforms
         projectCRS = dataStorage.project.activeMap.spatialReference
         # reproject geometry using chosen transformstion(s)
         if tr0 is not None:
@@ -622,7 +632,14 @@ def apply_reproject(f_shape, transforms: Tuple, dataStorage):
             ptgeo1 = f_shape.projectAs(midSr, tr1)
             ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
             f_shape = ptgeo2
+            r"""
+            elif tr_custom is not None:
+                print(tr_custom)
+                ptgeo1 = f_shape.projectAs(projectCRS, tr_custom)
+                f_shape = ptgeo1
+            """
         else:
+            projectCRS = arcpy.SpatialReference(text=projectCRS.exportToString())
             ptgeo1 = f_shape.projectAs(projectCRS)
             f_shape = ptgeo1
     except Exception as e:
