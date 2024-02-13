@@ -173,15 +173,12 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugi
     print("find And Clear LayerGroup")
     try:
         groupExists = 0
-        # print(newGroupName)
         for l in project.activeMap.listLayers():
-            # print(l.longName)
             if l.longName.startswith(newGroupName + "\\"):
-                # print(l.longName)
                 if l.isFeatureLayer:
                     # condition for feature layers:
                     fields = [f.name for f in arcpy.ListFields(l.dataSource)]
-                    # print(fields)
+
                     if "Speckle_ID" in fields or "speckle_id" in fields:
                         project.activeMap.removeLayer(l)
                         groupExists += 1
@@ -193,7 +190,7 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugi
 
             elif l.longName == newGroupName:
                 groupExists += 1
-        # print(newGroupName)
+
         if groupExists == 0:
             layerGroup = create_layer_group(project, newGroupName, plugin)
 
@@ -203,27 +200,6 @@ def findAndClearLayerGroup(project: ArcGISProject, newGroupName: str = "", plugi
 
 def create_layer_group(project: ArcGISProject, newGroupName: str, plugin):
     try:
-        path: str = (
-            os.path.expandvars(r"%LOCALAPPDATA%")
-            + "\\Temp\\Speckle_ArcGIS_temp\\"
-            + datetime.now().strftime("%Y-%m-%d_%H-%M")
-        )
-        path += "\\Layers_Speckle\\"
-        findOrCreatePath(path)
-        lyr_path = path + newGroupName + ".lyrx"
-        # print(lyr_path)
-        r"""
-        try:
-            f = open(lyr_path, "w")
-            content = createGroupLayer().replace("TestGroupLayer", newGroupName)
-            f.write(content)
-            f.close()
-            newGroupLayer = arcpy.mp.LayerFile(lyr_path)
-            layerGroup = project.activeMap.addLayer(newGroupLayer)[0]
-            print(layerGroup)
-            return layerGroup
-        except:  # for 3.0.0
-        """
         if project.activeMap is not None:
             # print("try creating the group")
             # check for full match

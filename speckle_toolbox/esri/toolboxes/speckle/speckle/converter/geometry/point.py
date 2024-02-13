@@ -68,8 +68,6 @@ def pointToSpeckle(pt, feature, layer, dataStorage):
         specklePoint.x, specklePoint.y = apply_pt_offsets_rotation_on_send(
             x, y, dataStorage
         )
-
-        # print(specklePoint)
         return specklePoint
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])

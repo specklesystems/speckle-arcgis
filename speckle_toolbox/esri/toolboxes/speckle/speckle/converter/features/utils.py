@@ -8,7 +8,50 @@ from speckle.speckle.utils.panel_logging import logToUser
 from specklepy.objects import Base
 
 
-def addFeatVariant(key, variant, value, f: "QgsFeature") -> "QgsFeature":
+def addFeatVariant(key, variant, value, f):
+    # print("Add feat variant")
+    feat = f
+    try:
+        if variant == "TEXT":
+            value = str(value)[:255]
+            if len(value) > 255:
+                print(len(value))
+                value = value[:255]
+                logToUser(
+                    f'Field "{key}" values are trimmed at 255 characters',
+                    level=2,
+                    func=inspect.stack()[0][3],
+                )
+
+        if value != "NULL" and value != "None":
+            # if key == 'area': print(value); print(type(value)); print(getVariantFromValue(value))
+            if variant == getVariantFromValue(
+                value
+            ):  # or (variant=="FLOAT" and isinstance(value, int)):
+                feat.update({key: value})
+            elif variant == "LONG" and isinstance(
+                value, float
+            ):  # if object has been modified
+                feat.update({key: int(value)})
+            elif variant == "FLOAT" and isinstance(
+                value, int
+            ):  # if object has been modified
+                feat.update({key: float(value)})
+            else:
+                feat.update({key: None})
+        elif (
+            variant == "TEXT"
+            or variant == "FLOAT"
+            or variant == "LONG"
+            or variant == "SHORT"
+        ):
+            feat.update({key: None})
+    except Exception as e:
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+    return feat
+
+
+def addFeatVariant_qgis(key, variant, value, f):
     try:
         feat = f
         if variant == 10:

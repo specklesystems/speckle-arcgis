@@ -330,7 +330,7 @@ def rasterFeatureToSpeckle(
         colors = []
         count = 0
 
-        print(selectedLayer.symbology)  # None
+        # print(selectedLayer.symbology)  # None
         colorizer = None
 
         # print(rendererType)
@@ -351,10 +351,10 @@ def rasterFeatureToSpeckle(
 
         if hasattr(selectedLayer.symbology, "colorizer"):
             colorizer = selectedLayer.symbology.colorizer
-            print(
-                colorizer
-            )  # <arcpy._colorizer.RasterStretchColorizer object at 0x000001780497FBC8>
-            print(colorizer.type)  # RasterStretchColorizer
+            # print(
+            #    colorizer
+            # )  # <arcpy._colorizer.RasterStretchColorizer object at 0x000001780497FBC8>
+            # print(colorizer.type)  # RasterStretchColorizer
         else:
             redBand = greenBand = blueBand = None
             # RGB colorizer

@@ -268,7 +268,7 @@ def layerToSpeckle(
                     row_shapes_list = [x for k, x in enumerate(rows_shapes)]
                     for i, features in enumerate(row_shapes_list):
 
-                        # print(
+                        print(
                             "____error Feature # " + str(i + 1)
                         )  # + " / " + str(sum(1 for _ in enumerate(rows_shapes))))
                         if features[0] is None:
@@ -279,7 +279,7 @@ def layerToSpeckle(
                         # print(feat.partCount)
 
                         if feat is not None:
-                            # print(
+                            print(
                                 feat
                             )  # <geoprocessing describe geometry object object at 0x0000026796C47780>
                             rows_attributes = arcpy.da.SearchCursor(
@@ -370,9 +370,9 @@ def layerToSpeckle(
         elif selectedLayer.isRasterLayer:
             print("RASTER HERE")
             # print(selectedLayer.name)  # London_square.tif
-            #print(
+            # print(
             #    arcpy.Describe(selectedLayer.dataSource)
-            #)  # <geoprocessing describe data object object at 0x000002507C7F3BB0>
+            # )  # <geoprocessing describe data object object at 0x000002507C7F3BB0>
             # print(arcpy.Describe(selectedLayer.dataSource).datasetType)  # RasterDataset
             b = rasterFeatureToSpeckle(selectedLayer, projectCRS, plugin)
 
@@ -2289,7 +2289,7 @@ def addRasterMainThread(obj: Tuple):
                 originPt.X, originPt.Y + (ysize * yres), originPt.Z
             )
             # upperRightCorner = arcpy.Point(originPt.X + (xsize*xres), originPt.Y, originPt.Z)
-            #print(leftLowerCorner)
+            # print(leftLowerCorner)
             # print(upperRightCorner)
 
             # # Convert array to a geodatabase raster, add to layers
@@ -2309,7 +2309,7 @@ def addRasterMainThread(obj: Tuple):
             rasterbandPath = validate_path(
                 rasterbandPath, plugin
             )  # solved file saving issue
-            #print(rasterbandPath)
+            # print(rasterbandPath)
             # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
             myRaster.save(rasterbandPath)
 
@@ -2351,17 +2351,17 @@ def addRasterMainThread(obj: Tuple):
         #    nodata=[[i, noDataVals[i] for i in range(bandsCount)],
         # )
         # print(rasterLayer)
-        #print(layerGroup)
+        # print(layerGroup)
         active_map.addLayerToGroup(layerGroup, rasterLayer)
 
         rl2 = None
-        #print(newName)
+        # print(newName)
         newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
             SYMBOL + SYMBOL, SYMBOL
         )
-        #print(newGroupName.replace(SYMBOL, "\\") + newName)
+        # print(newGroupName.replace(SYMBOL, "\\") + newName)
         for l in project.activeMap.listLayers():
-            #print(l.longName)
+            # print(l.longName)
             if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 rl2 = l
                 break

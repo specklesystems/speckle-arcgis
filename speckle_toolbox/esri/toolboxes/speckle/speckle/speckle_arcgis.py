@@ -41,7 +41,6 @@ from specklepy.objects.units import get_units_from_string
 from speckle.speckle.plugin_utils.threads import KThread
 from speckle.speckle.plugin_utils.object_utils import callback, traverseObject
 from speckle.speckle.converter.layers import (
-    convertSelectedLayers,
     getLayersWithStructure,
 )
 from speckle.speckle.converter.layers.utils import findAndClearLayerGroup
@@ -831,6 +830,7 @@ class SpeckleGIS:
 
     def reloadUI(self):
 
+        self.dockwidget.signal_cancel_operation.emit()
         from speckle.speckle.utils.project_vars import (
             get_project_streams,
             get_survey_point,

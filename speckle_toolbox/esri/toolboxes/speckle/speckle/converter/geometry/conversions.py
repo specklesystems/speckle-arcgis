@@ -245,7 +245,7 @@ def convertToNative(
                             converted = meshToNative(
                                 base["@displayValue"], sr, dataStorage
                             )
-                    else: 
+                    else:
                         converted = multiPolygonToNative(base, sr, dataStorage)
                 else:
                     # for older commits
@@ -281,7 +281,7 @@ def convertToNative(
                             )  # only called for Meshes created in QGIS before
 
                 except:  # any other object(
-                    pass 
+                    pass
         if converted is None:
             converted = multiPolygonToNative(base, sr, dataStorage)
     except Exception as e:
