@@ -14,6 +14,7 @@ from speckle.speckle.plugin_utils.helpers import (
     get_scale_factor_to_meter,
 )
 from speckle.speckle.converter.layers.utils import (
+    apply_reproject,
     findTransformation,
     getVariantFromValue,
     traverseDict,
@@ -218,16 +219,17 @@ def rasterFeatureToSpeckle(
 
         # Try to extract geometry
         reprojectedPt = None
+        x_form: tuple = findTransformation(
+            rasterOriginPoint,
+            "Point",
+            my_raster.spatialReference,
+            projectCRS,
+            selectedLayer,
+        )
         try:
             reprojectedPt = rasterOriginPoint
             if my_raster.spatialReference.name != projectCRS.name:
-                reprojectedPt = findTransformation(
-                    reprojectedPt,
-                    "Point",
-                    my_raster.spatialReference,
-                    projectCRS,
-                    selectedLayer,
-                )
+                reprojectedPt = apply_reproject(reprojectedPt, x_form, dataStorage)
                 if reprojectedPt is None:
                     reprojectedPt = rasterOriginPoint
         except Exception as error:
@@ -528,34 +530,11 @@ def rasterFeatureToSpeckle(
                     my_raster.spatialReference.exportToString()
                     != projectCRS.exportToString()
                 ):
-                    pt1 = findTransformation(
-                        pt1,
-                        "Point",
-                        my_raster.spatialReference,
-                        projectCRS,
-                        selectedLayer,
-                    )
-                    pt2 = findTransformation(
-                        pt2,
-                        "Point",
-                        my_raster.spatialReference,
-                        projectCRS,
-                        selectedLayer,
-                    )
-                    pt3 = findTransformation(
-                        pt3,
-                        "Point",
-                        my_raster.spatialReference,
-                        projectCRS,
-                        selectedLayer,
-                    )
-                    pt4 = findTransformation(
-                        pt4,
-                        "Point",
-                        my_raster.spatialReference,
-                        projectCRS,
-                        selectedLayer,
-                    )
+                    pt1 = apply_reproject(pt1, x_form, dataStorage)
+                    pt2 = apply_reproject(pt2, x_form, dataStorage)
+                    pt3 = apply_reproject(pt3, x_form, dataStorage)
+                    pt4 = apply_reproject(pt4, x_form, dataStorage)
+
                 vertices.extend(
                     [
                         pt1.getPart().X,
@@ -796,7 +775,6 @@ def featureToNative(
     feature: Base, fields: dict, geomType: str, sr: arcpy.SpatialReference, dataStorage
 ):
     print("04_____Feature To Native correct____________")
-    print(feature)
     feat = {}
     try:
         try:
@@ -806,6 +784,7 @@ def featureToNative(
         except:
             speckle_geom = feature  # for created in other software
 
+        print(speckle_geom)
         arcGisGeom = None
         if isinstance(speckle_geom, list):
             if len(speckle_geom) > 1 or geomType == "Multipoint":
@@ -820,7 +799,10 @@ def featureToNative(
             feat.update({"arcGisGeomFromSpeckle": arcGisGeom})
         else:
             return None
-        # print(arcGisGeom)
+        try:
+            [print(p for p in arcGisGeom.getPart())]
+        except:
+            print(arcGisGeom.getPart())
         # print(feat)
         for key, variant in fields.items():
             value = None

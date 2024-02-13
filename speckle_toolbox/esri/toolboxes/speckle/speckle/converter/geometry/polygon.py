@@ -87,7 +87,7 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
         return None
 
 
-def getPolyBoundaryVoids(feature, layer, dataStorage, xform_vars=None):
+def getPolyBoundaryVoids(feature, layer, dataStorage, x_form=None):
     # print("__getPolyBoundaryVoids__")
     voids: List[Union[None, Polyline, Arc, Line, Polycurve]] = []
     boundary = None
@@ -175,7 +175,7 @@ def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool, dataStorage)
     return polygon
 
 
-def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
+def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, x_form):
     """Converts a Polygon to Speckle"""
     # polygon = Base(units="m")
     polygon = GisPolygonGeometry(units="m")
@@ -183,7 +183,7 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, xform_vars):
         print("___Polygon to Speckle____")
         # print(geom)  # array
 
-        boundary, voids = getPolyBoundaryVoids(geom, layer, dataStorage, xform_vars)
+        boundary, voids = getPolyBoundaryVoids(geom, layer, dataStorage, x_form)
         # print(boundary)
         # print(voids)
 

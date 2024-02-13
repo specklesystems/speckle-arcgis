@@ -28,7 +28,7 @@ from speckle.speckle.converter.geometry.point import (
     addZtoPoint,
 )
 from speckle.speckle.converter.geometry.utils import speckleArcCircleToPoints
-from speckle.speckle.converter.layers.utils import get_scale_factor, findTransformation
+from speckle.speckle.converter.layers.utils import apply_reproject, get_scale_factor
 from speckle.speckle.utils.panel_logging import logToUser
 
 
@@ -82,7 +82,7 @@ def multiPolylineToSpeckle(
     return polyline
 
 
-def anyLineToSpeckle(geom, feature, layer, dataStorage, xform_vars=None):
+def anyLineToSpeckle(geom, feature, layer, dataStorage, x_form=None):
     print("___Any line to Speckle____")
     polyline = None
     try:
@@ -97,8 +97,9 @@ def anyLineToSpeckle(geom, feature, layer, dataStorage, xform_vars=None):
                 # geometry SHAPE@ tokens: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/reading-geometries.htm
                 # print(geom.JSON)
                 new_geom = geom.densify("GEODESIC", 0.1)
-                if xform_vars is not None:
-                    f_shape = findTransformation(new_geom, *xform_vars)
+                if x_form is not None:
+                    f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
+                    #f_shape = findTransformation(new_geom, *xform_vars)
                     if f_shape is None:
                         return None
             else:
@@ -106,7 +107,7 @@ def anyLineToSpeckle(geom, feature, layer, dataStorage, xform_vars=None):
         except:  # no curves
             new_geom = geom
 
-        print(new_geom)  # describe geometry object
+        #print(new_geom)  # describe geometry object
         for p in new_geom:
             print(p)  # array
             for pt in p:

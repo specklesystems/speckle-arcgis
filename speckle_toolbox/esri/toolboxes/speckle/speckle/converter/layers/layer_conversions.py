@@ -243,6 +243,7 @@ def layerToSpeckle(
 
         if selectedLayer.isFeatureLayer:
             print("VECTOR LAYER HERE")
+            print(projectCRS.exportToString())
 
             speckleLayer = VectorLayer(units="m")
             speckleLayer.collectionType = "VectorLayer"
@@ -2259,8 +2260,13 @@ def addRasterMainThread(obj: Tuple):
             originPt = arcpy.Point(
                 feat["displayValue"][0].x, feat["displayValue"][0].y, 0
             )
+
         # if source projection is different from layer display projection, convert display OriginPt to raster source projection
         if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
+            arc_pt = arcpy.PointGeometry(originPt, sr, has_z=True)
+            f_shape = arc_pt.projectAs(srRaster).getPart()
+
+            r"""
             originPt = findTransformation(
                 arcpy.PointGeometry(originPt, sr, has_z=True),
                 "Point",
@@ -2268,6 +2274,7 @@ def addRasterMainThread(obj: Tuple):
                 srRaster,
                 None,
             ).getPart()
+            """
 
         bandDatasets = ""
         rastersToMerge = []

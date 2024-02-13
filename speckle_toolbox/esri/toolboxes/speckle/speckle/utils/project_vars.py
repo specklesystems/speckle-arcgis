@@ -236,13 +236,13 @@ def get_rotation(plugin):
             return
 
         rows = arcpy.da.SearchCursor(table, "crs_rotation")
-        points = ""
+        rotation = ""
         for x in rows:
-            points = x[0]
+            rotation = x[0]
             break
 
-        if points != "":
-            vals: List[str] = points.replace(" ", "").split(";")
+        if rotation != "":
+            vals: str = rotation.replace(" ", "")
             dataStorage.crs_rotation = float(vals)
 
     except Exception as e:

@@ -55,7 +55,7 @@ from speckle.speckle.converter.geometry.point import (
     multiPointToSpeckle,
 )
 
-from speckle.speckle.converter.layers.utils import findTransformation
+from speckle.speckle.converter.layers.utils import apply_reproject, findTransformation
 from speckle.speckle.utils.panel_logging import logToUser
 
 import numpy as np
@@ -75,12 +75,21 @@ def convertToSpeckle(
         units = dataStorage.currentUnits
 
         xform_vars = (geomType, layer_sr, projectCRS, layer)
+
+        x_form: tuple = findTransformation(
+            feature, geomType, layer_sr, projectCRS, layer
+        )
+
         # f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
         # if f_shape is None:
         #    return None
 
         print(feature.isMultipart)  # e.g. False
         print(feature.partCount)
+        try:
+            [print(p for p in feature.getPart())]
+        except:
+            print(feature.getPart())
         # geomMultiType = feature.isMultipart
         hasCurves = feature.hasCurves
 
@@ -92,7 +101,10 @@ def convertToSpeckle(
 
         if geomType == "Point":  # Polygon, Point, Polyline, Multipoint, MultiPatch
             print("__Point conversion")
-            f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+            # x_form: tuple = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+            # f_shape = apply_reproject(feature, x_form, dataStorage)
+
+            f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
                 return None
             result = [pointToSpeckle(feature.getPart(), feature, layer, dataStorage)]
@@ -103,7 +115,10 @@ def convertToSpeckle(
 
         elif geomType == "Multipoint":
             print("__Multipoint conversion")
-            f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+            # x_form: tuple = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+            # f_shape = apply_reproject(feature, x_form, dataStorage)
+
+            f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
                 return None
             result = [
@@ -134,7 +149,7 @@ def convertToSpeckle(
                     )
                 )
             result = [
-                anyLineToSpeckle(poly, feature, layer, dataStorage, xform_vars)
+                anyLineToSpeckle(poly, feature, layer, dataStorage, x_form)
                 for poly in all_parts
             ]
             for r in result:
@@ -154,8 +169,9 @@ def convertToSpeckle(
 
             else:
             """
+            f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             result = [
-                polygonToSpeckle(geom, feature, index, layer, dataStorage, xform_vars)
+                polygonToSpeckle(geom, feature, index, layer, dataStorage, x_form)
                 for geom in feature.getPart()
             ]
 
@@ -175,7 +191,11 @@ def convertToSpeckle(
             element = GisPolygonElement(units=units, geometry=result)
 
         elif geomType == "MultiPatch":
-            f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
+            # x_form: tuple = findTransformation(
+            #    feature, geomType, layer_sr, projectCRS, layer
+            # )
+            # f_shape = apply_reproject(feature, x_form, dataStorage)
+            f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
                 return None
             result = [polygonToSpeckleMesh(feature, index, layer, False, dataStorage)]
@@ -200,6 +220,10 @@ def convertToSpeckle(
                 level=1,
                 func=inspect.stack()[0][3],
             )
+        try:
+            print(result)
+        except:
+            pass
         return element, iterations
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])

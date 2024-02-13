@@ -1,6 +1,6 @@
 import copy
 from datetime import datetime
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Tuple, Union
 import json
 import hashlib
 from specklepy.objects import Base
@@ -527,10 +527,15 @@ def findTransformation(
     layer_sr: arcpy.SpatialReference,
     projectCRS: arcpy.SpatialReference,
     selectedLayer: arcLayer,
-):
+) -> tuple:
     # apply transformation if needed
     try:
-        if layer_sr.name != projectCRS.name:
+        # print(f_shape)
+        if (
+            layer_sr.name != projectCRS.name
+            or len(layer_sr.name) < 2
+            or len(projectCRS.name) < 2
+        ):
             tr0 = tr1 = tr2 = tr_custom = None
             midSr = arcpy.SpatialReference("WGS 1984")  # GCS_WGS_1984
             # print(layer_sr)
@@ -563,6 +568,7 @@ def findTransformation(
                         sorted(selecterTr.items(), key=lambda item: item[1])
                     )
                     tr0 = list(selecterTr.keys())[0]
+                    # print(tr0)
 
                 if (
                     geomType != "Point"
@@ -584,18 +590,11 @@ def findTransformation(
                             level=2,
                             func=inspect.stack()[0][3],
                         )
-
-                # reproject geometry using chosen transformstion(s)
-                if tr0 is not None:
-                    ptgeo1 = f_shape.projectAs(projectCRS, tr0)
-                    f_shape = ptgeo1
-                elif tr1 is not None and tr2 is not None:
-                    ptgeo1 = f_shape.projectAs(midSr, tr1)
-                    ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
-                    f_shape = ptgeo2
-                else:
-                    ptgeo1 = f_shape.projectAs(projectCRS)
-                    f_shape = ptgeo1
+                try:
+                    print(layer_sr, tr0, tr1, tr2)
+                except:
+                    pass
+                return layer_sr, tr0, tr1, tr2
 
             except:
                 logToUser(
@@ -603,8 +602,29 @@ def findTransformation(
                     level=2,
                     func=inspect.stack()[0][3],
                 )
-                return None
+                return None, None, None, None
 
+    except Exception as e:
+        logToUser(str(e), level=2, func=inspect.stack()[0][3])
+        return None, None, None, None
+
+
+def apply_reproject(f_shape, transforms: Tuple, dataStorage):
+    try:
+        layer_sr, tr0, tr1, tr2 = transforms
+        projectCRS = dataStorage.project.activeMap.spatialReference
+        # reproject geometry using chosen transformstion(s)
+        if tr0 is not None:
+            ptgeo1 = f_shape.projectAs(projectCRS, tr0)
+            f_shape = ptgeo1
+        elif tr1 is not None and tr2 is not None:
+            midSr = arcpy.SpatialReference("WGS 1984")
+            ptgeo1 = f_shape.projectAs(midSr, tr1)
+            ptgeo2 = ptgeo1.projectAs(projectCRS, tr2)
+            f_shape = ptgeo2
+        else:
+            ptgeo1 = f_shape.projectAs(projectCRS)
+            f_shape = ptgeo1
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
     return f_shape
