@@ -523,7 +523,6 @@ def get_scale_factor(units: str) -> float:
 
 
 def findTransformation(
-    f_shape,
     geomType,
     layer_sr: arcpy.SpatialReference,
     projectCRS: arcpy.SpatialReference,
@@ -532,6 +531,8 @@ def findTransformation(
     # apply transformation if needed
     try:
         print("___findTransformation___")
+        print(layer_sr.name)
+        print(projectCRS.name)
         tr0 = tr1 = tr2 = tr_custom = None
         if (
             geomType != "Point"
@@ -583,9 +584,16 @@ def findTransformation(
                 layer_sr = arcpy.SpatialReference(text=layer_sr.exportToString())
                 projectCRS = arcpy.SpatialReference(text=projectCRS.exportToString())
                 customGeoTransfm = "GEOGTRAN[METHOD['Geocentric_Translation'],PARAMETER['X_Axis_Translation',''],PARAMETER['Y_Axis_Translation',''],PARAMETER['Z_Axis_Translation','']]"
-                arcpy.management.CreateCustomGeoTransformation(
-                    customTransformName, layer_sr, projectCRS, customGeoTransfm
-                )
+                try:
+                    arcpy.management.CreateCustomGeoTransformation(
+                        customTransformName, layer_sr, projectCRS, customGeoTransfm
+                    )
+                except Exception as e:  # if already exists
+                    logToUser(
+                        f"Spatial Transformation cannot be created: {e}",
+                        level=2,
+                        func=inspect.stack()[0][3],
+                    )
                 tr_custom = customTransformName
                 print(tr_custom)
             return layer_sr, tr0, tr1, tr2, tr_custom
@@ -788,26 +796,22 @@ def curvedFeatureClassToSegments(layer) -> str:
         return None
 
 
-def validate_path(path: str, plugin):
+def validate_path(path: str, plugin) -> str:
     """If our path contains a DB name, make sure we have a valid DB name and not a standard file name."""
-    try:
-        # https://github.com/EsriOceans/btm/commit/a9c0529485c9b0baa78c1f094372c0f9d83c0aaf
-        dirname, file_name = os.path.split(path)
-        # print(dirname)
-        # print(file_name)
-        file_base = os.path.splitext(file_name)[0]
-        if dirname == "":
-            # a relative path only, relying on the workspace
-            dirname = plugin.workspace
-        path_ext = os.path.splitext(dirname)[1].lower()
-        if path_ext in [".mdb", ".gdb", ".sde"]:
-            # we're working in a database
-            file_name = arcpy.ValidateTableName(
-                file_base
-            )  # e.g. add a letter in front of the name
-        validated_path = os.path.join(dirname, file_name)
-        # msg("validated path: %s; (from %s)" % (validated_path, path))
-        return validated_path
-    except Exception as e:
-        logToUser(str(e), level=2, func=inspect.stack()[0][3])
-        return None
+    # https://github.com/EsriOceans/btm/commit/a9c0529485c9b0baa78c1f094372c0f9d83c0aaf
+    dirname, file_name = os.path.split(path)
+    # print(dirname)
+    # print(file_name)
+    file_base = os.path.splitext(file_name)[0]
+    if dirname == "":
+        # a relative path only, relying on the workspace
+        dirname = plugin.workspace
+    path_ext = os.path.splitext(dirname)[1].lower()
+    if path_ext in [".mdb", ".gdb", ".sde"]:
+        # we're working in a database
+        file_name = arcpy.ValidateTableName(
+            file_base
+        )  # e.g. add a letter in front of the name
+    validated_path = os.path.join(dirname, file_name)
+    # msg("validated path: %s; (from %s)" % (validated_path, path))
+    return validated_path

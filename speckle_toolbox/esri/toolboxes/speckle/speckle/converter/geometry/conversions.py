@@ -73,19 +73,7 @@ def convertToSpeckle(
         featureType = data.featureType
         projectCRS = dataStorage.project.activeMap.spatialReference
         units = dataStorage.currentUnits
-
-        xform_vars = (geomType, layer_sr, projectCRS, layer)
-
-        x_form: tuple = findTransformation(
-            feature, geomType, layer_sr, projectCRS, layer
-        )
-
-        # f_shape = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
-        # if f_shape is None:
-        #    return None
-
-        print(feature.isMultipart)  # e.g. False
-        print(feature.partCount)
+        x_form: tuple = findTransformation(geomType, layer_sr, projectCRS, layer)
         try:
             [print(p for p in feature.getPart())]
         except:
@@ -101,8 +89,6 @@ def convertToSpeckle(
 
         if geomType == "Point":  # Polygon, Point, Polyline, Multipoint, MultiPatch
             print("__Point conversion")
-            # x_form: tuple = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
-            # f_shape = apply_reproject(feature, x_form, dataStorage)
 
             f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
@@ -115,16 +101,11 @@ def convertToSpeckle(
 
         elif geomType == "Multipoint":
             print("__Multipoint conversion")
-            # x_form: tuple = findTransformation(feature, geomType, layer_sr, projectCRS, layer)
-            # f_shape = apply_reproject(feature, x_form, dataStorage)
 
             f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
                 return None
-            result = [
-                pointToSpeckle(pt, feature, layer, dataStorage)
-                for pt in f_shape
-            ]
+            result = [pointToSpeckle(pt, feature, layer, dataStorage) for pt in f_shape]
             for r in result:
                 r.units = units
 
@@ -191,10 +172,6 @@ def convertToSpeckle(
             element = GisPolygonElement(units=units, geometry=result)
 
         elif geomType == "MultiPatch":
-            # x_form: tuple = findTransformation(
-            #    feature, geomType, layer_sr, projectCRS, layer
-            # )
-            # f_shape = apply_reproject(feature, x_form, dataStorage)
             f_shape = apply_reproject(feature, x_form, dataStorage).getPart()
             if f_shape is None:
                 return None

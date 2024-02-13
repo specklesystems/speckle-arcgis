@@ -104,7 +104,6 @@ def anyLineToSpeckle(geom, feature, layer, dataStorage, x_form=None):
 
         if x_form is not None:
             new_geom = apply_reproject(new_geom, x_form, dataStorage).getPart()
-            # f_shape = findTransformation(new_geom, *xform_vars)
             if new_geom is None:
                 return None
 

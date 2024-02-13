@@ -193,51 +193,65 @@ def rasterFeatureToSpeckle(
 
         rasterBandCount = my_raster.bandCount
         rasterBandNames = my_raster.bandNames
-        rasterDimensions = [my_raster.width, my_raster.height]
+        #rasterDimensions = [my_raster.width, my_raster.height] #wrong result
+        
+        rb = my_raster.getRasterBands(rasterBandNames[0])
+        size = np.shape(rb.read())
+        rasterDimensions = [size[1], size[0]]
         print(rasterDimensions)
 
         # ds = gdal.Open(selectedLayer.source(), gdal.GA_ReadOnly)
         extent = my_raster.extent
         print(extent.XMin)
         print(extent.YMin)
-        rasterOriginPoint = arcpy.PointGeometry(
-            arcpy.Point(extent.XMin, extent.YMax, extent.ZMin),
-            my_raster.spatialReference,
-            has_z=True,
-        )
-
         # if extent.YMin>0: rasterOriginPoint = arcpy.PointGeometry(arcpy.Point(extent.XMin, extent.YMax, extent.ZMin), my_raster.spatialReference, has_z = True)
-        print(rasterOriginPoint)
         rasterResXY = [
             my_raster.meanCellWidth,
             my_raster.meanCellHeight,
         ]  # [float(ds.GetGeoTransform()[1]), float(ds.GetGeoTransform()[5])]
+        
+        b.x_resolution = rasterResXY[0]
+        b.y_resolution = -1 * rasterResXY[1]
+        b.x_size = rasterDimensions[0]
+        b.y_size = rasterDimensions[1]
+        b.band_count = rasterBandCount
+        b.band_names = rasterBandNames
+
         rasterBandNoDataVal = []  # list(my_raster.noDataValues)
         rasterBandMinVal = []
         rasterBandMaxVal = []
         rasterBandVals = []
 
+        rasterOriginPoint = arcpy.PointGeometry(
+            arcpy.Point(extent.XMin, extent.YMax),
+            my_raster.spatialReference,
+        )
+        rasterOriginPoint_max = arcpy.PointGeometry(
+            arcpy.Point(
+                extent.XMin + rasterDimensions[0] * b.x_resolution,
+                extent.YMax + rasterDimensions[1] * b.y_resolution
+            ),
+            my_raster.spatialReference,
+        )
+
         # Try to extract geometry
-        reprojectedPt = None
         x_form: tuple = findTransformation(
-            rasterOriginPoint,
             "Point",
             my_raster.spatialReference,
             projectCRS,
             selectedLayer,
         )
-        try:
+
+        reprojectedPt = apply_reproject(rasterOriginPoint, x_form, dataStorage)
+        reprojectedPt_max = apply_reproject(rasterOriginPoint_max, x_form, dataStorage)
+        if reprojectedPt is None:
             reprojectedPt = rasterOriginPoint
-            if my_raster.spatialReference.name != projectCRS.name:
-                reprojectedPt = apply_reproject(reprojectedPt, x_form, dataStorage)
-                if reprojectedPt is None:
-                    reprojectedPt = rasterOriginPoint
-        except Exception as error:
-            logToUser(
-                "Error converting point geometry: " + str(error),
-                level=2,
-                func=inspect.stack()[0][3],
-            )
+            reprojectedPt_max = rasterOriginPoint_max
+
+        new_x_min, new_y_min = apply_pt_offsets_rotation_on_send(reprojectedPt.getPart().X, reprojectedPt.getPart().Y, dataStorage)
+        new_x_max, new_y_max = apply_pt_offsets_rotation_on_send(reprojectedPt_max.getPart().X, reprojectedPt_max.getPart().Y, dataStorage)
+        res_x = (new_x_max - new_x_min) / rasterDimensions[0]
+        res_y = (new_y_max - new_y_min) / rasterDimensions[1]
 
         for index in range(rasterBandCount):
             item = rasterBandNames[index]
@@ -313,15 +327,9 @@ def rasterFeatureToSpeckle(
                 bandValsFlat  # [0:int(max_values/rasterBandCount)]
             )
 
-        b.x_resolution = rasterResXY[0]
-        b.y_resolution = -1 * rasterResXY[1]
-        b.x_size = rasterDimensions[0]
-        b.y_size = rasterDimensions[1]
         b.x_origin, b.y_origin = apply_pt_offsets_rotation_on_send(
             reprojectedPt.getPart().X, reprojectedPt.getPart().Y, dataStorage
         )
-        b.band_count = rasterBandCount
-        b.band_names = rasterBandNames
         try:
             b.noDataValue = [float(val) for val in rasterBandNoDataVal]
         except:
@@ -438,10 +446,10 @@ def rasterFeatureToSpeckle(
 
         print(projectCRS)
         print(projectCRS.factoryCode)
-        if isinstance(projectCRS.factoryCode, int) and projectCRS.factoryCode > 1:
-            reprojected_raster = arcpy.ia.Reproject(
-                my_raster, {"wkid": projectCRS.factoryCode}
-            )
+        # if isinstance(projectCRS.factoryCode, int) and projectCRS.factoryCode > 1:
+        #    reprojected_raster = arcpy.ia.Reproject(
+        #        my_raster, {"wkid": projectCRS.factoryCode}
+        #    )
         print(my_raster.spatialReference)
         print(my_raster.spatialReference.factoryCode)
         for v in range(rasterDimensions[1]):  # each row, Y
@@ -491,64 +499,20 @@ def rasterFeatureToSpeckle(
                     )
 
             for h in range(rasterDimensions[0]):  # item in a row, X
-
-                pt1 = arcpy.PointGeometry(
-                    arcpy.Point(
-                        extent.XMin + h * rasterResXY[0],
-                        extent.YMax - v * rasterResXY[1],
-                    ),
-                    my_raster.spatialReference,
-                    has_z=True,
-                )
-                pt2 = arcpy.PointGeometry(
-                    arcpy.Point(
-                        extent.XMin + h * rasterResXY[0],
-                        extent.YMax - (v + 1) * rasterResXY[1],
-                    ),
-                    my_raster.spatialReference,
-                    has_z=True,
-                )
-                pt3 = arcpy.PointGeometry(
-                    arcpy.Point(
-                        extent.XMin + (h + 1) * rasterResXY[0],
-                        extent.YMax - (v + 1) * rasterResXY[1],
-                    ),
-                    my_raster.spatialReference,
-                    has_z=True,
-                )
-                pt4 = arcpy.PointGeometry(
-                    arcpy.Point(
-                        extent.XMin + (h + 1) * rasterResXY[0],
-                        extent.YMax - v * rasterResXY[1],
-                    ),
-                    my_raster.spatialReference,
-                    has_z=True,
-                )
-
-                # first, get point coordinates with correct position and resolution, then reproject each:
-                if (
-                    my_raster.spatialReference.exportToString()
-                    != projectCRS.exportToString()
-                ):
-                    pt1 = apply_reproject(pt1, x_form, dataStorage)
-                    pt2 = apply_reproject(pt2, x_form, dataStorage)
-                    pt3 = apply_reproject(pt3, x_form, dataStorage)
-                    pt4 = apply_reproject(pt4, x_form, dataStorage)
-
                 vertices.extend(
                     [
-                        pt1.getPart().X,
-                        pt1.getPart().Y,
-                        pt1.getPart().Z,
-                        pt2.getPart().X,
-                        pt2.getPart().Y,
-                        pt2.getPart().Z,
-                        pt3.getPart().X,
-                        pt3.getPart().Y,
-                        pt3.getPart().Z,
-                        pt4.getPart().X,
-                        pt4.getPart().Y,
-                        pt4.getPart().Z,
+                        new_x_min + h * res_x,
+                        new_y_min + v * res_y,
+                        0,
+                        new_x_min + h * res_x,
+                        new_y_min + (v + 1) * res_y,
+                        0,
+                        new_x_min + (h + 1) * res_x,
+                        new_y_min + (v + 1) * res_y,
+                        0,
+                        new_x_min + (h + 1) * res_x,
+                        new_y_min + v * res_y,
+                        0,
                     ]
                 )  ## add 4 points
                 faces.extend([4, count, count + 1, count + 2, count + 3])
@@ -574,9 +538,9 @@ def rasterFeatureToSpeckle(
                                 print(br.heading)  # "Value"
                                 # go through all values classified
                                 if br.heading != "Value":
-                                    print(int("x"))  # call exception
+                                    raise Exception('br.heading != "Value"')
                                 for k, itm in enumerate(br.items):
-                                    print(itm.values)
+                                    # print(itm.values)
                                     if (
                                         itm.values[0]
                                         == rasterBandVals[bandIndex][int(count / 4)]

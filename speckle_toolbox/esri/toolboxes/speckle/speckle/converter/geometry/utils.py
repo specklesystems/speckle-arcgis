@@ -44,7 +44,7 @@ def addCorrectUnits(geom: Base, dataStorage) -> Base:
 
 def apply_pt_offsets_rotation_on_send(
     x: float, y: float, dataStorage
-) -> Tuple[Union[float, None], Union[float, None]]:  # on Send
+) -> Tuple[float, float]:  # on Send
     try:
         offset_x = dataStorage.crs_offset_x
         offset_y = dataStorage.crs_offset_y
@@ -66,7 +66,7 @@ def apply_pt_offsets_rotation_on_send(
         return x, y
     except Exception as e:
         logToUser(e, level=2, func=inspect.stack()[0][3])
-        return None, None
+        return x, y
 
 
 def transform_speckle_pt_on_receive(pt_original: Point, dataStorage) -> Point:
