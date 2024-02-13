@@ -3,8 +3,8 @@ Contains all Layer related classes and methods.
 """
 
 import enum
-import inspect
 import hashlib
+import inspect
 import math
 import random
 from typing import List, Tuple, Union
@@ -89,7 +89,6 @@ from speckle.speckle.converter.layers.utils import (
     validateAttributeName,
     newLayerGroupAndName,
     validate_path,
-    findTransformation,
 )
 
 from speckle.speckle.converter.layers.symbology import (
@@ -2266,21 +2265,11 @@ def addRasterMainThread(obj: Tuple):
             arc_pt = arcpy.PointGeometry(originPt, sr, has_z=True)
             f_shape = arc_pt.projectAs(srRaster).getPart()
 
-            r"""
-            originPt = findTransformation(
-                arcpy.PointGeometry(originPt, sr, has_z=True),
-                "Point",
-                sr,
-                srRaster,
-                None,
-            ).getPart()
-            """
-
         bandDatasets = ""
         rastersToMerge = []
         rasterPathsToMerge = []
 
-        arcpy.env.overwriteOutput = True
+        # arcpy.env.overwriteOutput = True
         # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/composite-bands.htm
 
         for i in range(bandsCount):
@@ -2316,59 +2305,43 @@ def addRasterMainThread(obj: Tuple):
             rasterbandPath = validate_path(
                 rasterbandPath, plugin
             )  # solved file saving issue
-            # print(rasterbandPath)
-            # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
             myRaster.save(rasterbandPath)
 
             rastersToMerge.append(myRaster)
             rasterPathsToMerge.append(rasterbandPath)
 
         # mergedRaster.setProperty("spatialReference", crsRaster)
-        full_path = validate_path(
-            path + "\\" + newName, plugin
+        full_path: str = validate_path(
+            newName[:5] + layer.id[:8], plugin
         )  # solved file saving issue
 
-        if os.path.exists(full_path):
-            # print(full_path)
-            for index, letter in enumerate("1234567890abcdefghijklmnopqrstuvwxyz"):
-                # print(full_path + letter)
-                if os.path.exists(full_path + letter):
-                    pass
-                else:
-                    full_path += letter
-                    break
-        newName = full_path.split("\\")[-1]
-        # print("RASTER new PATH")
-        # print(full_path)
-        # print(rasterPathsToMerge)
         # mergedRaster = arcpy.ia.Merge(rastersToMerge) # glues all bands together
         # mergedRaster.save(full_path) # similar errors: https://community.esri.com/t5/python-questions/error-010240-could-not-save-raster-dataset/td-p/321690
 
         try:
             arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
         except:  # if already exists
-            full_path += "_"
+            full_path = full_path[:-3] + str(random.randint(100, 999))
             arcpy.management.CompositeBands(rasterPathsToMerge, full_path)
-        # print(path + "\\" + newName)
+
         arcpy.management.DefineProjection(full_path, srRaster)
 
-        rasterLayer = arcpy.management.MakeRasterLayer(full_path, newName).getOutput(0)
-        # arcpy.management.SetRasterProperties(
-        #    rasterLayer,
-        #    nodata=[[i, noDataVals[i] for i in range(bandsCount)],
-        # )
-        # print(rasterLayer)
-        # print(layerGroup)
+        print("RASTER full PATH")
+        print(full_path)
+        print(newName)
+        print(arcpy.env.workspace)
+
+        rasterLayer = arcpy.management.MakeRasterLayer(
+            full_path, "x" + str(random.randint(100000, 500000))
+        ).getOutput(0)
+        rasterLayer.name = newName
         active_map.addLayerToGroup(layerGroup, rasterLayer)
 
         rl2 = None
-        # print(newName)
         newGroupName = newGroupName.replace(SYMBOL + SYMBOL, SYMBOL).replace(
             SYMBOL + SYMBOL, SYMBOL
         )
-        # print(newGroupName.replace(SYMBOL, "\\") + newName)
         for l in project.activeMap.listLayers():
-            # print(l.longName)
             if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
                 rl2 = l
                 break
