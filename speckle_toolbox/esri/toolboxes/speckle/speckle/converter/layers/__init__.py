@@ -65,19 +65,30 @@ def getLayersWithStructure(
         if bySelection is True:  # by selection
             # print("get selected layers")
             for layer in project.activeMap.listLayers():
+                if layer.visible and (layer.isFeatureLayer or layer.isRasterLayer):
 
-                # print(layer.longName)
-                if layer.visible and ((layer.isFeatureLayer) or layer.isRasterLayer):
-
-                    # find possible nested groups
+                    # find possibly hidden parent groups
                     layerGroupsHidden = 0
                     for group in project.activeMap.listLayers():
-                        if group.isGroupLayer and layer.longName.startswith(
-                            group.longName + "\\"
+                        if (
+                            layer.longName.startswith(group.longName + "\\")
+                            and group.visible is False
                         ):
-                            if not group.visible:
-                                layerGroupsHidden += 1
-                                break
+                            for sub_layer in group.listLayers():
+                                if sub_layer.longName == layer.longName:
+                                    layerGroupsHidden += 1
+                                    break
+                            # .isGroupLayer method is broken: https://community.esri.com/t5/python-questions/arcpy-property-layer-isgrouplayer-not-working-as/td-p/709250
+                            r""" 
+                            if group.isGroupLayer:
+                                print("__groups")
+                                print(group.longName + "_" + str(group.visible))
+                                if layer.longName.startswith(group.longName + "\\"):
+                                    print(group.visible)
+                                    if group.visible is False:
+                                        layerGroupsHidden += 1
+                                        break
+                            """
                     if layerGroupsHidden == 0:
                         layers.append(layer)
                         structure.append(
