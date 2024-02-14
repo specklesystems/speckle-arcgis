@@ -44,7 +44,7 @@ def jsonFromLayerStyle(layerArcgis, path_style):
 def symbol_color_to_speckle(color: dict):
     newColor = (0 << 16) + (0 << 8) + 0
     try:
-        #print(color)
+        # print(color)
         if "RGB" in color:
             r = int(color["RGB"][0])
             g = int(color["RGB"][1])
@@ -86,10 +86,10 @@ def cadBimRendererToNative(
     f_class,
     existingAttrs: List,
 ) -> Union[None, Dict[str, Any]]:
-    #print("___________APPLY VECTOR RENDERER______________")
-    #print(layerArcgis)
-    #print(f_class)
-    #print(fetColors)
+    # print("___________APPLY VECTOR RENDERER______________")
+    # print(layerArcgis)
+    # print(f_class)
+    # print(fetColors)
 
     attribute = "Speckle_ID"
     try:
@@ -106,9 +106,9 @@ def cadBimRendererToNative(
             del cursor
 
             sym.updateRenderer("UniqueValueRenderer")
-            #print(sym.renderer.type)
-            #print(existingAttrs)
-            #print(attribute)
+            # print(sym.renderer.type)
+            # print(existingAttrs)
+            # print(attribute)
 
             sym.renderer.fields = [attribute]
             for k, grp in enumerate(sym.renderer.groups):
@@ -127,8 +127,8 @@ def cadBimRendererToNative(
                             # print("found label")
                             material = fetColors[i]
                             # print(material)
-                            #print("Symbol: ")
-                            #print(itm.symbol)
+                            # print("Symbol: ")
+                            # print(itm.symbol)
                             itm.symbol.color = colorFromSpeckle(material)
                             itm.label = label
                             break
@@ -149,14 +149,14 @@ def vectorRendererToNative(
     f_class,
     existingAttrs: List,
 ) -> Union[None, Dict[str, Any]]:
-    #print("___________APPLY VECTOR RENDERER______________")
+    # print("___________APPLY VECTOR RENDERER______________")
     # print(layerArcgis)
     # print(f_class)
     try:
         renderer = layerSpeckle.renderer
 
         if renderer and renderer["type"]:
-            #print(renderer["type"])
+            # print(renderer["type"])
 
             root_path = "\\".join(project.filePath.split("\\")[:-1])
             # path_style = root_path + '\\' + str(f_class).split('\\')[-1] + '_old.lyrx'
@@ -167,7 +167,7 @@ def vectorRendererToNative(
                 sym = layerArcgis.symbology
 
                 if renderer["type"] == "singleSymbol":
-                    #print("RENDERER SINGLE")
+                    # print("RENDERER SINGLE")
                     # print(renderer)
 
                     r, g, b = get_rgb_from_speckle(
@@ -182,7 +182,7 @@ def vectorRendererToNative(
                     return layerArcgis
 
                 elif renderer["type"] == "categorizedSymbol":
-                    #print("RENDERER CATEGORIZED")
+                    # print("RENDERER CATEGORIZED")
                     # print(renderer)
                     # print(existingAttrs)
 
@@ -196,7 +196,7 @@ def vectorRendererToNative(
                     # vl2 = active_map.addLayer(layerArcgis)[0]
                     # sym = layerArcgis.symbology
                     sym.updateRenderer("UniqueValueRenderer")
-                    #print(sym.renderer.type)
+                    # print(sym.renderer.type)
                     # print(existingAttrs)
                     # print(attribute)
 
@@ -220,7 +220,7 @@ def vectorRendererToNative(
                     return layerArcgis
 
                 elif renderer["type"] == "graduatedSymbol":
-                    #print("RENDERER GRADUATED")
+                    # print("RENDERER GRADUATED")
                     # print(renderer)
 
                     attribute = renderer["properties"]["attribute"]
@@ -238,7 +238,7 @@ def vectorRendererToNative(
                         return layerArcgis  # by color, not line width
 
                     sym.updateRenderer("GraduatedColorsRenderer")
-                    #print(sym.renderer.type)
+                    # print(sym.renderer.type)
 
                     r, g, b = get_rgb_from_speckle(
                         renderer["properties"]["sourceSymbColor"]
@@ -353,24 +353,24 @@ def rasterRendererToNative(
     rasterPathsToMerge,
     newName,
 ):
-    print("_____rasterRenderer ToNative______")
+    # print("_____rasterRenderer ToNative______")
     try:
         renderer = layer.renderer
         rendererNew = None
-        #print(renderer)
+        # print(renderer)
 
         layer_elements = layer.elements
         if layer_elements is None or len(layer_elements) == 0:
             layer_elements = layer.features
         feat = layer_elements[0]
-        #print(feat)
+        # print(feat)
 
         sym = arcLayer.symbology
         symJson = None
         path_style = ""
         path_style2 = ""
 
-        #print(sym)
+        # print(sym)
 
         if renderer and renderer["type"]:
 
@@ -394,7 +394,7 @@ def rasterRendererToNative(
                 symJson = jsonFromLayerStyle(arcLayer, path_style)
 
             if renderer["type"] == "singlebandgray":
-                print("Singleband grey")
+                # print("Singleband grey")
                 band_index = renderer["properties"]["band"] - 1
                 if symJson is None:
                     sym.updateColorizer("RasterStretchColorizer")
@@ -420,7 +420,7 @@ def rasterRendererToNative(
                     active_map.removeLayer(temp_layer)
 
             elif renderer["type"] == "multibandcolor":
-                print("Multiband")
+                # print("Multiband")
                 if symJson is None:
                     sym.updateColorizer("RasterStretchColorizer")
                     arcLayer.symbology = sym
@@ -462,7 +462,7 @@ def rasterRendererToNative(
                     except:
                         symJson["layerDefinitions"][0]["colorizer"]["blueBandIndex"] = 0
 
-                    #print(symJson)
+                    # print(symJson)
                     f = open(path_style2, "w")
                     f.write(json.dumps(symJson, indent=2))
                     f.close()
@@ -474,12 +474,12 @@ def rasterRendererToNative(
                     os.remove(path_style2)
 
             elif renderer["type"] == "paletted":
-                print("Paletted")
+                # print("Paletted")
                 band_index = renderer["properties"]["band"] - 1
 
                 if symJson is None:
                     for br in sym.colorizer.groups:
-                        #print(br.heading)  # "Value"
+                        # print(br.heading)  # "Value"
                         # go through all values classified
                         for k, itm in enumerate(br.items):
                             if k < len(renderer["properties"]["classes"]):

@@ -2263,7 +2263,7 @@ def addRasterMainThread(obj: Tuple):
         # if source projection is different from layer display projection, convert display OriginPt to raster source projection
         if rasterHasSr is True and srRaster.exportToString() != sr.exportToString():
             arc_pt = arcpy.PointGeometry(originPt, sr, has_z=True)
-            f_shape = arc_pt.projectAs(srRaster).getPart()
+            originPt = arc_pt.projectAs(srRaster).getPart()
 
         bandDatasets = ""
         rastersToMerge = []
@@ -2273,8 +2273,6 @@ def addRasterMainThread(obj: Tuple):
         # https://pro.arcgis.com/en/pro-app/latest/tool-reference/data-management/composite-bands.htm
 
         for i in range(bandsCount):
-            # print(i)
-            # print(bandNames[i])
             rasterbandPath = (
                 path_bands + "\\" + newName + "_Band_" + str(i + 1) + ".tif"
             )
@@ -2284,10 +2282,6 @@ def addRasterMainThread(obj: Tuple):
             leftLowerCorner = arcpy.Point(
                 originPt.X, originPt.Y + (ysize * yres), originPt.Z
             )
-            # upperRightCorner = arcpy.Point(originPt.X + (xsize*xres), originPt.Y, originPt.Z)
-            # print(leftLowerCorner)
-            # print(upperRightCorner)
-
             # # Convert array to a geodatabase raster, add to layers
             try:
                 myRaster = arcpy.NumPyArrayToRaster(
@@ -2326,10 +2320,10 @@ def addRasterMainThread(obj: Tuple):
 
         arcpy.management.DefineProjection(full_path, srRaster)
 
-        print("RASTER full PATH")
-        print(full_path)
-        print(newName)
-        print(arcpy.env.workspace)
+        #print("RASTER full PATH")
+        #print(full_path)
+        #print(newName)
+        #print(arcpy.env.workspace)
 
         rasterLayer = arcpy.management.MakeRasterLayer(
             full_path, "x" + str(random.randint(100000, 500000))
