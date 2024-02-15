@@ -47,13 +47,13 @@ jobs:
       - run:
           name: Clone
           command:  |
-            git clone git@github.com:specklesystems/specklepy_qt_ui.git specklepy_qt_ui
+            git clone git@github.com:specklesystems/specklepy_qt_ui.git speckle_toolbox/esri/toolboxes/speckle/specklepy_qt_ui
             ls -a
       - run:
           name: Remove Git Artifacts
           command: |
-            rm -rf ./specklepy_qt_ui/.git/
-            rm ./specklepy_qt_ui/.gitignore
+            rm -rf ./speckle_toolbox/esri/toolboxes/speckle/specklepy_qt_ui/.git/
+            rm ./speckle_toolbox/esri/toolboxes/speckle/specklepy_qt_ui/.gitignore
       - persist_to_workspace:
           root: ./
           paths:
