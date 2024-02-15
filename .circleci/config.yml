@@ -52,7 +52,7 @@ jobs:
             rm -rf ./specklepy_qt_ui/.git/
             rm ./specklepy_qt_ui/.gitignore
       - persist_to_workspace:
-          root: ./
+          root: ./speckle_toolbox/esri/toolboxes/speckle/
           paths:
             - specklepy_qt_ui
 
