@@ -52,9 +52,9 @@ jobs:
             rm -rf ./specklepy_qt_ui/.git/
             rm ./specklepy_qt_ui/.gitignore
       - persist_to_workspace:
-          root: ./speckle_toolbox/esri/toolboxes/speckle/
+          root: ./
           paths:
-            - specklepy_qt_ui
+            - speckle_toolbox/esri/toolboxes/speckle/specklepy_qt_ui
 
   build-connector-win: # Reusable job for basic connectors
     executor:
