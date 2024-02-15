@@ -33,24 +33,26 @@ jobs:
     docker:
       - image: cimg/base:2021.01
     steps:
+      - checkout
+      - attach_workspace:
+          at: ./
       - add_ssh_keys:
           fingerprints:
             - "d1:d5:96:4d:ed:58:6e:7f:58:cc:21:5f:94:20:76:49"
       - run:
           name: I know Github as a host
           command: |
-            mkdir ~/.ssh
             touch ~/.ssh/known_hosts
             ssh-keyscan github.com >> ~/.ssh/known_hosts
       - run:
           name: Clone
           command:  |
-            git clone git@github.com:specklesystems/specklepy_qt_ui.git specklepy_qt_ui
+            git clone git@github.com:specklesystems/specklepy_qt_ui.git speckle_toolbox/esri/toolboxes/speckle/specklepy_qt_ui
       - run:
           name: Remove Git Artifacts
           command: |
-            rm -rf ./specklepy_qt_ui/.git/
-            rm ./specklepy_qt_ui/.gitignore
+            rm -rf ./speckle_toolbox/esri/toolboxes/speckle/specklepy_qt_ui/.git/
+            rm ./speckle_toolbox/esri/toolboxes/speckle/specklepy_qt_ui/.gitignore
       - persist_to_workspace:
           root: ./
           paths:
@@ -150,19 +152,12 @@ workflows: #happens with every PR to main
     jobs:
       - get-ui:
           context: github-dev-bot
-          filters: &build_filters
-            branches:
-              only:
-                - main
-                - /ci\/.*/
       - get-ci-tools:
           context: github-dev-bot
-          filters: *build_filters
       - build-connector-win:
           requires:
             - get-ui
             - get-ci-tools
-          filters: *build_filters
           context: innosetup
 
   deploy: # build installers and deploy
