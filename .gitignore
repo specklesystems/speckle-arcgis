@@ -120,4 +120,5 @@ settings.json
 zip_build
 .qt_for_python
 *.pyt.xml
-
+*specklepy_qt_ui
+*.whl 

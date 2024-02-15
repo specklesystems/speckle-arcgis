@@ -8,7 +8,7 @@ def patch_installer(tag):
     conda_file = "speckle_arcgis_installer/conda_clone_activate.py"
     #toolbox_install_file = "speckle_arcgis_installer/toolbox_install.py"
     toolbox_manual_install_file = "speckle_arcgis_installer/toolbox_install_manual.py"
-    plugin_start_file = "speckle_toolbox/esri/toolboxes/speckle/speckle_arcgis.py"
+    plugin_start_file = "speckle_toolbox/esri/toolboxes/speckle/speckle/speckle_arcgis.py"
 
     #py_tag = get_specklepy_version()
     with open(iss_file, "r") as file:
