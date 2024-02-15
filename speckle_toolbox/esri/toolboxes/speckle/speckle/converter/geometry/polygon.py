@@ -46,30 +46,37 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
         for i, p in enumerate(geom):
             # print("____start enumerate feature")
             # print(p) #<geoprocessing array object object at 0x0000026796C77110>
-            # print(p)
-            boundary, voids = getPolyBoundaryVoids(p, layer, dataStorage)
-            # print(boundary)
-            # print(voids)
-            polyBorder = speckleBoundaryToSpecklePts(boundary)
-            # print(polyBorder)
-            voidsAsPts = []
-            for v in voids:
-                pts = speckleBoundaryToSpecklePts(v)
-                voidsAsPts.append(pts)
-            # print(voidsAsPts)
-            total_vert, vertices_x, faces_x, colors_x = meshPartsFromPolygon(
-                polyBorder, voidsAsPts, existing_vert, index, layer, dataStorage
-            )
+            boundaries, voids = getPolyBoundaryVoids(p, layer, dataStorage)
+            # boundary = boundaries[0]
+            for boundary in boundaries:
+                # print(boundary)
+                # print(voids)
+                polyBorder = speckleBoundaryToSpecklePts(boundary)
+                print(boundary.as_points())
+                # print(polyBorder)
+                if polyBorder is None or (
+                    isinstance(polyBorder, list) and len(polyBorder) < 3
+                ):
+                    continue
+                # print(existing_vert)
+                voidsAsPts = []
+                for v in voids:
+                    pts = speckleBoundaryToSpecklePts(v)
+                    voidsAsPts.append(pts)
+                # print(voidsAsPts)
+                total_vert, vertices_x, faces_x, colors_x = meshPartsFromPolygon(
+                    polyBorder, voidsAsPts, existing_vert, index, layer, dataStorage
+                )
 
-            existing_vert += total_vert
-            vertices.extend(vertices_x)
-            faces.extend(faces_x)
-            colors.extend(colors_x)
+                existing_vert += total_vert
+                vertices.extend(vertices_x)
+                faces.extend(faces_x)
+                colors.extend(colors_x)
 
         # print("Colors: ")
+        # print(colors)
         # print(faces)
         # print(vertices)
-        # print(colors)
         mesh = constructMesh(vertices, faces, colors)
         # print(mesh)
         if mesh is not None:
@@ -88,33 +95,39 @@ def polygonToSpeckleMesh(geom, index: int, layer, multitype: bool, dataStorage):
 
 
 def getPolyBoundaryVoids(feature, layer, dataStorage, x_form=None):
-    # print("__getPolyBoundaryVoids__")
+    print("__getPolyBoundaryVoids__")
     voids: List[Union[None, Polyline, Arc, Line, Polycurve]] = []
     boundary = None
     pointList = []
+    all_boundaries = []
     try:
-        # if multiType is False:  # Multipolygon
-        #    boundary = anyLineToSpeckle(feature, feature, layer, dataStorage, xform_vars)
-
-        # else:
-        # print("multi type")
         for i, pt in enumerate(feature):
             # print(pt)  # 284394.58100903 5710688.11602606 NaN NaN
-            # for pt in p:
-            # print(pt)
             if pt == None and boundary == None:  # first break
                 boundary = polylineFromVerticesToSpeckle(
                     pointList, True, feature, layer, dataStorage
                 )
-                # print("__Boundary:")
-                # print(boundary)  # Polyline
                 pointList = []
+                all_boundaries.append(boundary)
             elif pt == None and boundary != None:  # breaks btw voids
                 void = polylineFromVerticesToSpeckle(
                     pointList, True, feature, layer, dataStorage
                 )
                 voids.append(void)
                 pointList = []
+            elif (
+                len(pointList) > 0
+                and pt.X == pointList[0].X
+                and pt.Y == pointList[0].Y
+                and pt.Z == pointList[0].Z
+            ):  # new condition
+                # if multiple boundaries
+                new_boundary = polylineFromVerticesToSpeckle(
+                    pointList, True, feature, layer, dataStorage
+                )
+                pointList = []
+                # print(new_boundary)
+                all_boundaries.append(new_boundary)
             elif pt != None:  # add points to whatever list (boundary or void)
                 pointList.append(pt)
 
@@ -128,10 +141,11 @@ def getPolyBoundaryVoids(feature, layer, dataStorage, x_form=None):
             boundary = polylineFromVerticesToSpeckle(
                 pointList, True, feature, layer, dataStorage
             )
+            all_boundaries.append(boundary)
 
     except Exception as e:
         logToUser(str(e), level=2, func=inspect.stack()[0][3])
-    return boundary, voids
+    return all_boundaries, voids
 
 
 def multiPolygonToSpeckle(geom, index: str, layer, multiType: bool, dataStorage):
@@ -183,7 +197,8 @@ def polygonToSpeckle(geom, feature, index: int, layer, dataStorage, x_form):
         print("___Polygon to Speckle____")
         # print(geom)  # array
 
-        boundary, voids = getPolyBoundaryVoids(geom, layer, dataStorage, x_form)
+        boundaries, voids = getPolyBoundaryVoids(geom, layer, dataStorage, x_form)
+        boundary = boundaries[0]
         # print(boundary)
         # print(voids)
 

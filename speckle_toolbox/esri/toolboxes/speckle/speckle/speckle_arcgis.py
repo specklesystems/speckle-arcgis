@@ -406,7 +406,7 @@ class SpeckleGIS:
                 isinstance(layers, list) and len(layers) == 0
             ):  # len(selectedLayerNames) == 0:
                 logToUser(
-                    "No layers selected",
+                    "No valid layers selected",
                     level=1,
                     func=inspect.stack()[0][3],
                     plugin=self.dockwidget,

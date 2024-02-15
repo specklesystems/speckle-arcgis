@@ -27,7 +27,10 @@ from speckle.speckle.converter.geometry.point import (
     pointToSpeckle,
     addZtoPoint,
 )
-from speckle.speckle.converter.geometry.utils import speckleArcCircleToPoints
+from speckle.speckle.converter.geometry.utils import (
+    speckleArcCircleToPoints,
+    specklePolycurveToPoints,
+)
 from speckle.speckle.converter.layers.utils import apply_reproject, get_scale_factor
 from speckle.speckle.utils.panel_logging import logToUser
 
@@ -109,7 +112,7 @@ def anyLineToSpeckle(geom, feature, layer, dataStorage, x_form=None):
 
         # print(new_geom)  # describe geometry object
         for p in new_geom:
-            print(p)  # array
+            # print(p)  # array
             for pt in p:
                 # print(pt)
                 if pt != None:
@@ -527,6 +530,9 @@ def polylineToNative(
         if poly.closed is True:
             pts.append(pointToCoord(poly.as_points()[0]))
 
+        scale = get_scale_factor(poly.units)
+        pts = [[pt[0] * scale, pt[1] * scale, pt[2] * scale] for pt in pts]
+
         pts_coord_list = [arcpy.Point(*coords) for coords in pts]
         polyline = arcpy.Polyline(arcpy.Array(pts_coord_list), sr, has_z=True)
         # print(polyline.JSON)
@@ -540,6 +546,9 @@ def lineToNative(line: Line, sr: arcpy.SpatialReference, dataStorage) -> arcpy.P
     print("___Line to Native___")
     try:
         pts = [pointToCoord(pt) for pt in [line.start, line.end]]
+        scale = get_scale_factor(line.units)
+        pts = [[pt[0] * scale, pt[1] * scale, pt[2] * scale] for pt in pts]
+
         line = arcpy.Polyline(
             arcpy.Array([arcpy.Point(*coords) for coords in pts]), sr, has_z=True
         )
@@ -614,6 +623,10 @@ def circleToNative(
             pt.units = "m"
             points.append(pointToCoord(pt))
         points.append(points[0])
+
+        scale = get_scale_factor(poly.units)
+        points = [[pt[0] * scale, pt[1] * scale, pt[2] * scale] for pt in points]
+
         curve = arcpy.Polyline(
             arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True
         )
@@ -709,6 +722,10 @@ def arcToNativePolyline(
     try:
         pointsSpeckle = speckleArcCircleToPoints(poly)
         points = [pointToCoord(p) for p in pointsSpeckle]
+
+        scale = get_scale_factor(poly.units)
+        points = [[pt[0] * scale, pt[1] * scale, pt[2] * scale] for pt in points]
+
         curve = arcpy.Polyline(
             arcpy.Array([arcpy.Point(*coords) for coords in points]), sr, has_z=True
         )

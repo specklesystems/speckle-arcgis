@@ -875,7 +875,7 @@ def featureColorfromNativeRenderer(index: int, arcLayer: arcLayer) -> int:
         sym = arcLayer.symbology
 
         if sym.renderer.type == "SimpleRenderer":
-            print("SimpleRenderer")
+            #print("SimpleRenderer")
             color = sym.renderer.symbol.color
 
         elif sym.renderer.type == "UniqueValueRenderer":
