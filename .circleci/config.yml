@@ -88,6 +88,7 @@ jobs:
             $version = "$($ver).$($env:CIRCLE_BUILD_NUM)"
             echo $semver
             python patch_version.py $semver
+            pip install setuptools
             python setup.py sdist bdist_wheel
             Copy-Item -Path "dist\speckle_toolbox-$($ver)-py3-none-any.whl" -Destination "speckle_arcgis_installer"
       - run: 
