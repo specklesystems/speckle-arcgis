@@ -1,3 +1,11 @@
+import os
+import subprocess
+pythonExec = os.environ["ProgramFiles"]+ r"\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe"
+result = subprocess.run([pythonExec, "-m", "pip", "install", "--upgrade", "--ignore-installed", "specklepy==2.17.17"], capture_output=True, text=True, shell=True, timeout=1000)
+result = subprocess.run([pythonExec, "-m", "pip", "install", "--upgrade", "--ignore-installed", "panda3d==1.10.11"], capture_output=True, text=True, shell=True, timeout=1000)
+result = subprocess.run([pythonExec, "-m", "pip", "install", "--upgrade", "--ignore-installed", "PyQt5==5.15.9"], capture_output=True, text=True, shell=True, timeout=1000)
+
+
 
 from arcpy._mp import ArcGISProject, Map, Layer as arcLayer
 import arcpy
