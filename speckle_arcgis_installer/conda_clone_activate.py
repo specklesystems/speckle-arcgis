@@ -181,7 +181,14 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
                 print(f"Installing {pkgName} to {pythonExec}")
                 # subprocess_call( [pythonExec, "-m", "pip", "uninstall", f"{pkgName}"])
                 subprocess_call(
-                    [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"]
+                    [
+                        pythonExec,
+                        "-m",
+                        "pip",
+                        "install",
+                        "--ignore-installed",
+                        f"{pkgName}=={pkgVersion}",
+                    ]
                 )
         elif pkgName == "panda3d":
             import panda3d
@@ -191,7 +198,14 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
             ):
                 print(f"Installing {pkgName} to {pythonExec}")
                 subprocess_call(
-                    [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"]
+                    [
+                        pythonExec,
+                        "-m",
+                        "pip",
+                        "install",
+                        "--ignore-installed",
+                        f"{pkgName}=={pkgVersion}",
+                    ]
                 )
         elif pkgName == "PyQt5":
             import PyQt5
@@ -201,7 +215,14 @@ def installDependencies(pythonExec: str, pkgName: str, pkgVersion: str):
             ):
                 print(f"Installing {pkgName} to {pythonExec}")
                 subprocess_call(
-                    [pythonExec, "-m", "pip", "install", f"{pkgName}=={pkgVersion}"]
+                    [
+                        pythonExec,
+                        "-m",
+                        "pip",
+                        "install",
+                        "--ignore-installed",
+                        f"{pkgName}=={pkgVersion}",
+                    ]
                 )
     except Exception as e:
         print(f"{pkgName} not installed")
