@@ -74,12 +74,6 @@ jobs:
       - attach_workspace:
           at: ./
       - run:
-          name: Create Innosetup signing cert
-          shell: powershell.exe
-          command: |
-            echo $env:PFX_B64 > "speckle-sharp-ci-tools\SignTool\AEC Systems Ltd.txt"
-            certutil -decode "speckle-sharp-ci-tools\SignTool\AEC Systems Ltd.txt" "speckle-sharp-ci-tools\SignTool\AEC Systems Ltd.pfx"
-      - run:
           name: Patch
           shell: powershell.exe
           command:
@@ -93,12 +87,47 @@ jobs:
             pip install setuptools
             python setup.py sdist bdist_wheel
             Copy-Item -Path "dist\speckle_toolbox-$($ver)-py3-none-any.whl" -Destination "speckle_arcgis_installer"
-      - run: 
-          name: Build Installer
-          shell: cmd.exe
-          command:
-            | # If no tag, use 0.0.0.1 and don't make any YML (for testing only!)
-            speckle-sharp-ci-tools\InnoSetup\ISCC.exe speckle-sharp-ci-tools\arcgis.iss /Sbyparam=$p
+
+      - run:
+          name: Exit if External PR
+          shell: bash.exe
+          command: if [ "$CIRCLE_PR_REPONAME" ]; then circleci-agent step halt; fi
+      
+      - unless: # Build installers unsigned on non-tagged builds
+          condition: << pipeline.git.tag >>
+          steps:
+            - run:
+                name: Build Installer
+                shell: cmd.exe #does not work in powershell
+                command: 
+                  speckle-sharp-ci-tools\InnoSetup\ISCC.exe speckle-sharp-ci-tools\arcgis.iss /Sbyparam=$p
+
+      - when: # Setup certificates and build installers signed for tagged builds
+          condition: << pipeline.git.tag >>
+          steps:
+            - run: # Installs digicert signing tools for windows
+                name: "Digicert Signing Manager Setup"
+                command: |
+                  cd C:\
+                  curl.exe -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:$env:SM_API_KEY" -o smtools-windows-x64.msi
+                  msiexec.exe /i smtools-windows-x64.msi /quiet /qn | Wait-Process
+            - run: # Creates the Auth cert and the signing public PEM cert
+                name: Create Auth & OV Signing Cert
+                command: |
+                  cd C:\
+                  echo $env:SM_CLIENT_CERT_FILE_B64 > certificate.txt
+                  certutil -decode certificate.txt certificate.p12
+                  echo $env:SM_OV_PEM_CERT > SpeckleOVCertificate-2024.pem
+            - run: # Syncs certificates from Digicert into local user store
+                name: Sync Certs
+                command: |
+                  & $env:SSM\smksp_cert_sync.exe
+            - run: 
+                name: Build Installer
+                shell: cmd.exe
+                command:
+                  | # If no tag, use 0.0.0.1 and don't make any YML (for testing only!)
+                  speckle-sharp-ci-tools\InnoSetup\ISCC.exe speckle-sharp-ci-tools\arcgis.iss /Sbyparam=$p /DSIGN_INSTALLER
       - when:
           condition: << parameters.installer >>
           steps:
@@ -107,6 +136,8 @@ jobs:
                 paths:
                   - speckle-sharp-ci-tools/Installers
                   - speckle_arcgis_installer
+    environment:
+      SSM: 'C:\Program Files\DigiCert\DigiCert One Signing Manager Tools'
 
   publish-github-release:
     docker:
@@ -158,7 +189,7 @@ workflows: #happens with every PR to main
           requires:
             - get-ui
             - get-ci-tools
-          context: innosetup
+          context: digicert-signing-connectors-test
 
   deploy: # build installers and deploy
     jobs:
@@ -182,7 +213,7 @@ workflows: #happens with every PR to main
             - get-ui
             - get-ci-tools
           filters: *deploy_filters
-          context: innosetup
+          context: digicert-signing-connectors-test
       - publish-github-release:
           requires:
             - build-deploy-connector-win
