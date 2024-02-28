@@ -2199,15 +2199,17 @@ def addRasterMainThread(obj: Tuple):
             print(e)
         # report on receive:
 
-        try:
-            layerName = newName.split(shortName)[0] + shortName  # + ("_" + geom_print)
-        except:
-            layerName = newName
+        layerName = removeSpecialCharacters(layer.name)
         shortName = newName.split(SYMBOL)[len(newName.split(SYMBOL)) - 1][:50]
-        finalName = shortName  # + ("_" + geom_print)
+        
+        try:
+            layerName = newName.split(shortName)[0] + shortName + "_Speckle"
+        except:
+            layerName = newName + "_Speckle"
+        finalName = shortName + "_Speckle"
+
         dataStorage.latestActionLayers.append(finalName)
 
-        layerName = removeSpecialCharacters(layer.name) + "_Speckle"
         rasterHasSr = False
 
         p: str = (
@@ -2328,7 +2330,7 @@ def addRasterMainThread(obj: Tuple):
         rasterLayer = arcpy.management.MakeRasterLayer(
             full_path, "x" + str(random.randint(100000, 500000))
         ).getOutput(0)
-        rasterLayer.name = newName
+        rasterLayer.name = finalName
         active_map.addLayerToGroup(layerGroup, rasterLayer)
 
         rl2 = None
@@ -2336,11 +2338,11 @@ def addRasterMainThread(obj: Tuple):
             SYMBOL + SYMBOL, SYMBOL
         )
         for l in project.activeMap.listLayers():
-            if l.longName == newGroupName.replace(SYMBOL, "\\") + newName:
+            if l.longName == newGroupName.replace(SYMBOL, "\\") + finalName:
                 rl2 = l
                 break
         rasterLayer = rasterRendererToNative(
-            project, active_map, layerGroup, layer, rl2, rasterPathsToMerge, newName
+            project, active_map, layerGroup, layer, rl2, rasterPathsToMerge, finalName
         )
 
         try:
