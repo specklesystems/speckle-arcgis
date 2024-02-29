@@ -106,7 +106,7 @@ class SpeckleGISDialog(SpeckleGISDialog_UI):
                 self.streamList.addItems(
                     [
                         (
-                            f"Stream not accessible - {stream[0].stream_id}"
+                            f"Speckle Project not accessible - {stream[0].stream_id}"
                             if stream[1] is None
                             or isinstance(stream[1], SpeckleException)
                             else f"{stream[1].name}, {stream[1].id} | {stream[0].stream_url.split('/streams')[0].split('/projects')[0]}"
@@ -115,7 +115,7 @@ class SpeckleGISDialog(SpeckleGISDialog_UI):
                 )
             if len(plugin.current_streams) == 0:
                 self.streamList.addItems([""])
-            self.streamList.addItems(["Create New Stream"])
+            self.streamList.addItems(["Create New Project"])
             set_project_streams(plugin)
             index = self.streamList.currentIndex()
             if index == -1:

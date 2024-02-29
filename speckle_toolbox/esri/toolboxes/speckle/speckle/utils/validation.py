@@ -86,7 +86,7 @@ def validateStream(stream: Stream, dockwidget) -> Union[Stream, None]:
             return None
 
         if stream.branches is None:
-            logToUser("Stream has no branches", level=1, plugin=dockwidget)
+            logToUser("Speckle Project has no Models", level=1, plugin=dockwidget)
             return None
         return stream
     except Exception as e:

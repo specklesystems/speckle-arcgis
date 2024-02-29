@@ -510,13 +510,13 @@ class SpeckleGIS:
             stream = validateStream(stream, self.dockwidget)
             print(stream)
             if not isinstance(stream, Stream):
-                logToUser(f"Stream invalid", level=2, plugin=self.dockwidget)
+                logToUser(f"Speckle Project invalid", level=2, plugin=self.dockwidget)
                 return
 
             branch = validateBranch(stream, branchName, False, self.dockwidget)
             branchId = branch.id
             if branch == None:
-                logToUser(f"Branch invalid", level=2, plugin=self.dockwidget)
+                logToUser(f"Speckle Model invalid", level=2, plugin=self.dockwidget)
                 return
 
             transport = validateTransport(client, streamId)
