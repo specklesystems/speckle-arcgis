@@ -151,7 +151,7 @@ jobs:
             go install github.com/tcnksm/ghr@v0.16.0
             VERSION="${CIRCLE_TAG:-0.0.0}"
             VERSION_SHORT=$(echo "${VERSION}" | cut -d- -f1)
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete "${VERSION}" "./speckle_arcgis_installer/speckle_toolbox-${VERSION_SHORT}-py3-none-any.whl"
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete "${VERSION}" "./speckle_arcgis_installer/speckle_toolbox-${VERSION_SHORT}-py3-none-any.whl"
 
   deploy-manager2:
     docker:
