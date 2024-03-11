@@ -116,7 +116,6 @@ jobs:
                   cd C:\
                   echo $env:SM_CLIENT_CERT_FILE_B64 > certificate.txt
                   certutil -decode certificate.txt certificate.p12
-                  echo $env:SM_OV_PEM_CERT > SpeckleOVCertificate-2024.pem
             - run: # Syncs certificates from Digicert into local user store
                 name: Sync Certs
                 command: |
@@ -126,7 +125,10 @@ jobs:
                 shell: cmd.exe
                 command:
                   | # If no tag, use 0.0.0.1 and don't make any YML (for testing only!)
-                  speckle-sharp-ci-tools\InnoSetup\ISCC.exe speckle-sharp-ci-tools\arcgis.iss /Sbyparam=$p /DSIGN_INSTALLER
+                  speckle-sharp-ci-tools\InnoSetup\ISCC.exe speckle-sharp-ci-tools\arcgis.iss \
+                  /Sbyparam=$p \
+                  /DSIGN_INSTALLER \
+                  /DCODE_SIGNING_CERT_FINGERPRINT=%SM_CODE_SIGNING_CERT_SHA1_HASH%
       - when:
           condition: << parameters.installer >>
           steps:
@@ -188,7 +190,7 @@ workflows: #happens with every PR to main
           requires:
             - get-ui
             - get-ci-tools
-          context: digicert-signing-connectors-test
+          context: digicert-keylocker
 
   deploy: # build installers and deploy
     jobs:
@@ -212,7 +214,7 @@ workflows: #happens with every PR to main
             - get-ui
             - get-ci-tools
           filters: *deploy_filters
-          context: digicert-signing-connectors-test
+          context: digicert-keylocker
       - publish-github-release:
           requires:
             - build-deploy-connector-win
